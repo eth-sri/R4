@@ -32,6 +32,7 @@
 #include "Timer.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
+#include <stdio.h>
 
 using namespace std;
 
@@ -108,11 +109,28 @@ void ThreadTimers::sharedTimerFiredInternal()
         timer->m_nextFireTime = 0;
         timer->heapDeleteMin();
 
+        // TODO(WebERA): decide if a timer should not be delayed instead if firing depending
+        // on its name.
+
         double interval = timer->repeatInterval();
         timer->setNextFireTime(interval ? fireTime + interval : 0);
 
+        // WebERA: Denote that currently a timer with a given name is executed.
+        int timerNameIndex = timer->m_timerName;
+        threadGlobalData().threadTimers().setCurrentTimerNameIndex(timerNameIndex);
+        if (timerNameIndex != -1) {
+        	fprintf(stderr, "Timer %s fires {\n",
+        			threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+        }
+
         // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
         timer->fired();
+
+        // WebERA: Denote that currently a timer with a given name is executed.
+        if (timerNameIndex != -1) {
+        	fprintf(stderr, "} // %s\n", threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+        }
+        threadGlobalData().threadTimers().setCurrentTimerNameIndex(-2);
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
         if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())

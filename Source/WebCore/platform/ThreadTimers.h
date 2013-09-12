@@ -30,6 +30,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
+#include <wtf/StringSet.h>
 
 namespace WebCore {
 
@@ -47,6 +48,17 @@ namespace WebCore {
 
         Vector<TimerBase*>& timerHeap() { return m_timerHeap; }
 
+        // A list of names of timers.
+        StringSet* timerNames() { return &m_timerNames; }
+
+        // The index of the name (index in timerNames()) of the timer that currently executes.
+        // The value -2 means that a timer is currently not executed. A value -1 means that an
+        // unnamed timer executes.
+        int getCurrentTimerNameIndex() { return m_currentTimerNameIndex; }
+        void setCurrentTimerNameIndex(int currentTimerNameIndex) {
+        	m_currentTimerNameIndex = currentTimerNameIndex;
+        }
+
         void updateSharedTimer();
         void fireTimersInNestedEventLoop();
 
@@ -57,6 +69,8 @@ namespace WebCore {
         void fireTimersInNestedEventLoopInternal();
 
         Vector<TimerBase*> m_timerHeap;
+        StringSet m_timerNames;
+        int m_currentTimerNameIndex;
         SharedTimer* m_sharedTimer; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
         bool m_firingTimers; // Reentrancy guard.
     };

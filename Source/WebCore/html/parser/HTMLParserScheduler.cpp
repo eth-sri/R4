@@ -68,6 +68,8 @@ HTMLParserScheduler::HTMLParserScheduler(HTMLDocumentParser* parser)
     , m_continueNextChunkTimer(this, &HTMLParserScheduler::continueNextChunkTimerFired)
     , m_isSuspendedWithActiveTimer(false)
 {
+	// TODO(WebERA): Put name that identifies the document parsed.
+	m_continueNextChunkTimer.setTimerName("HTMLParserScheduler");
 }
 
 HTMLParserScheduler::~HTMLParserScheduler()

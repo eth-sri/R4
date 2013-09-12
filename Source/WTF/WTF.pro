@@ -119,6 +119,7 @@ HEADERS += \
     StdLibExtras.h \
     StringExtras.h \
     StringHasher.h \
+    StringSet.h \
     TCPackedCache.h \
     TCSpinLock.h \
     TCSystemAlloc.h \
@@ -200,6 +201,7 @@ SOURCES += \
     RefCountedLeakCounter.cpp \
     SHA1.cpp \
     StackBounds.cpp \
+    StringSet.cpp \
     TCSystemAlloc.cpp \
     Threading.cpp \
     TypeTraits.cpp \

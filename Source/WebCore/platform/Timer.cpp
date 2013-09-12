@@ -37,6 +37,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
+#include <stdio.h>
+
 using namespace std;
 
 namespace WebCore {
@@ -194,6 +196,7 @@ TimerBase::TimerBase()
     : m_nextFireTime(0)
     , m_repeatInterval(0)
     , m_heapIndex(-1)
+    , m_timerName(-1)
 #ifndef NDEBUG
     , m_thread(currentThread())
 #endif
@@ -204,6 +207,14 @@ TimerBase::~TimerBase()
 {
     stop();
     ASSERT(!inHeap());
+}
+
+void TimerBase::setTimerName(const char* timerName) {
+	if (timerName == NULL) {
+		m_timerName = -1;
+	} else {
+		m_timerName = threadGlobalData().threadTimers().timerNames()->addString(timerName);
+	}
 }
 
 void TimerBase::start(double nextFireInterval, double repeatInterval)
@@ -333,6 +344,17 @@ void TimerBase::setNextFireTime(double newTime)
             heapDecreaseKey();
         else
             heapIncreaseKey();
+
+        if (m_timerName != -1) {
+        	// WTFReportBacktrace();
+        	const char* name = threadGlobalData().threadTimers().timerNames()->getString(m_timerName);
+            if (oldTime == 0)
+            	fprintf(stderr, "  Add timer: %s\n", name);
+            else if (newTime == 0)
+            	fprintf(stderr, "  Remove timer: %s\n", name);
+            else if (newTime < oldTime)
+            	fprintf(stderr, "  Modify timer: %s\n", name);
+        }
 
         bool isFirstTimerInHeap = m_heapIndex == 0;
 

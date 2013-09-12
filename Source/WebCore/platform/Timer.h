@@ -57,6 +57,10 @@ public:
 
     static void fireTimersInNestedEventLoop();
 
+    // WebERA: Give a name to the timer. The WebERA system may delay a tiemr depending on its name.
+    // Note: once a timer fires, changing the name will only affect future timer fires.
+    void setTimerName(const char* timerName);
+
 private:
     virtual void fired() = 0;
 
@@ -79,6 +83,8 @@ private:
     double m_repeatInterval; // 0 if not repeating
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
+
+    int m_timerName;
 
 #ifndef NDEBUG
     ThreadIdentifier m_thread;

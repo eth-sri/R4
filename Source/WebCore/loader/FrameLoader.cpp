@@ -194,6 +194,8 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     , m_suppressOpenerInNewFrame(false)
     , m_forcedSandboxFlags(SandboxNone)
 {
+	// TODO(WebERA): Put name that identifies the document loaded.
+	m_checkTimer.setTimerName("FrameLoader::CheckLoadedTimer");
 }
 
 FrameLoader::~FrameLoader()
