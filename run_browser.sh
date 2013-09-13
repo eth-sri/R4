@@ -1,2 +1,2 @@
 #!/bin/bash
-WebKitBuild/Release/bin/QtTestBrowser 
+WebKitBuild/Release/bin/QtTestBrowser $1
