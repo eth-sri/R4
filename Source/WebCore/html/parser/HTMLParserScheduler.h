@@ -93,6 +93,8 @@ private:
 
     void continueNextChunkTimerFired(Timer<HTMLParserScheduler>*);
 
+    void updateTimerName();
+
     HTMLDocumentParser* m_parser;
 
     double m_parserTimeLimit;

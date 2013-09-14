@@ -345,6 +345,7 @@ void TimerBase::setNextFireTime(double newTime)
         else
             heapIncreaseKey();
 
+        // DEBUG(WebERA)
         if (m_timerName != -1) {
         	// WTFReportBacktrace();
         	const char* name = threadGlobalData().threadTimers().timerNames()->getString(m_timerName);

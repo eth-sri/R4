@@ -41,6 +41,9 @@
 #include "NestingLevelIncrementer.h"
 #include "Settings.h"
 
+#include <iostream>
+#include <sstream>
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -83,6 +86,7 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument* document, bool reportErrors
     , m_xssAuditor(this)
     , m_endWasDelayed(false)
     , m_pumpSessionNestingLevel(0)
+    , m_tokensSeen(0)
 {
 }
 
@@ -95,7 +99,10 @@ HTMLDocumentParser::HTMLDocumentParser(DocumentFragment* fragment, Element* cont
     , m_xssAuditor(this)
     , m_endWasDelayed(false)
     , m_pumpSessionNestingLevel(0)
+    , m_tokensSeen(0)
 {
+    // TODO(WebERA): Should we handle non-schedulable parsing?
+
     bool reportErrors = false; // For now document fragment parsing never reports errors.
     m_tokenizer->setState(tokenizerStateForContextElement(contextElement, reportErrors));
 }
@@ -261,6 +268,8 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), m_input.current().length(), m_tokenizer->lineNumber().zeroBasedInt());
 
     while (canTakeNextToken(mode, session) && !session.needsYield) {
+        ++m_tokensSeen;
+
         if (!isParsingFragment())
             m_sourceTracker.start(m_input, m_tokenizer.get(), m_token);
 
@@ -277,6 +286,12 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
 
         m_treeBuilder->constructTreeFromToken(m_token);
         ASSERT(m_token.isUninitialized());
+
+        // WebERA: We yield after every single token to split the parsing of every element into its own event action.
+        if (mode == AllowYield) {
+            session.needsYield = true;
+            break;
+        }
     }
 
     // Ensure we haven't been totally deref'ed after pumping. Any caller of this
@@ -582,6 +597,15 @@ void HTMLDocumentParser::resumeScheduledTasks()
 {
     if (m_parserScheduler)
         m_parserScheduler->resume();
+}
+
+std::string HTMLDocumentParser::getPositionAsString()
+{
+    // Convert an unsigned long into a string
+    std::stringstream tokensSeenAsString;
+    tokensSeenAsString << m_tokensSeen;
+
+    return std::string(m_document->url().string().ascii().data()) + "[" + tokensSeenAsString.str() + "]";
 }
 
 }

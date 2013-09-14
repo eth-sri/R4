@@ -109,6 +109,7 @@ private:
     ParserState m_state;
     bool m_documentWasLoadedAsPartOfNavigation;
 
+protected: // WebERA make this protected such that we can access it later
     // Every DocumentParser needs a pointer back to the document.
     // m_document will be 0 after the parser is stopped.
     Document* m_document;

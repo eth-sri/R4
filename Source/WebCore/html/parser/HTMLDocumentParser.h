@@ -38,6 +38,8 @@
 #include "XSSAuditor.h"
 #include <wtf/OwnPtr.h>
 
+#include <string>
+
 namespace WebCore {
 
 class Document;
@@ -52,6 +54,27 @@ class ScriptController;
 class ScriptSourceCode;
 
 class PumpSession;
+
+/**
+ * WebERA:
+ *
+ * The HTMLDocumentParser is modified in WebERA to control when the HTML parser yields and allows other events
+ * (XMLHttpRequests, user-interactions, timers ect.) to be scheduled.
+ *
+ * The parser yields after each token (see comment in pumpTokenizer()
+ *
+ * When the parser yields it will:
+ *   - Add a timer to ThreadTimers
+ *   - The timer will be named according to the next token to be parsed
+ *   - Yielding will be deterministic. Regardless of application state the same sequence of events will be yielded between executions.
+ *
+ * Naming:
+ *
+ * The timer will be renamed to HTMLDocumentParser(<URL>[<TOKEN>]) each time the parser yields.
+ *
+ * Note that with this naming we don't support handling multiple frames showing the same URL at the same time.
+ *
+ */
 
 class HTMLDocumentParser :  public ScriptableDocumentParser, HTMLScriptRunnerHost, CachedResourceClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -83,6 +106,8 @@ public:
 
     virtual void suspendScheduledTasks();
     virtual void resumeScheduledTasks();
+
+    std::string getPositionAsString();
 
 protected:
     virtual void insert(const SegmentedString&);
@@ -156,6 +181,9 @@ private:
 
     bool m_endWasDelayed;
     unsigned m_pumpSessionNestingLevel;
+
+    // WebERA: We could also use textPosition, however this has a bit lower overhead
+    unsigned long m_tokensSeen;
 };
 
 }

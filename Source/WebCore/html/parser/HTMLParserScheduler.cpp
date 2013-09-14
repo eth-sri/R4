@@ -31,6 +31,9 @@
 #include "HTMLDocumentParser.h"
 #include "Page.h"
 
+#include <iostream>
+#include <string>
+
 // defaultParserChunkSize is used to define how many tokens the parser will
 // process before checking against parserTimeLimit and possibly yielding.
 // This is a performance optimization to prevent checking after every token.
@@ -68,8 +71,7 @@ HTMLParserScheduler::HTMLParserScheduler(HTMLDocumentParser* parser)
     , m_continueNextChunkTimer(this, &HTMLParserScheduler::continueNextChunkTimerFired)
     , m_isSuspendedWithActiveTimer(false)
 {
-	// TODO(WebERA): Put name that identifies the document parsed.
-	m_continueNextChunkTimer.setTimerName("HTMLParserScheduler");
+    updateTimerName(); // WebERA
 }
 
 HTMLParserScheduler::~HTMLParserScheduler()
@@ -83,6 +85,7 @@ void HTMLParserScheduler::continueNextChunkTimerFired(Timer<HTMLParserScheduler>
     // FIXME: The timer class should handle timer priorities instead of this code.
     // If a layout is scheduled, wait again to let the layout timer run first.
     if (m_parser->document()->isLayoutTimerActive()) {
+        updateTimerName(); // WebERA
         m_continueNextChunkTimer.startOneShot(0);
         return;
     }
@@ -101,6 +104,7 @@ void HTMLParserScheduler::checkForYieldBeforeScript(PumpSession& session)
 
 void HTMLParserScheduler::scheduleForResume()
 {
+    updateTimerName(); // WebERA
     m_continueNextChunkTimer.startOneShot(0);
 }
 
@@ -120,7 +124,14 @@ void HTMLParserScheduler::resume()
     if (!m_isSuspendedWithActiveTimer)
         return;
     m_isSuspendedWithActiveTimer = false;
+    updateTimerName(); // WebERA
     m_continueNextChunkTimer.startOneShot(0);
+}
+
+void HTMLParserScheduler::updateTimerName()
+{
+    std::string name = "HTMLDocumentParser(" + m_parser->getPositionAsString() + ")";
+    m_continueNextChunkTimer.setTimerName(name.c_str());
 }
 
 }
