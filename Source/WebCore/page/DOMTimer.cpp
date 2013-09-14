@@ -92,6 +92,9 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     // or if it is a one-time timer and it has fired (DOMTimer::fired).
     DOMTimer* timer = new DOMTimer(context, action, timeout, singleShot);
 
+    // TODO(WebERA) Select an appropiate timer name
+    timer->setTimerName("DOMTimer");
+
     timer->suspendIfNeeded();
     InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);
 
