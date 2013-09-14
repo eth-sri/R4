@@ -42,6 +42,10 @@ XMLHttpRequestProgressEventThrottle::XMLHttpRequestProgressEventThrottle(EventTa
     , m_dispatchDeferredEventsTimer(this, &XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents)
 {
     ASSERT(target);
+
+    // TODO(WebERA) Select a better name for this timer
+    setTimerName("XMLHttpRequestProgressEventThrottle(BASE)");
+    m_dispatchDeferredEventsTimer.setTimerName("XMLHttpRequestProgressEventThrottle(DEFERRED)");
 }
 
 XMLHttpRequestProgressEventThrottle::~XMLHttpRequestProgressEventThrottle()
