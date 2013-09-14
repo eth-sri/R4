@@ -28,6 +28,8 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 
+#include <string>
+
 namespace JSC {
     class JSGlobalObject;
 }
@@ -50,12 +52,17 @@ namespace WebCore {
 
         void execute(ScriptExecutionContext*);
 
+        std::string getCalledUrl() const { return m_calledUrl; }
+        uint getCalledLine() const { return m_calledLine; }
+
     private:
-        ScheduledAction(JSC::ExecState*, JSC::JSValue function, DOMWrapperWorld* isolatedWorld);
+        ScheduledAction(JSC::ExecState*, JSC::JSValue function, DOMWrapperWorld* isolatedWorld, std::string calledUrl, uint calledLine);
         ScheduledAction(const String& code, DOMWrapperWorld* isolatedWorld)
             : m_function(*isolatedWorld->globalData())
             , m_code(code)
             , m_isolatedWorld(isolatedWorld)
+            , m_calledUrl("")
+            , m_calledLine(-1)
         {
         }
 
@@ -69,6 +76,9 @@ namespace WebCore {
         Vector<JSC::Strong<JSC::Unknown> > m_args;
         String m_code;
         RefPtr<DOMWrapperWorld> m_isolatedWorld;
+
+        std::string m_calledUrl;
+        uint m_calledLine;
     };
 
 } // namespace WebCore

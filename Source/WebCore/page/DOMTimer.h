@@ -36,6 +36,20 @@ namespace WebCore {
     class ScheduledAction;
     class Settings;
 
+   /**
+     * WebERA:
+     *
+     * The DOMTimer is instrumented in WebERA to identify individual DOMTimers for later scheduling.
+     *
+     * Naming:
+     *
+     * The timer will be named DOMTimer(<interval>, <oneshot>, <JavaScriptFunction>)
+     *
+     * Note, that in principle multiple timers could share the same name/signature. However, we assume that this is
+     * stable and unique accross executions.
+     *
+     */
+
     class DOMTimer : public SuspendableTimer {
         friend class Settings;
     public:

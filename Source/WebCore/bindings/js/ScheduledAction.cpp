@@ -38,6 +38,8 @@
 #include "ScriptValue.h"
 #include <runtime/JSLock.h>
 
+//#include "JavaScriptCore/bytecode/CodeBlock.h"
+
 #if ENABLE(WORKERS)
 #include "JSWorkerContext.h"
 #include "WorkerContext.h"
@@ -51,8 +53,10 @@ namespace WebCore {
 PassOwnPtr<ScheduledAction> ScheduledAction::create(ExecState* exec, DOMWrapperWorld* isolatedWorld, ContentSecurityPolicy* policy)
 {
     JSValue v = exec->argument(0);
+
     CallData callData;
-    if (getCallData(v, callData) == CallTypeNone) {
+    CallType callType = getCallData(v, callData);
+    if (callType == CallTypeNone) {
         if (policy && !policy->allowEval())
             return nullptr;
         UString string = v.toString(exec)->value(exec);
@@ -61,12 +65,26 @@ PassOwnPtr<ScheduledAction> ScheduledAction::create(ExecState* exec, DOMWrapperW
         return adoptPtr(new ScheduledAction(ustringToString(string), isolatedWorld));
     }
 
-    return adoptPtr(new ScheduledAction(exec, v, isolatedWorld));
+    // WebERA this calculates a unique indification of the called function scheduled in this action.
+
+    if (callType == CallTypeJS) {
+        const SourceCode source = callData.js.functionExecutable->source();
+
+        std::string url = source.provider()->url().utf8().data();
+        uint calledLine = source.firstLine();
+
+        return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, url, calledLine));
+    }
+
+    // TODO(WebERA) Should we give some good names for native functions?
+    return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, "", -1));
 }
 
-ScheduledAction::ScheduledAction(ExecState* exec, JSValue function, DOMWrapperWorld* isolatedWorld)
+ScheduledAction::ScheduledAction(ExecState* exec, JSValue function, DOMWrapperWorld* isolatedWorld, std::string calledUrl, uint calledLine)
     : m_function(exec->globalData(), function)
     , m_isolatedWorld(isolatedWorld)
+    , m_calledUrl(calledUrl)
+    , m_calledLine(calledLine)
 {
     // setTimeout(function, interval, arg0, arg1...).
     // Start at 2 to skip function and interval.

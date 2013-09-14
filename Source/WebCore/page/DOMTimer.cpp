@@ -34,6 +34,9 @@
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
+#include <string>
+#include <sstream>
+
 using namespace std;
 
 namespace WebCore {
@@ -87,13 +90,23 @@ DOMTimer::~DOMTimer()
 
 int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int timeout, bool singleShot)
 {
+    // WebERA: Convert an unsigned long into a string
+    std::stringstream timeoutAsString;
+    timeoutAsString << timeout;
+
+    std::stringstream calledLineAsString;
+    calledLineAsString << action->getCalledLine();
+
+    // WebERA: We need to access action before it is given to the DOMTimer, afterwards it will be NULL
+    std::string name = std::string("DOMTimer(") + timeoutAsString.str() + ", " + (singleShot ? "true" : "false") + ", " + action->getCalledUrl() + "[" + calledLineAsString.str() + "])";
+
     // DOMTimer constructor links the new timer into a list of ActiveDOMObjects held by the 'context'.
     // The timer is deleted when context is deleted (DOMTimer::contextDestroyed) or explicitly via DOMTimer::removeById(),
     // or if it is a one-time timer and it has fired (DOMTimer::fired).
     DOMTimer* timer = new DOMTimer(context, action, timeout, singleShot);
 
-    // TODO(WebERA) Select an appropiate timer name
-    timer->setTimerName("DOMTimer");
+    // TODO(WebERA): Select an appropiate timer name
+    timer->setTimerName(name.c_str());
 
     timer->suspendIfNeeded();
     InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);
