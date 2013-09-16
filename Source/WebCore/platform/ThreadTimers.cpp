@@ -121,6 +121,8 @@ void ThreadTimers::sharedTimerFiredInternal()
         if (timerNameIndex != -1) {
         	fprintf(stderr, "Timer %s fires {\n",
         			threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+        } else {
+            fprintf(stderr, "Timer UNKNOWN fires {\n");
         }
 
         // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
@@ -129,6 +131,8 @@ void ThreadTimers::sharedTimerFiredInternal()
         // WebERA: Denote that currently a timer with a given name is executed.
         if (timerNameIndex != -1) {
         	fprintf(stderr, "} // %s\n", threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+        } else {
+            fprintf(stderr, "} // UNKNOWN \n");
         }
         threadGlobalData().threadTimers().setCurrentTimerNameIndex(-2);
 
