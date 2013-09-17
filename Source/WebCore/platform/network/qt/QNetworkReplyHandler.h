@@ -27,6 +27,11 @@
 
 #include "FormData.h"
 #include "QtMIMETypeSniffer.h"
+#include "WebCore/platform/Timer.h"
+
+#include "ResourceResponse.h"
+#include "ResourceRequest.h"
+#include "ResourceError.h"
 
 QT_BEGIN_NAMESPACE
 class QFile;
@@ -112,6 +117,55 @@ private:
     bool m_sniffMIMETypes;
 };
 
+/**
+ * WebERA:
+ *
+ * // TODO read this through
+ *
+ * Change QNetworkReplyHandler such that we can control the loading of resources in a detailed manner.
+ *
+ * Roughly, incoming network data is processed as follows:
+ * Qt network handing -> QNetworkReplyHandlerCallQueue -> QNetworkReplyHandler -> client
+ *
+ * We insert a delay between QNetworkReplyHandler and its client by registering timers in ThreadTimers. Each timer
+ * is given a relevant name representing the event it is delaying. We also stop defer further processing of calls in
+ * QNetworkReplyHandlerCallQueue until the current event has been fired.
+ *
+ * The following invariants are assumed:
+ * (1) The URL of the requested resource is unique*
+ * (2) The resulting sequence of timers are triggered in the same order as they are registered**
+ * (3) The response is divided into identical data chunks from execution to execution***
+ *   (This assumes that (3a) the response is identical from execution to execution and (3b) the underlying infrastructure divides this into equal chunks
+ *
+ * The following events are registered:
+ *
+ * QNetworkReplyHandler(FAILURE, <url>)
+ * QNetworkReplyHandler(FINISHED, <url>)
+ * QNetworkReplyHandler(DATA, <chunk-seq-number>, <url>)
+ * QNetworkReplyHandler(UPLOAD, <chunk-seq-number>, <url>)
+ * QNetworkReplyHandler(RESPONSE, <url>)
+ * QNetworkReplyHandler(REQUEST, <url>)
+ *
+ * * If we want to support multiple requets to the same URL then we need to improve the Timer names.
+ * ** This holds as we do not expose the next timer before the previous timer has been fired
+ * *** TODO(WebERA) check if this invariant holds - right now this does not hold. When we use the CallQueue to defer further processing new data is still received and added,
+ *     thus depending on when we process the queue the chunks extracted will be different.
+ *
+ */
+
+class QNetworkReplyHandlerData : public TimerBase
+{
+
+public:
+    QNetworkReplyHandlerData() {
+        this->setTimerName("QNetworkReplyHandler(DATA, <chunk-seq-number>, <url>)");
+    }
+
+    void fired() {
+
+    }
+};
+
 class QNetworkReplyHandler : public QObject
 {
     Q_OBJECT
@@ -133,6 +187,14 @@ public:
     void finish();
     void forwardData();
     void sendResponseIfNeeded();
+
+    // WebERA delayed callbacks
+    void delayedFinish(Timer<QNetworkReplyHandler>* timer);
+    void delayedFailure(Timer<QNetworkReplyHandler>* timer);
+    void delayedResponse(Timer<QNetworkReplyHandler>* timer);
+    void delayedRequest(Timer<QNetworkReplyHandler>* timer);
+    void delayedDataSent(Timer<QNetworkReplyHandler>* timer);
+    void delayedDataReceived(Timer<QNetworkReplyHandler>* timer);
 
     static ResourceError errorForReply(QNetworkReply*);
 
@@ -158,6 +220,20 @@ private:
     int m_redirectionTries;
 
     QNetworkReplyHandlerCallQueue m_queue;
+
+    Timer<QNetworkReplyHandler> m_finishedDelayTimer;
+    Timer<QNetworkReplyHandler> m_failureDelayTimer;
+    Timer<QNetworkReplyHandler> m_responseDelayTimer;
+    Timer<QNetworkReplyHandler> m_requestDelayTimer;
+    Timer<QNetworkReplyHandler> m_dataSentDelayTimer;
+    Timer<QNetworkReplyHandler> m_dataReceivedDelayTimer;
+
+    ResourceResponse m_deferredResponse;
+    ResourceRequest m_deferredRequest;
+    ResourceError m_deferredError;
+    qint64 m_deferredBytesSent;
+    qint64 m_deferredBytesTotal;
+    QByteArray m_deferredBytes;
 };
 
 // Self destructing QIODevice for FormData
