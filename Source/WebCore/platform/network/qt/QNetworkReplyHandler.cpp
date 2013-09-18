@@ -554,8 +554,8 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
 {
     QUrl newUrl = m_replyWrapper->reply()->url().resolved(redirection);
 
-    ResourceHandleClient* client = m_resourceHandle->client();
-    ASSERT(client);
+    //ResourceHandleClient* client = m_resourceHandle->client();
+    //ASSERT(client);
 
     int statusCode = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
