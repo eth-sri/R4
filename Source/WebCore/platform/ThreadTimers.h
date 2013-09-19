@@ -38,6 +38,22 @@ namespace WebCore {
     class SharedTimer;
     class TimerBase;
 
+    /**
+      *
+      * WebERA:
+      *
+      * This is a modified ThreadTimers for demoing simple record-and-replay of executions.
+      *
+      * It has two modes, a record mode and a replay mode.
+      *
+      * If the file /tmp/input exists on the system it will automatically go into replay mode.
+      * This file should contain the output otherwise emitted by the record mode (a schedule consisting of a list of events)
+      *
+      * In record mode it will use the schedule to decide which of the pending events should be scheduled next.
+      * If it can't find an appropiate event then it will wait for some "magic" amount of time and eventually error out.
+      *
+      */
+
     // A collection of timers per thread. Kept in ThreadGlobalData.
     class ThreadTimers {
         WTF_MAKE_NONCOPYABLE(ThreadTimers); WTF_MAKE_FAST_ALLOCATED;
