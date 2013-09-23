@@ -126,13 +126,13 @@ void ThreadTimers::sharedTimerFiredInternal()
             if (timer == NULL || timer->m_nextFireTime > fireTime) {
                 // timer not registered yet or should not be fired yet...
 
-                if (m_scheduleWaits > 500) { // TODO(WebERA) 500 is an arbitrary magic number, reason about a good number
-                    std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
-                    std::cerr << "This is the current queue of events" << std::endl;
-                    debugPrintTimers();
+//                if (m_scheduleWaits > 500) { // TODO(WebERA) 500 is an arbitrary magic number, reason about a good number
+//                    std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
+//                    std::cerr << "This is the current queue of events" << std::endl;
+//                    debugPrintTimers();
 
-                    std::exit(1);
-                }
+//                    std::exit(1);
+//                }
 
                 m_scheduleWaits++;
                 break;

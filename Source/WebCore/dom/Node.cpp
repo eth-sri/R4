@@ -107,6 +107,8 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
+#include <iostream>
+
 #if ENABLE(INSPECTOR)
 #include "InspectorController.h"
 #endif
@@ -2796,7 +2798,33 @@ bool Node::dispatchKeyEvent(const PlatformKeyboardEvent& event)
 bool Node::dispatchMouseEvent(const PlatformMouseEvent& event, const AtomicString& eventType,
     int detail, Node* relatedTarget)
 {
-    return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(eventType, document()->defaultView(), event, detail, relatedTarget)));
+    // WebERA: defer all mouse events and add them as a timer
+
+    // WebERA: for demonstration purposes do not defer handling of mouse move events
+    if (eventType == eventNames().mousemoveEvent) {
+        return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(eventType, document()->defaultView(), event, detail, relatedTarget)));
+    }
+
+    m_deferredEvent = event;
+    m_deferredEventType = (AtomicString)eventType;
+    m_deferredDetail = detail;
+    m_deferredRelatedTarget = relatedTarget;
+
+    m_deferMouseEventsTimer.startOneShot(0);
+
+    // WebERA: Always return false
+    // This is not exactly safe behaviour if the application relies on stopping default actions
+    // at the level of the EventHandler (e.g. avoid a mouse relese event from the mouse up event).
+    //
+    // TODO(WebERA): should we support this? We could divide event processing in EventHandler into chunks
+    //               for each call to dispatch*Event, such that each chunk can access this return value.
+    return false;
+
+}
+
+void Node::dispatchMouseEventDeferred(Timer<Node>*)
+{
+    EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(m_deferredEventType, document()->defaultView(), m_deferredEvent, m_deferredDetail, m_deferredRelatedTarget)));
 }
 
 void Node::dispatchSimulatedClick(PassRefPtr<Event> event, bool sendMouseEvents, bool showPressedLook)
