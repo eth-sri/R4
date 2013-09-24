@@ -149,6 +149,7 @@ void LauncherApplication::handleUserOptions()
              << "[-set-offline-storage-default-quota maxSize]"
              << "[-use-test-fonts]"
              << "[-print-loaded-urls]"
+             << "[-webera-capture-mouse-movements]"
              << "URLs";
         appQuit(0);
     }
@@ -278,6 +279,14 @@ void LauncherApplication::handleUserOptions()
     int robotExtraTimeIndex = args.indexOf("-robot-extra-time");
     if (robotExtraTimeIndex != -1)
         m_robotExtraTimeSeconds = takeOptionValue(&args, robotExtraTimeIndex).toInt();
+
+    if (args.contains("-webera-capture-mouse-movements")) {
+        // WebERA(TODO): Move WEBERA_OPTIONS into its own module such that we don't need to mix it with WebCore and all of its dependencies
+        /*WebCore::WEBERA_OPTIONS options = WebCore::threadGlobalData().weberaOptions();
+        options.captureMouseMove = true;
+
+        WebCore::threadGlobalData().setWeberaOptions(options);*/
+    }
 }
 
 

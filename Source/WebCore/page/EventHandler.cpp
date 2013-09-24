@@ -85,6 +85,7 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TemporaryChange.h>
+#include <WebCore/platform/ThreadGlobalData.h>
 
 #if ENABLE(GESTURE_EVENTS)
 #include "PlatformGestureEvent.h"
@@ -1687,6 +1688,10 @@ static RenderLayer* layerForNode(Node* node)
 
 bool EventHandler::mouseMoved(const PlatformMouseEvent& mouseEvent)
 {
+    if (!threadGlobalData().weberaOptions().captureMouseMove) {
+        return false;
+    }
+
     DeferredPlatformEvent event;
     event.type = MouseMoveEvent;
     event.mouseEvent = mouseEvent;

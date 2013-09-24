@@ -49,6 +49,16 @@ namespace WebCore {
     struct ICUConverterWrapper;
     struct TECConverterWrapper;
 
+    typedef struct WEBERA_OPTIONS_t {
+        bool captureMouseMove;
+
+        WEBERA_OPTIONS_t()
+            : captureMouseMove(false)
+        {
+        }
+
+    } WEBERA_OPTIONS;
+
     class ThreadGlobalData {
         WTF_MAKE_NONCOPYABLE(ThreadGlobalData);
     public:
@@ -59,6 +69,10 @@ namespace WebCore {
         EventNames& eventNames() { return *m_eventNames; }
         ThreadTimers& threadTimers() { return *m_threadTimers; }
         XMLMIMETypeRegExp& xmlTypeRegExp() { return *m_xmlTypeRegExp; }
+
+        const WEBERA_OPTIONS& weberaOptions() { return m_webera_options; }
+        void setWeberaOptions(const WEBERA_OPTIONS& options) { m_webera_options = options; }
+
 
 #if USE(ICU_UNICODE)
         ICUConverterWrapper& cachedConverterICU() { return *m_cachedConverterICU; }
@@ -76,6 +90,7 @@ namespace WebCore {
         OwnPtr<EventNames> m_eventNames;
         OwnPtr<ThreadTimers> m_threadTimers;
         OwnPtr<XMLMIMETypeRegExp> m_xmlTypeRegExp;
+        WEBERA_OPTIONS m_webera_options;
 
 #ifndef NDEBUG
         bool m_isMainThread;
