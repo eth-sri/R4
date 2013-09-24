@@ -32,6 +32,7 @@
 #include "HitTestRequest.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
+#include "PlatformKeyboardEvent.h"
 #include "ScrollTypes.h"
 #include "TextEventInputType.h"
 #include "TextGranularity.h"
@@ -39,6 +40,9 @@
 #include <wtf/Forward.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Vector.h>
+#include <platform/Timer.h>
+#include <string>
 
 #if PLATFORM(MAC) && !defined(__OBJC__)
 class NSView;
@@ -90,6 +94,37 @@ extern const int GeneralDragHysteresis;
 
 enum HitTestScrollbars { ShouldHitTestScrollbars, DontHitTestScrollbars };
 
+// WebERA: Deferred event queue
+enum EventType { MousePressEvent, MouseReleaseEvent, MouseMoveEvent, KeystrokeEvent, MouseWheelEvent };
+
+typedef struct DeferredPlatformEvent_t {
+
+    EventType type;
+    std::string name;
+
+    PlatformMouseEvent mouseEvent;
+    PlatformKeyboardEvent keyboardEvent;
+    PlatformWheelEvent wheelEvent;
+
+} DeferredPlatformEvent;
+
+/**
+ * WebERA:
+ *
+ * This is the first class to receive and handle user interactions in WebKit. To allow monitoring and generation of
+ * schedules based on real user interaction we modify this class in the following way:
+ *
+ * - Mouse presses, releases and movements (mouse down, up, move, and click events), scroll, and wheelscroll
+ *   are deferred and registered as timers in ThreadTimers
+ * - Key input events are deferred and registered as timers in ThreadTimers
+ *
+ * Note, a huge number of move events are generated. However, we want to have at least some of these becaue they
+ * generate both move and mouseover/out events. For illustrative purposes we could try to filter out some of these
+ * events when creating the schedule (if the schedule should be readable by humans).
+ *
+ * TODO(WebERA): Update naming of timers such that they can be recreated 100% using the schedule alone and not the "controlled replay" technique
+ *
+ */
 class EventHandler {
     WTF_MAKE_NONCOPYABLE(EventHandler);
 public:
@@ -151,14 +186,18 @@ public:
     bool tabsToAllFormControls(KeyboardEvent*) const;
 
     bool mouseMoved(const PlatformMouseEvent&);
+    bool mouseMovedDeferred(const PlatformMouseEvent&);
     bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
 
     void lostMouseCapture();
 
     bool handleMousePressEvent(const PlatformMouseEvent&);
+    bool handleMousePressEventDeferred(const PlatformMouseEvent&);
     bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* hoveredNode = 0, bool onlyUpdateScrollbars = false);
     bool handleMouseReleaseEvent(const PlatformMouseEvent&);
+    bool handleMouseReleaseEventDeferred(const PlatformMouseEvent&);
     bool handleWheelEvent(const PlatformWheelEvent&);
+    bool handleWheelEventDeferred(const PlatformWheelEvent&);
     void defaultWheelEventHandler(Node*, WheelEvent*);
 
 #if ENABLE(GESTURE_EVENTS)
@@ -183,6 +222,7 @@ public:
 
     static unsigned accessKeyModifiers();
     bool handleAccessKey(const PlatformKeyboardEvent&);
+    bool keyEventDeferred(const PlatformKeyboardEvent&);
     bool keyEvent(const PlatformKeyboardEvent&);
     void defaultKeyboardEventHandler(KeyboardEvent*);
 
@@ -444,6 +484,13 @@ private:
 #endif
     double m_maxMouseMovedDuration;
     PlatformEvent::Type m_baseEventType;
+
+    // WebERA
+    WTF::Vector<DeferredPlatformEvent> m_deferredEventQueue;
+    Timer<EventHandler> m_deferredEventTimer;
+
+    void deferredEventTimerFired(Timer<EventHandler>*);
+    void scheduleEvent(DeferredPlatformEvent event);
 };
 
 } // namespace WebCore
