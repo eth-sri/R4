@@ -32,7 +32,9 @@
 #include "Timer.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
+#include <wtf/Vector.h>
 #include <stdio.h>
+#include <iostream>
 
 using namespace std;
 
@@ -55,9 +57,20 @@ static MainThreadSharedTimer* mainThreadSharedTimer()
 ThreadTimers::ThreadTimers()
     : m_sharedTimer(0)
     , m_firingTimers(false)
+    , m_scheduleWaits(0)
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
+
+    m_schedule.open("/tmp/input");
+    nextScheduledEvent(); // read the first event in the schedule
+}
+
+ThreadTimers::~ThreadTimers()
+{
+    if (m_schedule.is_open()) {
+        m_schedule.close();
+    }
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.
@@ -104,41 +117,91 @@ void ThreadTimers::sharedTimerFiredInternal()
     double fireTime = monotonicallyIncreasingTime();
     double timeToQuit = fireTime + maxDurationOfFiringTimers;
 
-    while (!m_timerHeap.isEmpty() && m_timerHeap.first()->m_nextFireTime <= fireTime) {
-        TimerBase* timer = m_timerHeap.first();
-        timer->m_nextFireTime = 0;
-        timer->heapDeleteMin();
+    if (inReplayMode()) {
 
-        // TODO(WebERA): decide if a timer should not be delayed instead if firing depending
-        // on its name.
+        while (true) {
 
-        double interval = timer->repeatInterval();
-        timer->setNextFireTime(interval ? fireTime + interval : 0);
+            TimerBase* timer = getTimerForNextEvent();
 
-        // WebERA: Denote that currently a timer with a given name is executed.
-        int timerNameIndex = timer->m_timerName;
-        threadGlobalData().threadTimers().setCurrentTimerNameIndex(timerNameIndex);
-        if (timerNameIndex != -1) {
-        	fprintf(stderr, "Timer %s fires {\n",
-        			threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
-        } else {
-            fprintf(stderr, "Timer UNKNOWN fires {\n");
+            if (timer == NULL || timer->m_nextFireTime > fireTime) {
+                // timer not registered yet or should not be fired yet...
+
+//                if (m_scheduleWaits > 500) { // TODO(WebERA) 500 is an arbitrary magic number, reason about a good number
+//                    std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
+//                    std::cerr << "This is the current queue of events" << std::endl;
+//                    debugPrintTimers();
+
+//                    std::exit(1);
+//                }
+
+                m_scheduleWaits++;
+                break;
+            }
+
+            m_scheduleWaits = 0;
+
+            debugPrintTimers();
+
+            timer->m_nextFireTime = 0;
+            timer->heapDelete();
+
+            // TODO(WebERA): decide if a timer should not be delayed instead if firing depending
+            // on its name.
+
+            double interval = timer->repeatInterval();
+            timer->setNextFireTime(interval ? fireTime + interval : 0);
+
+            // WebERA: Denote that currently a timer with a given name is executed.
+            int timerNameIndex = timer->m_timerName;
+            threadGlobalData().threadTimers().setCurrentTimerNameIndex(timerNameIndex);
+
+            ASSERT(timerNameIndex != -1);
+            fprintf(stdout, "REPEAT: %s\n", threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+
+            // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
+            timer->fired();
+
+            // WebERA: Denote that currently a timer with a given name is executed.
+            threadGlobalData().threadTimers().setCurrentTimerNameIndex(-2);
+
+            nextScheduledEvent();
+
+            // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
+            if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())
+                break;
         }
 
-        // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
-        timer->fired();
+    } else {
 
-        // WebERA: Denote that currently a timer with a given name is executed.
-        if (timerNameIndex != -1) {
-        	fprintf(stderr, "} // %s\n", threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
-        } else {
-            fprintf(stderr, "} // UNKNOWN \n");
+        while (!m_timerHeap.isEmpty() && m_timerHeap.first()->m_nextFireTime <= fireTime) {
+            TimerBase* timer = m_timerHeap.first();
+            timer->m_nextFireTime = 0;
+            timer->heapDeleteMin();
+
+            // TODO(WebERA): decide if a timer should not be delayed instead if firing depending
+            // on its name.
+
+            double interval = timer->repeatInterval();
+            timer->setNextFireTime(interval ? fireTime + interval : 0);
+
+            // WebERA: Denote that currently a timer with a given name is executed.
+            int timerNameIndex = timer->m_timerName;
+            threadGlobalData().threadTimers().setCurrentTimerNameIndex(timerNameIndex);
+
+            ASSERT(timerNameIndex != -1);
+            fprintf(stderr, "%s\n", threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+
+            // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
+            timer->fired();
+
+            // WebERA: Denote that currently a timer with a given name is executed.
+            threadGlobalData().threadTimers().setCurrentTimerNameIndex(-2);
+
+            // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
+            if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())
+                break;
         }
-        threadGlobalData().threadTimers().setCurrentTimerNameIndex(-2);
 
-        // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
-        if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())
-            break;
     }
 
     m_firingTimers = false;
@@ -151,6 +214,56 @@ void ThreadTimers::fireTimersInNestedEventLoop()
     // Reset the reentrancy guard so the timers can fire again.
     m_firingTimers = false;
     updateSharedTimer();
+}
+
+std::string ThreadTimers::currentScheduledEvent()
+{
+    return m_nextEventName;
+}
+
+void ThreadTimers::nextScheduledEvent()
+{
+    if (m_schedule.is_open() && m_schedule.good()) {
+         getline(m_schedule, m_nextEventName);
+    } else {
+        m_nextEventName = "__EOS__";
+    }
+}
+
+bool ThreadTimers::inReplayMode()
+{
+    return m_schedule.is_open() && m_schedule.good();
+}
+
+TimerBase* ThreadTimers::getTimerForNextEvent()
+{
+    std::string nextEventName = currentScheduledEvent();
+    int nextEventNameInt = threadGlobalData().threadTimers().timerNames()->addString(nextEventName.c_str());
+
+    for(Vector<TimerBase*>::iterator it = m_timerHeap.begin(); it != m_timerHeap.end(); ++it) {
+        if ((*it)->m_timerName == nextEventNameInt) {
+            return *it;
+        }
+    }
+
+    return NULL;
+}
+
+void ThreadTimers::debugPrintTimers()
+{
+    std::string nextEventName = currentScheduledEvent();
+    int nextEventNameInt = threadGlobalData().threadTimers().timerNames()->addString(nextEventName.c_str());
+
+   // StringSet* s = threadGlobalData().threadTimers().timerNames();
+    //nextEventNameInt = s->findString(nextEventName.c_str());
+
+    std::cout << "=========== TIMERS ===========" << std::endl;
+    std::cout << "NEXT -> (" << nextEventNameInt << ") " << nextEventName << std::endl << std::endl;
+
+    for(Vector<TimerBase*>::iterator it = m_timerHeap.begin(); it != m_timerHeap.end(); ++it) {
+        std::cout << "(" << (*it)->m_timerName << ") " << threadGlobalData().threadTimers().timerNames()->getString((*it)->m_timerName) << std::endl;
+    }
+
 }
 
 } // namespace WebCore

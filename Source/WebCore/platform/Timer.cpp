@@ -201,6 +201,9 @@ TimerBase::TimerBase()
     , m_thread(currentThread())
 #endif
 {
+    // TODO(WebERA) set default name - this is a hack to ease writing and loading of schedule files.
+    // Decide if we want to mix names and "NULL" names or just have a default "NULL" name (string based).
+    setTimerName("UNNAMED_TIMER");
 }
 
 TimerBase::~TimerBase()
@@ -344,18 +347,6 @@ void TimerBase::setNextFireTime(double newTime)
             heapDecreaseKey();
         else
             heapIncreaseKey();
-
-        // DEBUG(WebERA)
-        if (m_timerName != -1) {
-        	// WTFReportBacktrace();
-        	const char* name = threadGlobalData().threadTimers().timerNames()->getString(m_timerName);
-            if (oldTime == 0)
-            	fprintf(stderr, "  Add timer: %s\n", name);
-            else if (newTime == 0)
-            	fprintf(stderr, "  Remove timer: %s\n", name);
-            else if (newTime < oldTime)
-            	fprintf(stderr, "  Modify timer: %s\n", name);
-        }
 
         bool isFirstTimerInHeap = m_heapIndex == 0;
 

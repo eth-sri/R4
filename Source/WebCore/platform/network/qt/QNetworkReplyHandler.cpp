@@ -417,7 +417,7 @@ QNetworkReplyHandler::QNetworkReplyHandler(ResourceHandle* handle, LoadType load
     m_finishedDelayTimer.setTimerName(finishedName.c_str());
     m_failureDelayTimer.setTimerName(failureName.c_str());
     m_responseDelayTimer.setTimerName(responseName.c_str());
-    m_responseDelayTimer.setTimerName(requestName.c_str());
+    m_requestDelayTimer.setTimerName(requestName.c_str());
     m_dataReceivedDelayTimer.setTimerName(dataName.c_str());
     m_dataSentDelayTimer.setTimerName(uploadName.c_str());
 }
