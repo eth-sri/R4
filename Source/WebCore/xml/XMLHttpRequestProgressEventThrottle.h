@@ -41,6 +41,12 @@ enum ProgressEventAction {
     FlushProgressEvent
 };
 
+/**
+  TODO(WebERA) Should we disable the progress event throttle? If we add the right happens-before relations then I don't think this is a problem.
+               However it would be easier to reason about the behaviour of the system without the throttle.
+
+  **/
+
 // This implements the XHR2 progress event dispatching: "dispatch a progress event called progress
 // about every 50ms or for every byte received, whichever is least frequent".
 class XMLHttpRequestProgressEventThrottle : public TimerBase {

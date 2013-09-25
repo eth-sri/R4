@@ -47,6 +47,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/Vector.h>
+#include <string>
 
 using namespace WTF;
 
@@ -765,6 +766,10 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
     , m_client(client)
     , m_callbackTimer(this, &CachedResourceCallback::timerFired)
 {
+    // WebERA: This callback is used when loading cached resources
+    std::string name = std::string("CachedResourceCallback(") + resource->url().string().ascii().data() + ")";
+    m_callbackTimer.setTimerName(name.c_str());
+
     m_callbackTimer.startOneShot(0);
 }
 

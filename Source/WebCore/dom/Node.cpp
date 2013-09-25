@@ -107,6 +107,8 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
+#include <iostream>
+
 #if ENABLE(INSPECTOR)
 #include "InspectorController.h"
 #endif
@@ -2797,6 +2799,24 @@ bool Node::dispatchMouseEvent(const PlatformMouseEvent& event, const AtomicStrin
     int detail, Node* relatedTarget)
 {
     return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(eventType, document()->defaultView(), event, detail, relatedTarget)));
+}
+
+void Node::queueMouseEvent(const PlatformMouseEvent& event, const AtomicString& eventType,
+    int detail, Node* relatedTarget) {
+
+    // WebERA: A deferred alternative to dispatchMouseEvent, useful if we wan't to trigger events programatically
+
+    m_deferredEvent = event;
+    m_deferredEventType = (AtomicString)eventType;
+    m_deferredDetail = detail;
+    m_deferredRelatedTarget = relatedTarget;
+
+    m_deferMouseEventsTimer.startOneShot(0);
+}
+
+void Node::dispatchMouseEventDeferred(Timer<Node>*)
+{
+    EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(m_deferredEventType, document()->defaultView(), m_deferredEvent, m_deferredDetail, m_deferredRelatedTarget)));
 }
 
 void Node::dispatchSimulatedClick(PassRefPtr<Event> event, bool sendMouseEvents, bool showPressedLook)
