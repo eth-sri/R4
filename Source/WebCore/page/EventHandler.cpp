@@ -318,12 +318,16 @@ EventHandler::EventHandler(Frame* frame)
 #endif
     , m_maxMouseMovedDuration(0)
     , m_baseEventType(PlatformEvent::NoType)
+    , m_deferredEventTimer(this, &EventHandler::deferredEventTimerFired)
 {
 }
 
 EventHandler::~EventHandler()
 {
     ASSERT(!m_fakeMouseMoveEventTimer.isActive());
+    if (m_deferredEventTimer.isActive()) {
+        m_deferredEventTimer.stop();
+    }
 }
     
 #if ENABLE(DRAG_SUPPORT)
@@ -1479,6 +1483,18 @@ Node* EventHandler::targetNode(const HitTestResult& hitTestResult)
 
 bool EventHandler::handleMousePressEvent(const PlatformMouseEvent& mouseEvent)
 {
+    DeferredPlatformEvent event;
+    event.type = MousePressEvent;
+    event.mouseEvent = mouseEvent;
+    event.name = "EventHandler(MousePressEvent)";
+
+    scheduleEvent(event);
+
+    return false;
+}
+
+bool EventHandler::handleMousePressEventDeferred(const PlatformMouseEvent& mouseEvent)
+{
     RefPtr<FrameView> protector(m_frame->view());
 
 #if ENABLE(TOUCH_EVENTS)
@@ -1669,7 +1685,19 @@ static RenderLayer* layerForNode(Node* node)
     return layer;
 }
 
-bool EventHandler::mouseMoved(const PlatformMouseEvent& event)
+bool EventHandler::mouseMoved(const PlatformMouseEvent& mouseEvent)
+{
+    DeferredPlatformEvent event;
+    event.type = MouseMoveEvent;
+    event.mouseEvent = mouseEvent;
+    event.name = "EventHandler(MouseMoveEvent)";
+
+    scheduleEvent(event);
+
+    return false;
+}
+
+bool EventHandler::mouseMovedDeferred(const PlatformMouseEvent& event)
 {
     MaximumDurationTracker maxDurationTracker(&m_maxMouseMovedDuration);
     RefPtr<FrameView> protector(m_frame->view());
@@ -1826,6 +1854,18 @@ void EventHandler::invalidateClick()
 }
 
 bool EventHandler::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent)
+{
+    DeferredPlatformEvent event;
+    event.type = MouseReleaseEvent;
+    event.mouseEvent = mouseEvent;
+    event.name = "EventHandler(MouseReleaseEvent)";
+
+    scheduleEvent(event);
+
+    return false;
+}
+
+bool EventHandler::handleMouseReleaseEventDeferred(const PlatformMouseEvent& mouseEvent)
 {
     RefPtr<FrameView> protector(m_frame->view());
 
@@ -2285,6 +2325,20 @@ bool EventHandler::shouldTurnVerticalTicksIntoHorizontal(const HitTestResult&) c
 
 bool EventHandler::handleWheelEvent(const PlatformWheelEvent& e)
 {
+    // WebERA: deferred event
+
+    DeferredPlatformEvent event;
+    event.type = MouseWheelEvent;
+    event.wheelEvent = e;
+    event.name = "EventHandler(WheelEvent)";
+
+    scheduleEvent(event);
+
+    return false;
+}
+
+bool EventHandler::handleWheelEventDeferred(const PlatformWheelEvent& e)
+{
     Document* doc = m_frame->document();
 
     RenderObject* docRenderer = doc->renderer();
@@ -2736,6 +2790,20 @@ bool EventHandler::isKeyEventAllowedInFullScreen(const PlatformKeyboardEvent& ke
 
 bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
 {
+    DeferredPlatformEvent event;
+    event.type = KeystrokeEvent;
+    event.keyboardEvent = initialKeyEvent;
+    event.name = "EventHandler(KeyEvent)";
+
+    scheduleEvent(event);
+
+    return false;
+}
+
+bool EventHandler::keyEventDeferred(const PlatformKeyboardEvent& initialKeyEvent)
+{
+    // WebERA: deferred event
+
     RefPtr<FrameView> protector(m_frame->view()); 
 
 #if ENABLE(FULLSCREEN_API)
@@ -3613,5 +3681,50 @@ bool EventHandler::dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent
 }
 
 #endif
+
+void EventHandler::deferredEventTimerFired(Timer<EventHandler>* timer)
+{
+    DeferredPlatformEvent currentEvent = m_deferredEventQueue.first();
+    m_deferredEventQueue.remove(0);
+
+    // handling
+
+    switch (currentEvent.type) {
+    case MousePressEvent:
+        handleMousePressEventDeferred(currentEvent.mouseEvent);
+        break;
+    case MouseReleaseEvent:
+        handleMouseReleaseEventDeferred(currentEvent.mouseEvent);
+        break;
+    case MouseMoveEvent:
+        mouseMovedDeferred(currentEvent.mouseEvent);
+        break;
+    case KeystrokeEvent:
+        keyEventDeferred(currentEvent.keyboardEvent);
+        break;
+    case MouseWheelEvent:
+        handleWheelEventDeferred(currentEvent.wheelEvent);
+        break;
+    }
+
+    // reschedule
+    if (!m_deferredEventQueue.isEmpty()) {
+        DeferredPlatformEvent nextEvent = m_deferredEventQueue.first();
+
+        m_deferredEventTimer.setTimerName(nextEvent.name.c_str());
+        m_deferredEventTimer.startOneShot(0);
+    }
+}
+
+void EventHandler::scheduleEvent(DeferredPlatformEvent event)
+{
+    m_deferredEventQueue.append(event);
+
+    // reschedule
+    if (!m_deferredEventTimer.isActive()) {
+        m_deferredEventTimer.setTimerName(event.name.c_str());
+        m_deferredEventTimer.startOneShot(0);
+    }
+}
 
 }
