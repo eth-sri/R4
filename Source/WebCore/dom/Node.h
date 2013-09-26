@@ -817,17 +817,6 @@ protected:
     void setItemType(const String&);
 #endif
 
-private:
-    void dispatchMouseEventDeferred(Timer<Node>*);
-
-    // TODO(WebERA): The deferred *events should be moved out into their own objects, such that
-    // more than one deferred event can exist at one time.
-    PlatformMouseEvent m_deferredEvent;
-    AtomicString m_deferredEventType;
-    int m_deferredDetail;
-    Node* m_deferredRelatedTarget; // assuming that this pointer exists as long as this node exists
-
-    Timer<Node> m_deferMouseEventsTimer;
 };
 
 // Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()

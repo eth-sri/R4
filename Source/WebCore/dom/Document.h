@@ -1517,10 +1517,7 @@ inline Node::Node(Document* document, ConstructionType type)
     , m_previous(0)
     , m_next(0)
     , m_renderer(0)
-    , m_deferMouseEventsTimer(this, &Node::dispatchMouseEventDeferred)
 {
-    m_deferMouseEventsTimer.setTimerName("Node(MouseEvent)");
-
     if (document)
         document->guardRef();
 #if !defined(NDEBUG) || (defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS)

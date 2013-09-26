@@ -143,10 +143,7 @@ void ThreadTimers::sharedTimerFiredInternal()
             debugPrintTimers();
 
             timer->m_nextFireTime = 0;
-            timer->heapDelete();
-
-            // TODO(WebERA): decide if a timer should not be delayed instead if firing depending
-            // on its name.
+            //timer->heapDelete();
 
             double interval = timer->repeatInterval();
             timer->setNextFireTime(interval ? fireTime + interval : 0);
@@ -224,7 +221,7 @@ std::string ThreadTimers::currentScheduledEvent()
 void ThreadTimers::nextScheduledEvent()
 {
     if (m_schedule.is_open() && m_schedule.good()) {
-         getline(m_schedule, m_nextEventName);
+    	getline(m_schedule, m_nextEventName);
     } else {
         m_nextEventName = "__EOS__";
     }
