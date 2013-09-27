@@ -337,16 +337,16 @@ void TimerBase::setNextFireTime(double newTime)
             heapIncreaseKey();
 
         // DEBUG(WebERA)
-        if (m_eventActionDescriptor.isNull()) {
-        	// WTFReportBacktrace();
-            std::string name = m_eventActionDescriptor.getDescription();
-            if (oldTime == 0)
-                fprintf(stderr, "  Add timer: %s\n", name.c_str());
-            else if (newTime == 0)
-                fprintf(stderr, "  Remove timer: %s\n", name.c_str());
-            else if (newTime < oldTime)
-                fprintf(stderr, "  Modify timer: %s\n", name.c_str());
-        }
+//        if (m_eventActionDescriptor.isNull()) {
+//        	// WTFReportBacktrace();
+//            std::string name = m_eventActionDescriptor.getDescription();
+//            if (oldTime == 0)
+//                fprintf(stderr, "  Add timer: %s\n", name.c_str());
+//            else if (newTime == 0)
+//                fprintf(stderr, "  Remove timer: %s\n", name.c_str());
+//            else if (newTime < oldTime)
+//                fprintf(stderr, "  Modify timer: %s\n", name.c_str());
+//        }
 
         bool isFirstTimerInHeap = m_heapIndex == 0;
 

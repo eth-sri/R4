@@ -47,6 +47,12 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/Vector.h>
+#include <string>
+
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 
 using namespace WTF;
 
@@ -765,7 +771,17 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
     , m_client(client)
     , m_callbackTimer(this, &CachedResourceCallback::timerFired)
 {
+    // WebERA: This callback is used when loading cached resources
+    std::string name = std::string("CachedResourceCallback(") + resource->url().string().ascii().data() + ")";
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(name);
+
+    m_callbackTimer.setEventActionDescriptor(descriptor);
     m_callbackTimer.startOneShot(0);
+
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                descriptor);
 }
 
 void CachedResource::CachedResourceCallback::cancel()

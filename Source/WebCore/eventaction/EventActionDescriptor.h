@@ -38,12 +38,16 @@ namespace WebCore {
         bool isNull() const { return m_isNull; }
 
         std::string getDescription() const;
+        int getDescriptionIndex() const { return m_descriptionIndex; }
 
         bool operator==(const EventActionDescriptor &other) const;
 
-    private:
+        static EventActionDescriptor null;
 
+        // TODO(WebERA): Make this private...
         static StringSet* descriptions() { return &EventActionDescriptor::m_descriptions; }
+
+    private:
         static StringSet m_descriptions;
 
         unsigned long m_id;

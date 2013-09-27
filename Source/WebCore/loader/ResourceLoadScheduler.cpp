@@ -123,18 +123,26 @@ void ResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader, Resourc
     }
 
     HostInformation* host = hostForURL(resourceLoader->url(), CreateIfNotFound);    
-    bool hadRequests = host->hasRequests();
+    //bool hadRequests = host->hasRequests(); // WebERA: unused variable
     host->schedule(resourceLoader, priority);
 
-    if (priority > ResourceLoadPriorityLow || !resourceLoader->url().protocolIsInHTTPFamily() || (priority == ResourceLoadPriorityLow && !hadRequests)) {
-        // Try to request important resources immediately.
-        servePendingRequests(host, priority);
-        return;
-    }
+    // WebERA: This disables the deferred sending of some requests.
+    // We control all other aspects of request handling (in particular all events that inform WebKit of the
+    // status of the requests).
+    //
+    // By disabling this we remove potential problems arising by multiple requests creating one or more
+    // timer events depending on when we trigger the ServePendingRequests event.
+    servePendingRequests();
 
-    // Handle asynchronously so early low priority requests don't get scheduled before later high priority ones.
-    InspectorInstrumentation::didScheduleResourceRequest(resourceLoader->frameLoader() ? resourceLoader->frameLoader()->frame()->document() : 0, resourceLoader->url());
-    scheduleServePendingRequests();
+//    if (priority > ResourceLoadPriorityLow || !resourceLoader->url().protocolIsInHTTPFamily() || (priority == ResourceLoadPriorityLow && !hadRequests)) {
+//        // Try to request important resources immediately.
+//        servePendingRequests(host, priority);
+//        return;
+//    }
+
+//    // Handle asynchronously so early low priority requests don't get scheduled before later high priority ones.
+//    InspectorInstrumentation::didScheduleResourceRequest(resourceLoader->frameLoader() ? resourceLoader->frameLoader()->frame()->document() : 0, resourceLoader->url());
+//    scheduleServePendingRequests();
 }
 
 void ResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
@@ -144,7 +152,10 @@ void ResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
     HostInformation* host = hostForURL(resourceLoader->url());
     if (host)
         host->remove(resourceLoader);
-    scheduleServePendingRequests();
+
+    // WebERA: omit this timer and do serve the requests now
+    //scheduleServePendingRequests();
+    servePendingRequests();
 }
 
 void ResourceLoadScheduler::crossOriginRedirectReceived(ResourceLoader* resourceLoader, const KURL& redirectURL)
@@ -222,8 +233,11 @@ void ResourceLoadScheduler::resumePendingRequests()
     --m_suspendPendingRequestsCount;
     if (m_suspendPendingRequestsCount)
         return;
-    if (!m_hosts.isEmpty() || m_nonHTTPProtocolHost->hasRequests())
-        scheduleServePendingRequests();
+    if (!m_hosts.isEmpty() || m_nonHTTPProtocolHost->hasRequests()) {
+        // WebERA: omit this timer and do serve the requests now
+        //scheduleServePendingRequests();
+        servePendingRequests();
+    }
 }
     
 void ResourceLoadScheduler::scheduleServePendingRequests()

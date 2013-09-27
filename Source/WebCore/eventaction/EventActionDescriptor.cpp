@@ -26,6 +26,7 @@
 namespace WebCore {
 
 StringSet EventActionDescriptor::m_descriptions;
+EventActionDescriptor EventActionDescriptor::null;
 
 EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& description)
     : m_id(id)

@@ -50,7 +50,7 @@ namespace WebCore {
 
         const EventActionDescriptor& lastEventActionDispatched() const
         {
-            return m_schedule.last();
+            return m_schedule.isEmpty() ? EventActionDescriptor::null : m_schedule.last();
         }
 
     private:

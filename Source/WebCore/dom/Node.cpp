@@ -107,6 +107,9 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
+
+#include <iostream>
+
 #if ENABLE(INSPECTOR)
 #include "InspectorController.h"
 #endif
@@ -2797,6 +2800,53 @@ bool Node::dispatchMouseEvent(const PlatformMouseEvent& event, const AtomicStrin
     int detail, Node* relatedTarget)
 {
     return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(eventType, document()->defaultView(), event, detail, relatedTarget)));
+}
+
+class DeferredMouseEventDispatcher {
+public:
+	DeferredMouseEventDispatcher(
+			const PlatformMouseEvent& event,
+			const AtomicString& eventType,
+		    int detail,
+		    Node* relatedTarget)
+		: m_event(event)
+		, m_eventType(eventType)
+		, m_detail(detail)
+		, m_relatedTarget(relatedTarget)
+		, m_timer(this, &DeferredMouseEventDispatcher::dispatchMouseEventDeferred) {
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor("DeferredMouseEvent");
+
+        m_timer.setEventActionDescriptor(descriptor);
+		m_timer.startOneShot(0);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
+	}
+
+protected:
+	void dispatchMouseEventDeferred(Timer<DeferredMouseEventDispatcher>*) {
+		// TODO(WebERA): Using actual object pointers is dangerous (they may be deleted or inactive already).
+		// We want to serialize and then deserialize.
+		// TODO(WebERA): Actually dispatch the event.
+		//EventDispatcher::dispatchEvent(m_relatedTarget, m_event, sendMouseEvents, showPressedLook);
+
+		delete this;  // This is OK. Timers are designed to work if the delete is the last statement of a fire method.
+	}
+
+	const PlatformMouseEvent& m_event;
+	const AtomicString& m_eventType;
+	int m_detail;
+	Node* m_relatedTarget;
+	Timer<DeferredMouseEventDispatcher> m_timer;
+};
+
+void Node::queueMouseEvent(const PlatformMouseEvent& event, const AtomicString& eventType,
+    int detail, Node* relatedTarget) {
+
+    // WebERA: A deferred alternative to dispatchMouseEvent, useful if we wan't to trigger events programatically
+	new DeferredMouseEventDispatcher(event, eventType, detail, relatedTarget);
 }
 
 void Node::dispatchSimulatedClick(PassRefPtr<Event> event, bool sendMouseEvents, bool showPressedLook)

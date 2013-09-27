@@ -36,6 +36,8 @@
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/text/AtomicString.h>
+#include <WebCore/platform/Timer.h>
+#include <WebCore/platform/PlatformMouseEvent.h>
 
 #if USE(JSC)
 namespace JSC {
@@ -102,6 +104,14 @@ enum StyleChangeType {
     SyntheticStyleChange = 3 << nodeStyleChangeShift
 };
 
+/**
+ * WebERA:
+ *
+ * A number of queue*Event methods have been added for programatically dispatching events using
+ * timers registered in ThreadTimers.
+ *
+ * TODO(WebERA): Add missing queue*Event methods
+ */
 class Node : public EventTarget, public ScriptWrappable, public TreeShared<ContainerNode> {
     friend class Document;
     friend class TreeScope;
@@ -599,6 +609,7 @@ public:
     bool dispatchKeyEvent(const PlatformKeyboardEvent&);
     bool dispatchWheelEvent(const PlatformWheelEvent&);
     bool dispatchMouseEvent(const PlatformMouseEvent&, const AtomicString& eventType, int clickCount = 0, Node* relatedTarget = 0);
+    void queueMouseEvent(const PlatformMouseEvent&, const AtomicString& eventType, int clickCount = 0, Node* relatedTarget = 0);
     void dispatchSimulatedClick(PassRefPtr<Event> underlyingEvent, bool sendMouseEvents = false, bool showPressedLook = true);
     bool dispatchBeforeLoadEvent(const String& sourceURL);
 
@@ -805,6 +816,7 @@ protected:
     void setItemRef(const String&);
     void setItemType(const String&);
 #endif
+
 };
 
 // Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()

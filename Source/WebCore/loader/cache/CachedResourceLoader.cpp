@@ -52,6 +52,10 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 #if ENABLE(VIDEO_TRACK)
 #include "CachedTextTrack.h"
 #endif
@@ -119,6 +123,10 @@ CachedResourceLoader::CachedResourceLoader(Document* document)
     , m_autoLoadImages(true)
     , m_allowStaleResources(false)
 {
+    // WebERA: We can ignore this timer, however we still give it a name distinguish it from other timers
+    m_garbageCollectDocumentResourcesTimer.setEventActionDescriptor(
+                threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor("CachedResourceLoaderGC()")
+    );
 }
 
 CachedResourceLoader::~CachedResourceLoader()

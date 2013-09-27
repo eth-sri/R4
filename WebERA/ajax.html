@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Test file without any timers (setinterval, settimeout) -->
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+	<title>Caper Svenning Jensen</title>
+	<meta name="author" content="Caper Svenning Jensen">
+
+	<script type="text/javascript">
+          var resource = 0;
+
+          var func = function(get_resource) {
+		var xhr = new XMLHttpRequest();
+		
+		xhr.onreadystatechange = function(e) {
+			if (xhr.readyState == 4) { // DONE
+                             resource = get_resource;
+			}
+		};
+		
+		xhr.open("GET", "resource.json", true);
+		xhr.send();
+          }
+
+//          func(1);
+//        func(2);
+	</script>
+
+</head>
+<body>
+<input type="button" onclick="func(0);" value="do" />
+</body>
+</html>
