@@ -24,6 +24,8 @@
 #ifndef EventActionSchedule_h
 #define EventActionSchedule_h
 
+#include <string>
+
 #include <wtf/Noncopyable.h>
 #include <wtf/ExportMacros.h>
 #include <wtf/Vector.h>
@@ -39,17 +41,21 @@ namespace WebCore {
         EventActionSchedule();
         ~EventActionSchedule();
 
-        EventActionDescriptor allocateEventDescriptor(int descriptionIndex);
+        EventActionDescriptor allocateEventDescriptor(const std::string& description);
 
-        void addToSchedule(const EventActionDescriptor& descriptor)
+        void eventActionDispatched(const EventActionDescriptor& descriptor)
         {
             m_schedule.append(descriptor);
+        }
+
+        const EventActionDescriptor& lastEventActionDispatched() const
+        {
+            return m_schedule.last();
         }
 
     private:
 
         WTF::Vector<EventActionDescriptor> m_schedule;
-
         unsigned long m_nextEventActionDescriptorId;
     };
 

@@ -29,6 +29,8 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Threading.h>
 
+#include <eventaction/EventActionDescriptor.h>
+
 namespace WebCore {
 
 // Time intervals are all in seconds.
@@ -43,6 +45,7 @@ public:
 
     void start(double nextFireInterval, double repeatInterval);
 
+    // TODO(WebERA): Repeating timers should be split up into multiple descriptors or?
     void startRepeating(double repeatInterval) { start(repeatInterval, repeatInterval); }
     void startOneShot(double interval) { start(interval, 0); }
 
@@ -57,9 +60,11 @@ public:
 
     static void fireTimersInNestedEventLoop();
 
-    // WebERA: Give a name to the timer. The WebERA system may delay a tiemr depending on its name.
-    // Note: once a timer fires, changing the name will only affect future timer fires.
-    void setTimerName(const char* timerName);
+    // WebERA: Mark this timer as a representative for an event action.
+    // The WebERA system may delay a tiemr depending on the event action.
+    // Note: once a timer fires, changing the descriptor will only affect future timer fires.
+    void setEventActionDescriptor(const EventActionDescriptor& descriptor) { m_eventActionDescriptor = descriptor; }
+    const EventActionDescriptor& eventActionDescriptor() const { return m_eventActionDescriptor; }
 
 private:
     virtual void fired() = 0;
@@ -84,7 +89,7 @@ private:
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
 
-    int m_timerName;
+    EventActionDescriptor m_eventActionDescriptor;
 
 #ifndef NDEBUG
     ThreadIdentifier m_thread;

@@ -51,18 +51,6 @@ namespace WebCore {
 
         Vector<TimerBase*>& timerHeap() { return m_timerHeap; }
 
-        // WebERA: A list of names of timers.
-        StringSet* timerNames() { return &m_timerNames; }
-
-        // WebERA:
-        // The index of the name (index in timerNames()) of the timer that currently executes.
-        // The value -2 means that a timer is currently not executed. A value -1 means that an
-        // unnamed timer executes.
-        int getCurrentTimerNameIndex() { return m_currentTimerNameIndex; }
-        void setCurrentTimerNameIndex(int currentTimerNameIndex) {
-        	m_currentTimerNameIndex = currentTimerNameIndex;
-        }
-
         // WebERA:
         EventActionSchedule& eventActionSchedule() { return m_eventActionSchedule; }
         EventActionsHB& eventActionsHB() { return m_eventActionsHB; }
@@ -81,8 +69,6 @@ namespace WebCore {
         bool m_firingTimers; // Reentrancy guard.
 
         // WebERA
-        StringSet m_timerNames;
-        int m_currentTimerNameIndex;
         EventActionSchedule m_eventActionSchedule;
         EventActionsHB m_eventActionsHB;
     };

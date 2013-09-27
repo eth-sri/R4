@@ -116,25 +116,30 @@ void ThreadTimers::sharedTimerFiredInternal()
         timer->setNextFireTime(interval ? fireTime + interval : 0);
 
         // WebERA: Denote that currently a timer with a given name is executed.
-        int timerNameIndex = timer->m_timerName;
-        threadGlobalData().threadTimers().setCurrentTimerNameIndex(timerNameIndex);
-        if (timerNameIndex != -1) {
+
+        bool hasDescription = !timer->eventActionDescriptor().isNull();
+        std::string description = timer->eventActionDescriptor().getDescription();
+
+        if (hasDescription) {
         	fprintf(stderr, "Timer %s fires {\n",
-        			threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+                    description.c_str());
         } else {
             fprintf(stderr, "Timer UNKNOWN fires {\n");
         }
 
+        threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
+
         // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
         timer->fired();
 
+        threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(EventActionDescriptor());
+
         // WebERA: Denote that currently a timer with a given name is executed.
-        if (timerNameIndex != -1) {
-        	fprintf(stderr, "} // %s\n", threadGlobalData().threadTimers().timerNames()->getString(timerNameIndex));
+        if (hasDescription) {
+            fprintf(stderr, "} // %s\n", description.c_str());
         } else {
             fprintf(stderr, "} // UNKNOWN \n");
         }
-        threadGlobalData().threadTimers().setCurrentTimerNameIndex(-2);
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
         if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())

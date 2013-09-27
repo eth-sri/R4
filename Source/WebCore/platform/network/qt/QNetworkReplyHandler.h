@@ -120,16 +120,15 @@ private:
 /**
  * WebERA:
  *
- * // TODO read this through
- *
  * Change QNetworkReplyHandler such that we can control the loading of resources in a detailed manner.
  *
  * Roughly, incoming network data is processed as follows:
  * Qt network handing -> QNetworkReplyHandlerCallQueue -> QNetworkReplyHandler -> client
  *
  * We insert a delay between QNetworkReplyHandler and its client by registering timers in ThreadTimers. Each timer
- * is given a relevant name representing the event it is delaying. We also stop defer further processing of calls in
- * QNetworkReplyHandlerCallQueue until the current event has been fired.
+ * is given a relevant event action descriptor representing the event it is delaying.
+ *
+ * Further processing of network events are stopped in QNetworkReplyHandlerCallQueue until the current timer has fired.
  *
  * The following invariants are assumed:
  * (1) The URL of the requested resource is unique*
@@ -152,19 +151,6 @@ private:
  *     thus depending on when we process the queue the chunks extracted will be different.
  *
  */
-
-class QNetworkReplyHandlerData : public TimerBase
-{
-
-public:
-    QNetworkReplyHandlerData() {
-        this->setTimerName("QNetworkReplyHandler(DATA, <chunk-seq-number>, <url>)");
-    }
-
-    void fired() {
-
-    }
-};
 
 class QNetworkReplyHandler : public QObject
 {

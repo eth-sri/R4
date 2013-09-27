@@ -196,7 +196,6 @@ TimerBase::TimerBase()
     : m_nextFireTime(0)
     , m_repeatInterval(0)
     , m_heapIndex(-1)
-    , m_timerName(-1)
 #ifndef NDEBUG
     , m_thread(currentThread())
 #endif
@@ -207,14 +206,6 @@ TimerBase::~TimerBase()
 {
     stop();
     ASSERT(!inHeap());
-}
-
-void TimerBase::setTimerName(const char* timerName) {
-	if (timerName == NULL) {
-		m_timerName = -1;
-	} else {
-		m_timerName = threadGlobalData().threadTimers().timerNames()->addString(timerName);
-	}
 }
 
 void TimerBase::start(double nextFireInterval, double repeatInterval)
@@ -346,15 +337,15 @@ void TimerBase::setNextFireTime(double newTime)
             heapIncreaseKey();
 
         // DEBUG(WebERA)
-        if (m_timerName != -1) {
+        if (m_eventActionDescriptor.isNull()) {
         	// WTFReportBacktrace();
-        	const char* name = threadGlobalData().threadTimers().timerNames()->getString(m_timerName);
+            std::string name = m_eventActionDescriptor.getDescription();
             if (oldTime == 0)
-            	fprintf(stderr, "  Add timer: %s\n", name);
+                fprintf(stderr, "  Add timer: %s\n", name.c_str());
             else if (newTime == 0)
-            	fprintf(stderr, "  Remove timer: %s\n", name);
+                fprintf(stderr, "  Remove timer: %s\n", name.c_str());
             else if (newTime < oldTime)
-            	fprintf(stderr, "  Modify timer: %s\n", name);
+                fprintf(stderr, "  Modify timer: %s\n", name.c_str());
         }
 
         bool isFirstTimerInHeap = m_heapIndex == 0;

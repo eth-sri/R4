@@ -31,6 +31,10 @@
 #include "HTMLDocumentParser.h"
 #include "Page.h"
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 #include <iostream>
 #include <string>
 
@@ -71,7 +75,7 @@ HTMLParserScheduler::HTMLParserScheduler(HTMLDocumentParser* parser)
     , m_continueNextChunkTimer(this, &HTMLParserScheduler::continueNextChunkTimerFired)
     , m_isSuspendedWithActiveTimer(false)
 {
-    updateTimerName(); // WebERA
+    // TODO(WebERA-HB): The EventRacer implementation mentions an exception caused by a network request, should we add this?
 }
 
 HTMLParserScheduler::~HTMLParserScheduler()
@@ -85,8 +89,10 @@ void HTMLParserScheduler::continueNextChunkTimerFired(Timer<HTMLParserScheduler>
     // FIXME: The timer class should handle timer priorities instead of this code.
     // If a layout is scheduled, wait again to let the layout timer run first.
     if (m_parser->document()->isLayoutTimerActive()) {
+
         updateTimerName(); // WebERA
         m_continueNextChunkTimer.startOneShot(0);
+
         return;
     }
     m_parser->resumeParsingAfterYield();
@@ -124,6 +130,7 @@ void HTMLParserScheduler::resume()
     if (!m_isSuspendedWithActiveTimer)
         return;
     m_isSuspendedWithActiveTimer = false;
+
     updateTimerName(); // WebERA
     m_continueNextChunkTimer.startOneShot(0);
 }
@@ -131,7 +138,16 @@ void HTMLParserScheduler::resume()
 void HTMLParserScheduler::updateTimerName()
 {
     std::string name = "HTMLDocumentParser(" + m_parser->getPositionAsString() + ")";
-    m_continueNextChunkTimer.setTimerName(name.c_str());
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(name);
+
+    m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
+
+    // Add a happens before relation if we schedule a new fragment because of another action
+    // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                descriptor
+    );
 }
 
 }

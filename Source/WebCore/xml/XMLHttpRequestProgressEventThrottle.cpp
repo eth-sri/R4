@@ -27,6 +27,10 @@
 #include "config.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 #include "EventTarget.h"
 #include "XMLHttpRequestProgressEvent.h"
 
@@ -43,9 +47,6 @@ XMLHttpRequestProgressEventThrottle::XMLHttpRequestProgressEventThrottle(EventTa
 {
     ASSERT(target);
 
-    // TODO(WebERA) Select a better name for this timer
-    setTimerName("XMLHttpRequestProgressEventThrottle(BASE)");
-    m_dispatchDeferredEventsTimer.setTimerName("XMLHttpRequestProgressEventThrottle(DEFERRED)");
 }
 
 XMLHttpRequestProgressEventThrottle::~XMLHttpRequestProgressEventThrottle()
@@ -69,7 +70,19 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         ASSERT(!m_total);
 
         dispatchEvent(XMLHttpRequestProgressEvent::create(eventNames().progressEvent, lengthComputable, loaded, total));
+
+        // TODO(WebERA) Select a better name for this timer
+        std::string name = "XMLHttpRequestProgressEventThrottle(BASE)";
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(name);
+
+        setEventActionDescriptor(descriptor);
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
+
         return;
     }
 
@@ -206,7 +219,17 @@ void XMLHttpRequestProgressEventThrottle::resume()
     // the list of active DOM objects to resume them, and any activated JS event-handler
     // could insert new active DOM objects to the list.
     // m_deferEvents is kept true until all deferred events have been dispatched.
+
+    std::string deferredName = "XMLHttpRequestProgressEventThrottle(DEFERRED)";
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(deferredName);
+
+    m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
     m_dispatchDeferredEventsTimer.startOneShot(0);
+
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                descriptor);
 }
 
 } // namespace WebCore

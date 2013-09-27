@@ -34,6 +34,10 @@
 #include <QNetworkReply>
 #include <QNetworkCookie>
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 #include <wtf/text/CString.h>
 
 #include <QDebug>
@@ -404,22 +408,6 @@ QNetworkReplyHandler::QNetworkReplyHandler(ResourceHandle* handle, LoadType load
     m_request = r.toNetworkRequest(m_resourceHandle->getInternal()->m_context.get());
 
     m_queue.push(&QNetworkReplyHandler::start);
-
-    // WebERA set timer names for static timers (all except the data chunk timers)
-    std::string url =  m_request.url().toString().toAscii().data();
-    std::string finishedName = std::string("QNetworkReplyHandler(FINISHED, ") + url + ")";
-    std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
-    std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + url + ")";
-    std::string requestName = std::string("QNetworkReplyHandler(REQUEST, ") + url + ")";
-    std::string dataName = std::string("QNetworkReplyHandler(DATA, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
-    std::string uploadName = std::string("QNetworkReplyHandler(UPLOAD, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
-
-    m_finishedDelayTimer.setTimerName(finishedName.c_str());
-    m_failureDelayTimer.setTimerName(failureName.c_str());
-    m_responseDelayTimer.setTimerName(responseName.c_str());
-    m_responseDelayTimer.setTimerName(requestName.c_str());
-    m_dataReceivedDelayTimer.setTimerName(dataName.c_str());
-    m_dataSentDelayTimer.setTimerName(uploadName.c_str());
 }
 
 void QNetworkReplyHandler::abort()
@@ -474,12 +462,35 @@ void QNetworkReplyHandler::finish()
     if (!m_replyWrapper->reply()->error() || shouldIgnoreHttpError(m_replyWrapper->reply(), m_replyWrapper->responseContainsData())) {
         // WEbERA: delay
         m_queue.setDeferSignals(true, false);
+
+        std::string url =  m_request.url().toString().toAscii().data();
+        std::string finishedName = std::string("QNetworkReplyHandler(FINISHED, ") + url + ")";
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(finishedName);
+
+        m_finishedDelayTimer.setEventActionDescriptor(descriptor);
         m_finishedDelayTimer.startOneShot(0);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
+
     } else {
         // WebERA: delay
         m_deferredError = errorForReply(m_replyWrapper->reply());
         m_queue.setDeferSignals(true, false);
+
+        std::string url =  m_request.url().toString().toAscii().data();
+        std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(failureName);
+
+        m_failureDelayTimer.setEventActionDescriptor(descriptor);
         m_failureDelayTimer.startOneShot(0);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
     }
 }
 
@@ -510,7 +521,18 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         // WebERA: delay
         m_deferredResponse = response;
         m_queue.setDeferSignals(true, false);
+
+        std::string request_url =  m_request.url().toString().toAscii().data();
+        std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + request_url + ")";
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(responseName);
+
+        m_responseDelayTimer.setEventActionDescriptor(descriptor);
         m_responseDelayTimer.startOneShot(0);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
 
         //client->didReceiveResponse(m_resourceHandle, response);
 
@@ -545,7 +567,18 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
     // WebERA: delay
     m_deferredResponse = response;
     m_queue.setDeferSignals(true, false);
+
+    std::string request_url =  m_request.url().toString().toAscii().data();
+    std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + request_url + ")";
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(responseName);
+
+    m_responseDelayTimer.setEventActionDescriptor(descriptor);
     m_responseDelayTimer.startOneShot(0);
+
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                descriptor);
 
     //client->didReceiveResponse(m_resourceHandle, response);
 }
@@ -568,7 +601,18 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
         // WebERA: delay
         m_deferredError = error;
         m_queue.setDeferSignals(true, false);
+
+        std::string url =  m_request.url().toString().toAscii().data();
+        std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(failureName);
+
+        m_failureDelayTimer.setEventActionDescriptor(descriptor);
         m_failureDelayTimer.startOneShot(0);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
 
         return;
     }
@@ -593,7 +637,18 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     m_deferredResponse = response;
 
     m_queue.setDeferSignals(true, false);
+
+    std::string url =  m_request.url().toString().toAscii().data();
+    std::string requestName = std::string("QNetworkReplyHandler(REQUEST, ") + url + ")";
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(requestName);
+
+    m_requestDelayTimer.setEventActionDescriptor(descriptor);
     m_requestDelayTimer.startOneShot(0);
+
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                descriptor);
 }
 
 void QNetworkReplyHandler::forwardData()
@@ -615,7 +670,18 @@ void QNetworkReplyHandler::forwardData()
         m_deferredBytes = data;
 
         m_queue.setDeferSignals(true, false);
+
+        std::string url =  m_request.url().toString().toAscii().data();
+        std::string dataName = std::string("QNetworkReplyHandler(DATA, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(dataName);
+
+        m_dataReceivedDelayTimer.setEventActionDescriptor(descriptor);
         m_dataReceivedDelayTimer.startOneShot(0);
+
+        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    descriptor);
     }
 }
 
@@ -633,7 +699,18 @@ void QNetworkReplyHandler::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
     m_deferredBytesTotal = bytesTotal;
 
     m_queue.setDeferSignals(true, false);
+
+    std::string url =  m_request.url().toString().toAscii().data();
+    std::string uploadName = std::string("QNetworkReplyHandler(UPLOAD, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(uploadName);
+
+    m_dataSentDelayTimer.setEventActionDescriptor(descriptor);
     m_dataSentDelayTimer.startOneShot(0);
+
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                descriptor);
 }
 
 void QNetworkReplyHandler::clearContentHeaders()

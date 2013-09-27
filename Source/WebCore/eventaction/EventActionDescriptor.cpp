@@ -25,15 +25,30 @@
 
 namespace WebCore {
 
-EventActionDescriptor::EventActionDescriptor(unsigned long id, int descriptionIndex)
+StringSet EventActionDescriptor::m_descriptions;
+
+EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& description)
     : m_id(id)
-    , m_descriptionIndex(descriptionIndex)
+    , m_descriptionIndex(EventActionDescriptor::descriptions()->addString(description.c_str()))
+    , m_isNull(false)
+{
+}
+
+EventActionDescriptor::EventActionDescriptor()
+    : m_id(0)
+    , m_descriptionIndex(-1)
+    , m_isNull(true)
 {
 }
 
 bool EventActionDescriptor::operator==(const EventActionDescriptor &other) const
 {
     return m_id == other.m_id && m_descriptionIndex == other.m_descriptionIndex;
+}
+
+std::string EventActionDescriptor::getDescription() const
+{
+    return EventActionDescriptor::descriptions()->getString(m_descriptionIndex);
 }
 
 

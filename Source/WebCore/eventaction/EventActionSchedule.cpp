@@ -34,9 +34,9 @@ EventActionSchedule::~EventActionSchedule()
 {
 }
 
-EventActionDescriptor EventActionSchedule::allocateEventDescriptor(int descriptionIndex)
+EventActionDescriptor EventActionSchedule::allocateEventDescriptor(const std::string& description)
 {
-    return EventActionDescriptor(m_nextEventActionDescriptorId++, descriptionIndex);
+    return EventActionDescriptor(m_nextEventActionDescriptorId++, description);
 }
 
 }
