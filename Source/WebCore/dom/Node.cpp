@@ -107,6 +107,7 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
+#include <WebCore/platform/ThreadTimers.h>
 
 #include <iostream>
 

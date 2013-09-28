@@ -31,7 +31,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/StringSet.h>
-#include <fstream>
+
+#include <platform/schedule/Scheduler.h>
 
 #include "eventaction/EventActionSchedule.h"
 #include "eventaction/EventActionHB.h"
@@ -82,12 +83,6 @@ namespace WebCore {
         void sharedTimerFiredInternal();
         void fireTimersInNestedEventLoopInternal();
 
-        std::string currentScheduledEvent();
-        void nextScheduledEvent();
-        bool inReplayMode();
-        TimerBase* getTimerForNextEvent();
-        void debugPrintTimers();
-
         Vector<TimerBase*> m_timerHeap;
         SharedTimer* m_sharedTimer; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
         bool m_firingTimers; // Reentrancy guard.
@@ -95,10 +90,7 @@ namespace WebCore {
         // WebERA
         EventActionSchedule m_eventActionSchedule;
         EventActionsHB m_eventActionsHB;
-
-        std::ifstream m_schedule;
-        std::string m_nextEventName;
-        uint m_scheduleWaits;
+	    Scheduler* m_scheduler;
     };
 
 }

@@ -27,6 +27,7 @@
 #ifndef ThreadGlobalData_h
 #define ThreadGlobalData_h
 
+#include <wtf/ExportMacros.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>

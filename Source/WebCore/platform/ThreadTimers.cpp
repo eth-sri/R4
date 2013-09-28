@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <iostream>
 
+#include <platform/schedule/RepeatScheduler.h>
+
 using namespace std;
 
 namespace WebCore {
@@ -57,20 +59,16 @@ static MainThreadSharedTimer* mainThreadSharedTimer()
 ThreadTimers::ThreadTimers()
     : m_sharedTimer(0)
     , m_firingTimers(false)
-    , m_scheduleWaits(0)
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
 
-    m_schedule.open("/tmp/input");
-    nextScheduledEvent(); // read the first event in the schedule
+    m_scheduler = new RepeatScheduler();
 }
 
 ThreadTimers::~ThreadTimers()
 {
-    if (m_schedule.is_open()) {
-        m_schedule.close();
-    }
+    delete m_scheduler;
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.
@@ -117,83 +115,36 @@ void ThreadTimers::sharedTimerFiredInternal()
     double fireTime = monotonicallyIncreasingTime();
     double timeToQuit = fireTime + maxDurationOfFiringTimers;
 
-    if (inReplayMode()) {
+    while (!m_timerHeap.isEmpty() && m_timerHeap.first()->m_nextFireTime <= fireTime) {
 
-        while (true) {
+        int timer_index = m_scheduler->selectNextSchedulableItem(m_timerHeap);
 
-            TimerBase* timer = getTimerForNextEvent();
-
-            if (timer == NULL || timer->m_nextFireTime > fireTime) {
-                // timer not registered yet or should not be fired yet...
-
-//                if (m_scheduleWaits > 500) { // TODO(WebERA) 500 is an arbitrary magic number, reason about a good number
-//                    std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
-//                    std::cerr << "This is the current queue of events" << std::endl;
-//                    debugPrintTimers();
-
-//                    std::exit(1);
-//                }
-
-                m_scheduleWaits++;
-                break;
-            }
-
-            m_scheduleWaits = 0;
-
-            debugPrintTimers();
-
-            timer->m_nextFireTime = 0;
-            //timer->heapDelete();
-
-            double interval = timer->repeatInterval();
-            timer->setNextFireTime(interval ? fireTime + interval : 0);
-
-            // WebERA: Denote that currently a timer with a given name is executed.
-            threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
-
-            fprintf(stdout, "REPEAT: %s\n",  timer->eventActionDescriptor().getDescription().c_str());
-
-            // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
-            timer->fired();
-
-            // WebERA: Denote that currently a timer with a given name is executed.
-            threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(EventActionDescriptor());
-
-            nextScheduledEvent();
-
-            // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
-            if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())
-                break;
+        if (timer_index == Scheduler::YIELD) {
+            break;
         }
 
-    } else {
+        TimerBase* timer = m_timerHeap.at(timer_index);
 
-        while (!m_timerHeap.isEmpty() && m_timerHeap.first()->m_nextFireTime <= fireTime) {
-            TimerBase* timer = m_timerHeap.first();
-            timer->m_nextFireTime = 0;
-            timer->heapDeleteMin();
+        timer->m_nextFireTime = 0;
+        timer->heapDelete();
 
-            // TODO(WebERA): decide if a timer should not be delayed instead if firing depending
-            // on its name.
+        double interval = timer->repeatInterval();
+        timer->setNextFireTime(interval ? fireTime + interval : 0);
 
-            double interval = timer->repeatInterval();
-            timer->setNextFireTime(interval ? fireTime + interval : 0);
+        // WebERA: Denote that currently a timer with a given name is executed.
+        threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
 
-            // WebERA: Denote that currently a timer with a given name is executed.
-            threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
+        fprintf(stderr, "%s\n",  timer->eventActionDescriptor().getDescription().c_str());
 
-            fprintf(stderr, "%s\n",  timer->eventActionDescriptor().getDescription().c_str());
+        // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
+        timer->fired();
 
-            // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
-            timer->fired();
+        // WebERA: Denote that currently a timer with a given name is executed.
+        threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(EventActionDescriptor());
 
-            // WebERA: Denote that currently a timer with a given name is executed.
-            threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(EventActionDescriptor());
-
-            // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
-            if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())
-                break;
-        }
+        // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
+        if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())
+            break;
 
     }
 
@@ -207,57 +158,6 @@ void ThreadTimers::fireTimersInNestedEventLoop()
     // Reset the reentrancy guard so the timers can fire again.
     m_firingTimers = false;
     updateSharedTimer();
-}
-
-std::string ThreadTimers::currentScheduledEvent()
-{
-    return m_nextEventName;
-}
-
-void ThreadTimers::nextScheduledEvent()
-{
-    if (m_schedule.is_open() && m_schedule.good()) {
-    	getline(m_schedule, m_nextEventName);
-    } else {
-        m_nextEventName = "__EOS__";
-    }
-}
-
-bool ThreadTimers::inReplayMode()
-{
-    return m_schedule.is_open() && m_schedule.good();
-}
-
-TimerBase* ThreadTimers::getTimerForNextEvent()
-{
-    std::string nextEventName = currentScheduledEvent();
-    int nextEventNameInt = EventActionDescriptor::descriptions()->addString(nextEventName.c_str());
-
-    for(Vector<TimerBase*>::iterator it = m_timerHeap.begin(); it != m_timerHeap.end(); ++it) {
-        if ((*it)->eventActionDescriptor().getDescriptionIndex() == nextEventNameInt) {
-            return *it;
-        }
-    }
-
-    return NULL;
-}
-
-void ThreadTimers::debugPrintTimers()
-{
-    std::string nextEventName = currentScheduledEvent();
-    int nextEventNameInt = EventActionDescriptor::descriptions()->addString(nextEventName.c_str());
-
-   // StringSet* s = threadGlobalData().threadTimers().timerNames();
-    //nextEventNameInt = s->findString(nextEventName.c_str());
-
-    std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "NEXT -> (" << nextEventNameInt << ") " << nextEventName << std::endl << std::endl;
-
-    for(Vector<TimerBase*>::iterator it = m_timerHeap.begin(); it != m_timerHeap.end(); ++it) {
-        std::string eventName = (*it)->eventActionDescriptor().getDescription();
-        std::cout << "(" << (*it)->eventActionDescriptor().getDescriptionIndex() << ") " << eventName << std::endl;
-    }
-
 }
 
 } // namespace WebCore
