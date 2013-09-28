@@ -43,9 +43,10 @@ namespace WebCore {
 
         int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items);
 
+        bool isFinished();
+
     private:
 
-        bool isFinished();
         void updateNextTimerToSchedule();
 
         void debugPrintTimers(const WTF::Vector<TimerBase*>& items);

@@ -81,12 +81,12 @@ int RepeatScheduler::selectNextSchedulableItem(const WTF::Vector<TimerBase*>& it
 
 bool RepeatScheduler::isFinished()
 {
-    return m_schedule.is_open() && m_schedule.good();
+    return !m_schedule.is_open() || !m_schedule.good();
 }
 
 void RepeatScheduler::updateNextTimerToSchedule()
 {
-    if (m_schedule.is_open() && m_schedule.good()) {
+    if (!isFinished()) {
         getline(m_schedule, m_nextTimerToSchedule);
 
     } else {

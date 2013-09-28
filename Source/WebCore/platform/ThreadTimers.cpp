@@ -37,6 +37,7 @@
 #include <iostream>
 
 #include <platform/schedule/RepeatScheduler.h>
+#include <platform/schedule/DefaultScheduler.h>
 
 using namespace std;
 
@@ -64,6 +65,11 @@ ThreadTimers::ThreadTimers()
         setSharedTimer(mainThreadSharedTimer());
 
     m_scheduler = new RepeatScheduler();
+
+    if (((RepeatScheduler*)m_scheduler)->isFinished()) {
+        delete m_scheduler;
+        m_scheduler = new DefaultScheduler();
+    }
 }
 
 ThreadTimers::~ThreadTimers()
