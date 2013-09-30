@@ -27,6 +27,7 @@
 #ifndef ThreadTimers_h
 #define ThreadTimers_h
 
+#include <wtf/ExportMacros.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -77,6 +78,8 @@ namespace WebCore {
         void updateSharedTimer();
         void fireTimersInNestedEventLoop();
 
+        static void setScheduler(Scheduler* scheduler);
+
     private:
         static void sharedTimerFired();
 
@@ -90,7 +93,8 @@ namespace WebCore {
         // WebERA
         EventActionSchedule m_eventActionSchedule;
         EventActionsHB m_eventActionsHB;
-	    Scheduler* m_scheduler;
+
+        static Scheduler* m_scheduler;
     };
 
 }

@@ -25,13 +25,13 @@
 #include <string>
 #include <fstream>
 
-#ifndef DefaultScheduler_h
-#define DefaultScheduler_h
-
 #include <wtf/ExportMacros.h>
 #include <wtf/Noncopyable.h>
 
 #include "Scheduler.h"
+
+#ifndef DefaultScheduler_h
+#define DefaultScheduler_h
 
 namespace WebCore {
 
@@ -42,7 +42,7 @@ namespace WebCore {
         DefaultScheduler();
         ~DefaultScheduler();
 
-        int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items);
+        virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items);
     };
 
 }

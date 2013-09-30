@@ -48,6 +48,14 @@ namespace WebCore {
 // This is to prevent UI freeze when there are too many timers or machine performance is low.
 static const double maxDurationOfFiringTimers = 0.050;
 
+Scheduler* ThreadTimers::m_scheduler = new DefaultScheduler();
+
+void ThreadTimers::setScheduler(Scheduler* scheduler)
+{
+    delete ThreadTimers::m_scheduler;
+    ThreadTimers::m_scheduler = scheduler;
+}
+
 // Timers are created, started and fired on the same thread, and each thread has its own ThreadTimers
 // copy to keep the heap and a set of currently firing timers.
 
@@ -63,18 +71,10 @@ ThreadTimers::ThreadTimers()
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
-
-    m_scheduler = new RepeatScheduler();
-
-    if (((RepeatScheduler*)m_scheduler)->isFinished()) {
-        delete m_scheduler;
-        m_scheduler = new DefaultScheduler();
-    }
 }
 
 ThreadTimers::~ThreadTimers()
 {
-    delete m_scheduler;
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.
@@ -123,7 +123,7 @@ void ThreadTimers::sharedTimerFiredInternal()
 
     while (!m_timerHeap.isEmpty() && m_timerHeap.first()->m_nextFireTime <= fireTime) {
 
-        int timer_index = m_scheduler->selectNextSchedulableItem(m_timerHeap);
+        int timer_index = ThreadTimers::m_scheduler->selectNextSchedulableItem(m_timerHeap);
 
         if (timer_index == Scheduler::YIELD) {
             break;
@@ -139,8 +139,6 @@ void ThreadTimers::sharedTimerFiredInternal()
 
         // WebERA: Denote that currently a timer with a given name is executed.
         threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
-
-        fprintf(stderr, "%s\n",  timer->eventActionDescriptor().getDescription().c_str());
 
         // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
         timer->fired();
