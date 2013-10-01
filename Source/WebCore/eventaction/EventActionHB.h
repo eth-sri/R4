@@ -47,6 +47,8 @@ namespace WebCore {
         void addTimedArc(const EventActionDescriptor& earlier, const EventActionDescriptor& later, double duration);
         void addTimedArc(const EventActionDescriptor& earlier, const EventActionDescriptor& later, int duration);
 
+        bool haveAnyOrderRelation(const EventActionDescriptor& ea1, const EventActionDescriptor& ea2) const;
+
         void serialize(std::ostream& stream) const;
         static EventActionsHB* deserialize(std::istream& stream);
 

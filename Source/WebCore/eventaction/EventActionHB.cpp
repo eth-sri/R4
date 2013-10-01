@@ -65,6 +65,18 @@ void EventActionsHB::addTimedArc(const EventActionDescriptor& earlier, const Eve
     m_arcs.append(new Arc(earlier, later, duration));
 }
 
+bool EventActionsHB::haveAnyOrderRelation(const EventActionDescriptor& ea1, const EventActionDescriptor& ea2) const
+{
+    for (WTF::Vector<const Arc*>::const_iterator it = m_arcs.begin(); it != m_arcs.end(); it++) {
+        if (((*it)->to == ea1 && (*it)->from == ea2) ||
+              ((*it)->to == ea2 && (*it)->from == ea1)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void EventActionsHB::serialize(std::ostream& stream) const
 {
     for (WTF::Vector<const Arc*>::const_iterator it = m_arcs.begin(); it != m_arcs.end(); it++) {

@@ -41,6 +41,7 @@ namespace WebCore {
 
     public:
         EventActionSchedule();
+        EventActionSchedule(const WTF::Vector<EventActionDescriptor>&);
         ~EventActionSchedule();
 
         EventActionDescriptor allocateEventDescriptor(const std::string& description);
@@ -70,6 +71,11 @@ namespace WebCore {
             }
 
             return EventActionDescriptor::null;
+        }
+
+        WTF::Vector<EventActionDescriptor> getVectorCopy() const
+        {
+            return m_schedule;
         }
 
     private:

@@ -35,6 +35,13 @@ EventActionSchedule::EventActionSchedule()
 {
 }
 
+EventActionSchedule::EventActionSchedule(const WTF::Vector<EventActionDescriptor>& schedule)
+    : m_schedule(schedule)
+    , m_nextEventActionDescriptorId(0)
+    , m_isDispatching(false)
+{
+}
+
 EventActionSchedule::~EventActionSchedule()
 {
 }
