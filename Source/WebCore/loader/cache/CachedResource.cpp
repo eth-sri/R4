@@ -780,7 +780,7 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
     m_callbackTimer.startOneShot(0);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor);
 }
 

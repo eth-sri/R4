@@ -25,6 +25,8 @@
 #define EventActionSchedule_h
 
 #include <string>
+#include <ostream>
+#include <istream>
 
 #include <wtf/Noncopyable.h>
 #include <wtf/ExportMacros.h>
@@ -43,20 +45,39 @@ namespace WebCore {
 
         EventActionDescriptor allocateEventDescriptor(const std::string& description);
 
-        void eventActionDispatched(const EventActionDescriptor& descriptor)
+        void serialize(std::ostream& stream) const;
+        static EventActionSchedule* deserialize(std::istream& stream);
+
+        void eventActionDispatchStart(const EventActionDescriptor& descriptor)
         {
+            ASSERT(!m_isDispatching);
+
             m_schedule.append(descriptor);
+            m_isDispatching = true;
         }
 
-        const EventActionDescriptor& lastEventActionDispatched() const
+        void eventActionDispatchEnd()
         {
-            return m_schedule.isEmpty() ? EventActionDescriptor::null : m_schedule.last();
+            ASSERT(m_isDispatching);
+
+            m_isDispatching = false;
+        }
+
+        const EventActionDescriptor& currentEventActionDispatching() const
+        {
+            if (m_isDispatching) {
+                return m_schedule.isEmpty() ? EventActionDescriptor::null : m_schedule.last();
+            }
+
+            return EventActionDescriptor::null;
         }
 
     private:
 
         WTF::Vector<EventActionDescriptor> m_schedule;
         unsigned long m_nextEventActionDescriptorId;
+
+        bool m_isDispatching;
     };
 
 }

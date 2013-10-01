@@ -87,6 +87,10 @@ EventActionsHB* EventActionsHB::deserialize(std::istream& stream)
         std::string arc;
         std::getline(stream, arc);
 
+        if (arc.compare("") == 0) {
+            continue; // ignore blank lines
+        }
+
         std::stringstream arcStream(arc);
 
         std::string fromId;
@@ -104,15 +108,15 @@ EventActionsHB* EventActionsHB::deserialize(std::istream& stream)
         std::string duration;
         std::getline(arcStream, duration);
 
-        EventActionDescriptor to(strtoul(fromId.c_str(), NULL, 10), fromDescription);
-        EventActionDescriptor from(strtoul(toId.c_str(), NULL, 10), toDescription);
+        EventActionDescriptor from(strtoul(fromId.c_str(), NULL, 10), fromDescription);
+        EventActionDescriptor to(strtoul(toId.c_str(), NULL, 10), toDescription);
 
         int durationInt = atoi(duration.c_str());
 
         if (durationInt == -1) {
-            hb->addExplicitArc(to, from);
+            hb->addExplicitArc(from, to);
         } else {
-            hb->addTimedArc(to, from, durationInt);
+            hb->addTimedArc(from, to, durationInt);
         }
     }
 

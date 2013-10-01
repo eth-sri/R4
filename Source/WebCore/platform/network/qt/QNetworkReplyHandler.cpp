@@ -472,7 +472,7 @@ void QNetworkReplyHandler::finish()
         m_finishedDelayTimer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
 
     } else {
@@ -489,7 +489,7 @@ void QNetworkReplyHandler::finish()
         m_failureDelayTimer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
     }
 }
@@ -531,7 +531,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
         m_responseDelayTimer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
 
         //client->didReceiveResponse(m_resourceHandle, response);
@@ -577,7 +577,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
     m_responseDelayTimer.startOneShot(0);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor);
 
     //client->didReceiveResponse(m_resourceHandle, response);
@@ -611,7 +611,7 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
         m_failureDelayTimer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
 
         return;
@@ -647,7 +647,7 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     m_requestDelayTimer.startOneShot(0);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor);
 }
 
@@ -680,7 +680,7 @@ void QNetworkReplyHandler::forwardData()
         m_dataReceivedDelayTimer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
     }
 }
@@ -709,7 +709,7 @@ void QNetworkReplyHandler::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
     m_dataSentDelayTimer.startOneShot(0);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor);
 }
 

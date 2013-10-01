@@ -204,7 +204,7 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     m_checkTimer.setEventActionDescriptor(descriptor);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor);
 }
 

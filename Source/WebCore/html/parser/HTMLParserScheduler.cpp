@@ -145,7 +145,7 @@ void HTMLParserScheduler::updateTimerName()
     // Add a happens before relation if we schedule a new fragment because of another action
     // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor
     );
 }

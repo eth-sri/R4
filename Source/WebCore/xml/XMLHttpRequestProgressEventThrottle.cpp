@@ -80,7 +80,7 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
 
         return;
@@ -228,7 +228,7 @@ void XMLHttpRequestProgressEventThrottle::resume()
     m_dispatchDeferredEventsTimer.startOneShot(0);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor);
 }
 

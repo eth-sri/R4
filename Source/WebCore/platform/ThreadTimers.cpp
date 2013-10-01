@@ -140,13 +140,13 @@ void ThreadTimers::sharedTimerFiredInternal()
         timer->setNextFireTime(interval ? fireTime + interval : 0);
 
         // WebERA: Denote that currently a timer with a given name is executed.
-        ThreadTimers::eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
+        ThreadTimers::eventActionSchedule().eventActionDispatchStart(timer->eventActionDescriptor());
 
         // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
         timer->fired();
 
-        // WebERA: Denote that currently a timer with a given name is executed.
-        ThreadTimers::eventActionSchedule().eventActionDispatched(EventActionDescriptor());
+        // WebERA: Denote that we are finished dispatching this event action
+        ThreadTimers::eventActionSchedule().eventActionDispatchEnd();
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
         if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())

@@ -2822,7 +2822,7 @@ public:
 		m_timer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                     descriptor);
 	}
 

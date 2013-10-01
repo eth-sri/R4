@@ -114,7 +114,7 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     timer->setEventActionDescriptor(descriptor);
 
     threadGlobalData().threadTimers().eventActionsHB().addTimedArc(
-                ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor,
                 timeout);
 
