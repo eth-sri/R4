@@ -262,7 +262,7 @@ void TimerBase::heapDecreaseKey()
     checkHeapIndex();
 }
 
-inline void TimerBase::heapDelete()
+void TimerBase::heapDelete()
 {
     ASSERT(m_nextFireTime == 0);
     heapPop();
