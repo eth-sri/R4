@@ -39,6 +39,7 @@ namespace WebCore {
         bool isNull() const { return m_isNull; }
 
         std::string getDescription() const;
+        unsigned long getId() const { return m_id; }
 
         bool operator==(const EventActionDescriptor& other) const;
         bool compareDescription(const EventActionDescriptor& other) const;
