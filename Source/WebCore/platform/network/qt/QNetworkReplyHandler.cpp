@@ -384,7 +384,7 @@ QNetworkReplyHandler::QNetworkReplyHandler(ResourceHandle* handle, LoadType load
     , m_finishedDelayTimer(this, &QNetworkReplyHandler::delayedFinish)
     , m_failureDelayTimer(this, &QNetworkReplyHandler::delayedFailure)
     , m_responseDelayTimer(this, &QNetworkReplyHandler::delayedResponse)
-    , m_requestDelayTimer(this, &QNetworkReplyHandler::delayedResponse)
+    , m_requestDelayTimer(this, &QNetworkReplyHandler::delayedRequest)
     , m_dataSentDelayTimer(this, &QNetworkReplyHandler::delayedDataSent)
     , m_dataReceivedDelayTimer(this, &QNetworkReplyHandler::delayedDataReceived)
     , m_deferredBytesSent(-1)
@@ -461,7 +461,7 @@ void QNetworkReplyHandler::finish()
 
     if (!m_replyWrapper->reply()->error() || shouldIgnoreHttpError(m_replyWrapper->reply(), m_replyWrapper->responseContainsData())) {
         // WEbERA: delay
-        m_queue.setDeferSignals(true, false);
+        m_queue.lock();
 
         std::string url =  m_request.url().toString().toAscii().data();
         std::string finishedName = std::string("QNetworkReplyHandler(FINISHED, ") + url + ")";
@@ -478,7 +478,7 @@ void QNetworkReplyHandler::finish()
     } else {
         // WebERA: delay
         m_deferredError = errorForReply(m_replyWrapper->reply());
-        m_queue.setDeferSignals(true, false);
+        m_queue.lock();
 
         std::string url =  m_request.url().toString().toAscii().data();
         std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
@@ -520,7 +520,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
     if (url.isLocalFile()) {
         // WebERA: delay
         m_deferredResponse = response;
-        m_queue.setDeferSignals(true, false);
+        m_queue.lock();
 
         std::string request_url =  m_request.url().toString().toAscii().data();
         std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + request_url + ")";
@@ -566,7 +566,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
 
     // WebERA: delay
     m_deferredResponse = response;
-    m_queue.setDeferSignals(true, false);
+    m_queue.lock();
 
     std::string request_url =  m_request.url().toString().toAscii().data();
     std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + request_url + ")";
@@ -600,7 +600,7 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
 
         // WebERA: delay
         m_deferredError = error;
-        m_queue.setDeferSignals(true, false);
+        m_queue.lock();
 
         std::string url =  m_request.url().toString().toAscii().data();
         std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
@@ -636,9 +636,9 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     m_deferredRequest = newRequest;
     m_deferredResponse = response;
 
-    m_queue.setDeferSignals(true, false);
+    m_queue.lock();
 
-    std::string url =  m_request.url().toString().toAscii().data();
+    std::string url =  newUrl.toString().toAscii().data();
     std::string requestName = std::string("QNetworkReplyHandler(REQUEST, ") + url + ")";
 
     EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(requestName);
@@ -669,7 +669,7 @@ void QNetworkReplyHandler::forwardData()
         // WebERA: delay
         m_deferredBytes = data;
 
-        m_queue.setDeferSignals(true, false);
+        m_queue.lock();
 
         std::string url =  m_request.url().toString().toAscii().data();
         std::string dataName = std::string("QNetworkReplyHandler(DATA, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
@@ -698,7 +698,7 @@ void QNetworkReplyHandler::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
     m_deferredBytesSent = bytesSent;
     m_deferredBytesTotal = bytesTotal;
 
-    m_queue.setDeferSignals(true, false);
+    m_queue.lock();
 
     std::string url =  m_request.url().toString().toAscii().data();
     std::string uploadName = std::string("QNetworkReplyHandler(UPLOAD, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
@@ -824,7 +824,7 @@ void QNetworkReplyHandler::delayedFinish(Timer<QNetworkReplyHandler>*)
     client->didFinishLoading(m_resourceHandle, 0);
     m_replyWrapper = nullptr;
 
-    m_queue.setDeferSignals(false, true);
+    m_queue.unlock();
 }
 
 void QNetworkReplyHandler::delayedFailure(Timer<QNetworkReplyHandler>*)
@@ -834,7 +834,7 @@ void QNetworkReplyHandler::delayedFailure(Timer<QNetworkReplyHandler>*)
     client->didFail(m_resourceHandle, m_deferredError);
     m_replyWrapper = nullptr;
 
-    m_queue.setDeferSignals(false, true);
+    m_queue.unlock();
 }
 
 void QNetworkReplyHandler::delayedResponse(Timer<QNetworkReplyHandler>*)
@@ -845,7 +845,7 @@ void QNetworkReplyHandler::delayedResponse(Timer<QNetworkReplyHandler>*)
     client->didReceiveResponse(m_resourceHandle, m_deferredResponse);
     m_deferredResponse = ResourceResponse(); // destroy the old response
 
-    m_queue.setDeferSignals(false, true);
+    m_queue.unlock();
 }
 
 void QNetworkReplyHandler::delayedRequest(Timer<QNetworkReplyHandler>*)
@@ -864,7 +864,7 @@ void QNetworkReplyHandler::delayedRequest(Timer<QNetworkReplyHandler>*)
     m_deferredResponse = ResourceResponse(); // destroy the old response
     m_deferredRequest = ResourceRequest(); // destroy the old request
 
-    m_queue.setDeferSignals(false, true);
+    m_queue.unlock();
 }
 
 void QNetworkReplyHandler::delayedDataSent(Timer<QNetworkReplyHandler>* timer)
@@ -878,7 +878,7 @@ void QNetworkReplyHandler::delayedDataSent(Timer<QNetworkReplyHandler>* timer)
     m_deferredBytesSent = -1;
     m_deferredBytesTotal = -1;
 
-    m_queue.setDeferSignals(false, true);
+    m_queue.unlock();
 }
 
 void QNetworkReplyHandler::delayedDataReceived(Timer<QNetworkReplyHandler>*)
@@ -890,7 +890,7 @@ void QNetworkReplyHandler::delayedDataReceived(Timer<QNetworkReplyHandler>*)
 
     m_deferredBytes = QByteArray();
 
-    m_queue.setDeferSignals(false, true);
+    m_queue.unlock();
 }
 
 }
