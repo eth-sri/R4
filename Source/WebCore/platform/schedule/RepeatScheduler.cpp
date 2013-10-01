@@ -52,7 +52,7 @@ int RepeatScheduler::selectNextSchedulableItem(const WTF::Vector<TimerBase*>& it
 {
     // Search for the next timer and return its index
     for(Vector<TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        if ((*it)->eventActionDescriptor().getDescriptionIndex() == m_nextTimerToScheduleInt) {
+        if ((*it)->eventActionDescriptor().compareDescription(m_nextTimerToSchedule)) {
 
             debugPrintTimers(items); // TODO(WebERA): DEBUG
 
@@ -87,23 +87,23 @@ bool RepeatScheduler::isFinished()
 void RepeatScheduler::updateNextTimerToSchedule()
 {
     if (!isFinished()) {
-        getline(m_schedule, m_nextTimerToSchedule);
+        std::string description;
+        getline(m_schedule, description);
+
+        m_nextTimerToSchedule = EventActionDescriptor(description);
 
     } else {
-        m_nextTimerToSchedule = "__EOS__";
+        m_nextTimerToSchedule = EventActionDescriptor::null;
     }
-
-    m_nextTimerToScheduleInt = EventActionDescriptor::descriptions()->addString(m_nextTimerToSchedule.c_str());
 }
 
 void RepeatScheduler::debugPrintTimers(const WTF::Vector<TimerBase*>& items)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "NEXT -> (" << m_nextTimerToScheduleInt << ") " << m_nextTimerToSchedule << std::endl << std::endl;
+    std::cout << "NEXT -> " << m_nextTimerToSchedule.getDescription() << std::endl << std::endl;
 
     for(Vector<TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        std::string eventName = (*it)->eventActionDescriptor().getDescription();
-        std::cout << "(" << (*it)->eventActionDescriptor().getDescriptionIndex() << ") " << eventName << std::endl;
+        std::cout << (*it)->eventActionDescriptor().getDescription() << std::endl;
     }
 
 }

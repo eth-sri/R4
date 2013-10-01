@@ -53,8 +53,7 @@ namespace WebCore {
 
         std::ifstream m_schedule;
 
-        std::string m_nextTimerToSchedule;
-        int m_nextTimerToScheduleInt;
+        EventActionDescriptor m_nextTimerToSchedule;
 
         unsigned int m_scheduleWaits;
     };

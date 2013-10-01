@@ -21,6 +21,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <climits>
+
 #include "EventActionDescriptor.h"
 
 namespace WebCore {
@@ -30,6 +32,13 @@ EventActionDescriptor EventActionDescriptor::null;
 
 EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& description)
     : m_id(id)
+    , m_descriptionIndex(EventActionDescriptor::descriptions()->addString(description.c_str()))
+    , m_isNull(false)
+{
+}
+
+EventActionDescriptor::EventActionDescriptor(const std::string& description)
+    : m_id(UINT_MAX)
     , m_descriptionIndex(EventActionDescriptor::descriptions()->addString(description.c_str()))
     , m_isNull(false)
 {
@@ -45,6 +54,11 @@ EventActionDescriptor::EventActionDescriptor()
 bool EventActionDescriptor::operator==(const EventActionDescriptor &other) const
 {
     return m_id == other.m_id && m_descriptionIndex == other.m_descriptionIndex;
+}
+
+bool EventActionDescriptor::compareDescription(const EventActionDescriptor &other) const
+{
+    return m_descriptionIndex == other.m_descriptionIndex;
 }
 
 std::string EventActionDescriptor::getDescription() const
