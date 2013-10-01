@@ -67,10 +67,12 @@ void EventActionsHB::addTimedArc(const EventActionDescriptor& earlier, const Eve
 
 void EventActionsHB::serialize(std::ostream& stream) const
 {
-    for (WTF::Vector<const Arc*>::const_iterator it; it != m_arcs.end(); it++) {
-        stream << (*it)->from.getId() << ";" << (*it)->from.getDescription() << ";";
-        stream << (*it)->to.getId() << ";" << (*it)->to.getDescription() << ";";
-        stream << (*it)->duration << std::endl;
+    for (WTF::Vector<const Arc*>::const_iterator it = m_arcs.begin(); it != m_arcs.end(); it++) {
+        if (!(*it)->from.isNull()) {
+            stream << (*it)->from.getId() << ";" << (*it)->from.getDescription() << ";";
+            stream << (*it)->to.getId() << ";" << (*it)->to.getDescription() << ";";
+            stream << (*it)->duration << std::endl;
+        }
     }
 }
 

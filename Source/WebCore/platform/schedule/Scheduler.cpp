@@ -22,28 +22,10 @@
  *
  */
 
-#ifndef Scheduler_h
-#define Scheduler_h
-
-#include <wtf/ExportMacros.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/Vector.h>
-
-#include <platform/Timer.h>
+#include "Scheduler.h"
 
 namespace WebCore {
 
-    class Scheduler {
-        WTF_MAKE_NONCOPYABLE(Scheduler);
+int Scheduler::YIELD = -1;
 
-    public:
-        static int YIELD;
-
-        Scheduler() {}
-        virtual ~Scheduler() {}
-        virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items) = 0;
-
-    };
 }
-
-#endif

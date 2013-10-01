@@ -49,6 +49,8 @@ namespace WebCore {
 static const double maxDurationOfFiringTimers = 0.050;
 
 Scheduler* ThreadTimers::m_scheduler = new DefaultScheduler();
+EventActionSchedule ThreadTimers::m_eventActionSchedule;
+EventActionsHB ThreadTimers::m_eventActionsHB;
 
 void ThreadTimers::setScheduler(Scheduler* scheduler)
 {
@@ -138,13 +140,13 @@ void ThreadTimers::sharedTimerFiredInternal()
         timer->setNextFireTime(interval ? fireTime + interval : 0);
 
         // WebERA: Denote that currently a timer with a given name is executed.
-        threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
+        ThreadTimers::eventActionSchedule().eventActionDispatched(timer->eventActionDescriptor());
 
         // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
         timer->fired();
 
         // WebERA: Denote that currently a timer with a given name is executed.
-        threadGlobalData().threadTimers().eventActionSchedule().eventActionDispatched(EventActionDescriptor());
+        ThreadTimers::eventActionSchedule().eventActionDispatched(EventActionDescriptor());
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
         if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())

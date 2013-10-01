@@ -2816,13 +2816,13 @@ public:
 		, m_relatedTarget(relatedTarget)
 		, m_timer(this, &DeferredMouseEventDispatcher::dispatchMouseEventDeferred) {
 
-        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor("DeferredMouseEvent");
+        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor("DeferredMouseEvent");
 
         m_timer.setEventActionDescriptor(descriptor);
 		m_timer.startOneShot(0);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                    ThreadTimers::eventActionSchedule().lastEventActionDispatched(),
                     descriptor);
 	}
 

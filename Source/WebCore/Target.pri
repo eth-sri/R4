@@ -72,7 +72,8 @@ SOURCES += \
     accessibility/AccessibilityTableRow.cpp \
     accessibility/AXObjectCache.cpp \
     bindings/generic/ActiveDOMCallback.cpp \
-    bindings/generic/RuntimeEnabledFeatures.cpp
+    bindings/generic/RuntimeEnabledFeatures.cpp \
+    platform/schedule/Scheduler.cpp
 
 v8 {
     include($$PWD/../JavaScriptCore/yarr/yarr.pri)
