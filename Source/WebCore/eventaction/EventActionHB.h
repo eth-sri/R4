@@ -24,6 +24,9 @@
 #ifndef EventActionHB_h
 #define EventActionHB_h
 
+#include <ostream>
+#include <istream>
+
 #include <wtf/Noncopyable.h>
 #include <wtf/ExportMacros.h>
 #include <wtf/Vector.h>
@@ -42,9 +45,12 @@ namespace WebCore {
 
         void addExplicitArc(const EventActionDescriptor& earlier, const EventActionDescriptor& later);
         void addTimedArc(const EventActionDescriptor& earlier, const EventActionDescriptor& later, double duration);
+        void addTimedArc(const EventActionDescriptor& earlier, const EventActionDescriptor& later, int duration);
 
-        bool areInOrder(const EventActionDescriptor& first, const EventActionDescriptor& second);
-        bool haveAnyOrderRelation(const EventActionDescriptor& ea1, const EventActionDescriptor& ea2);
+        bool haveAnyOrderRelation(const EventActionDescriptor& ea1, const EventActionDescriptor& ea2) const;
+
+        void serialize(std::ostream& stream) const;
+        static EventActionsHB* deserialize(std::istream& stream);
 
     private:
 

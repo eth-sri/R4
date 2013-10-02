@@ -150,6 +150,8 @@ private:
  * *** TODO(WebERA) check if this invariant holds - right now this does not hold. When we use the CallQueue to defer further processing new data is still received and added,
  *     thus depending on when we process the queue the chunks extracted will be different.
  *
+ * TODO(WebERA): There is a bug in the happens before relations in the networking layer. HB relations are added correctly if the execution of one event action is followed
+ * by another network-related event action (that is, another event is waiting in the defer queue). If this event is added later then a NULL event action descriptor is used.
  */
 
 class QNetworkReplyHandler : public QObject

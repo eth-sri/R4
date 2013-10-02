@@ -21,6 +21,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <string>
+#include <sstream>
+#include <cstdlib>
+
 #include "EventActionHB.h"
 
 namespace WebCore {
@@ -53,18 +57,82 @@ void EventActionsHB::addTimedArc(const EventActionDescriptor& earlier, const Eve
     m_arcs.append(new Arc(earlier, later, duration * 1000));
 }
 
-bool EventActionsHB::areInOrder(const EventActionDescriptor& first, const EventActionDescriptor& second)
+void EventActionsHB::addTimedArc(const EventActionDescriptor& earlier, const EventActionDescriptor& later, int duration) {
+    if (earlier == later) {
+        CRASH();
+    }
+
+    m_arcs.append(new Arc(earlier, later, duration));
+}
+
+bool EventActionsHB::haveAnyOrderRelation(const EventActionDescriptor& ea1, const EventActionDescriptor& ea2) const
 {
-    // TODO(WebERA): Implement
-    CRASH();
+    for (WTF::Vector<const Arc*>::const_iterator it = m_arcs.begin(); it != m_arcs.end(); it++) {
+        if (((*it)->to == ea1 && (*it)->from == ea2) ||
+              ((*it)->to == ea2 && (*it)->from == ea1)) {
+            return true;
+        }
+    }
+
     return false;
 }
 
-bool EventActionsHB::haveAnyOrderRelation(const EventActionDescriptor& ea1, const EventActionDescriptor& ea2)
+void EventActionsHB::serialize(std::ostream& stream) const
 {
-    // TODO(WebERA): Implement
-    CRASH();
-    return false;
+    for (WTF::Vector<const Arc*>::const_iterator it = m_arcs.begin(); it != m_arcs.end(); it++) {
+        if (!(*it)->from.isNull()) {
+            stream << (*it)->from.getId() << ";" << (*it)->from.getDescription() << ";";
+            stream << (*it)->to.getId() << ";" << (*it)->to.getDescription() << ";";
+            stream << (*it)->duration << std::endl;
+        }
+    }
+}
+
+EventActionsHB* EventActionsHB::deserialize(std::istream& stream)
+{
+    // TODO(WebERA): This function does very little input validation,
+    // we should add a bit just to give the user useful feedback if something is illformed
+
+    EventActionsHB* hb = new EventActionsHB();
+
+    while (stream.good()) {
+        std::string arc;
+        std::getline(stream, arc);
+
+        if (arc.compare("") == 0) {
+            continue; // ignore blank lines
+        }
+
+        std::stringstream arcStream(arc);
+
+        std::string fromId;
+        std::getline(arcStream, fromId, ';');
+
+        std::string fromDescription;
+        std::getline(arcStream, fromDescription, ';');
+
+        std::string toId;
+        std::getline(arcStream, toId, ';');
+
+        std::string toDescription;
+        std::getline(arcStream, toDescription, ';');
+
+        std::string duration;
+        std::getline(arcStream, duration);
+
+        EventActionDescriptor from(strtoul(fromId.c_str(), NULL, 10), fromDescription);
+        EventActionDescriptor to(strtoul(toId.c_str(), NULL, 10), toDescription);
+
+        int durationInt = atoi(duration.c_str());
+
+        if (durationInt == -1) {
+            hb->addExplicitArc(from, to);
+        } else {
+            hb->addTimedArc(from, to, durationInt);
+        }
+    }
+
+    return hb;
 }
 
 

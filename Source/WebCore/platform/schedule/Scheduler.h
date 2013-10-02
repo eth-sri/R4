@@ -22,14 +22,14 @@
  *
  */
 
+#ifndef Scheduler_h
+#define Scheduler_h
+
 #include <wtf/ExportMacros.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
 
 #include <platform/Timer.h>
-
-#ifndef Scheduler_h
-#define Scheduler_h
 
 namespace WebCore {
 
@@ -44,7 +44,6 @@ namespace WebCore {
         virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items) = 0;
 
     };
-
 }
 
 #endif

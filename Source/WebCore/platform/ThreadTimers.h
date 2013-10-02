@@ -71,12 +71,12 @@ namespace WebCore {
 
         Vector<TimerBase*>& timerHeap() { return m_timerHeap; }
 
-        // WebERA:
-        EventActionSchedule& eventActionSchedule() { return m_eventActionSchedule; }
-        EventActionsHB& eventActionsHB() { return m_eventActionsHB; }
-
         void updateSharedTimer();
         void fireTimersInNestedEventLoop();
+
+        // WebERA:
+        static EventActionSchedule& eventActionSchedule() { return ThreadTimers::m_eventActionSchedule; }
+        static EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
 
         static void setScheduler(Scheduler* scheduler);
 
@@ -91,9 +91,8 @@ namespace WebCore {
         bool m_firingTimers; // Reentrancy guard.
 
         // WebERA
-        EventActionSchedule m_eventActionSchedule;
-        EventActionsHB m_eventActionsHB;
-
+        static EventActionSchedule m_eventActionSchedule;
+        static EventActionsHB m_eventActionsHB;
         static Scheduler* m_scheduler;
     };
 

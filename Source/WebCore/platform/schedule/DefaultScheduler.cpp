@@ -26,8 +26,6 @@
 
 namespace WebCore {
 
-int Scheduler::YIELD = -1; // TODO(WebERA): Move into Scheduler.cpp
-
 DefaultScheduler::DefaultScheduler()
 {
 }

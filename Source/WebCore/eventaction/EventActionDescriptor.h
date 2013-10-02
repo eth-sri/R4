@@ -33,21 +33,21 @@ namespace WebCore {
 
     public:
         EventActionDescriptor(unsigned long id, const std::string& description);
+        EventActionDescriptor(const std::string& description);
         EventActionDescriptor();
 
         bool isNull() const { return m_isNull; }
 
         std::string getDescription() const;
-        int getDescriptionIndex() const { return m_descriptionIndex; }
+        unsigned long getId() const { return m_id; }
 
-        bool operator==(const EventActionDescriptor &other) const;
+        bool operator==(const EventActionDescriptor& other) const;
+        bool compareDescription(const EventActionDescriptor& other) const;
 
         static EventActionDescriptor null;
 
-        // TODO(WebERA): Make this private...
-        static StringSet* descriptions() { return &EventActionDescriptor::m_descriptions; }
-
     private:
+        static StringSet* descriptions() { return &EventActionDescriptor::m_descriptions; }
         static StringSet m_descriptions;
 
         unsigned long m_id;

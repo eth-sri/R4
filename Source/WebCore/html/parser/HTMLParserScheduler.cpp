@@ -138,14 +138,14 @@ void HTMLParserScheduler::resume()
 void HTMLParserScheduler::updateTimerName()
 {
     std::string name = "HTMLDocumentParser(" + m_parser->getPositionAsString() + ")";
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionSchedule().allocateEventDescriptor(name);
+    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(name);
 
     m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
 
     // Add a happens before relation if we schedule a new fragment because of another action
     // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                threadGlobalData().threadTimers().eventActionSchedule().lastEventActionDispatched(),
+                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
                 descriptor
     );
 }
