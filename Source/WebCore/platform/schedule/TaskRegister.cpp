@@ -99,8 +99,7 @@ bool TaskRegister::RunTaskOnTarget(const char* name, const char* params) {
 	// Execute the function.
 	if (l.size() > 1)
 		fprintf(stderr, "Warning: multiple targets may fire with name %s, params %s\n", name, params);
-	(l[0].function)(l[0].object, params);
-	return true;
+	return (l[0].function)(l[0].object, params);
 }
 
 }  // namespace WebCore

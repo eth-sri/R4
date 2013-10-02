@@ -10,7 +10,7 @@
 
 namespace WebCore {
 
-typedef void (*TaskTargetFunction)(void* object, const char* params);
+typedef bool (*TaskTargetFunction)(void* object, const char* params);
 
 class TaskRegisterMaps;
 
