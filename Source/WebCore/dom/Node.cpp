@@ -1319,10 +1319,41 @@ bool Node::containsIncludingShadowDOM(Node* node)
     return false;
 }
 
+// WebERA: The node identifier should be usable for finding the node again.
+String Node::getNodeReplayIdentifier() const {
+	if (isElementNode()) {
+		const Element* el = toElement(this);
+		if (el->hasID()) {
+			String uri = baseURI().string();
+			String id = el->getIdAttribute().string();
+			return String::format("%s @ ID=%s",
+					uri.isNull() ? "" : uri.utf8().data(),
+					id.isNull() ? "" : id.utf8().data());
+		}
+	}
+	String name = nodeName();
+
+	ContainerNode* parent = parentNode();
+	if (parent) {
+		return String::format("%s/%s[%d]",
+				parent->getNodeReplayIdentifier().utf8().data(),
+				name.isNull() ? "" : name.utf8().data(),
+				nodeIndex());
+	}
+
+	String uri = baseURI().string();
+	return String::format("%s @ %s[%d]",
+			uri.isNull() ? "" : uri.utf8().data(),
+			name.isNull() ? "" : name.utf8().data(),
+			nodeIndex());
+}
+
 void Node::attach()
 {
     ASSERT(!attached());
     ASSERT(!renderer() || (renderer()->style() && renderer()->parent()));
+
+    printf("Attach %s\n", getNodeReplayIdentifier().utf8().data());
 
     // FIXME: This is O(N^2) for the innerHTML case, where all children are replaced at once (and not attached).
     // If this node got a renderer it may be the previousRenderer() of sibling text nodes and thus affect the
@@ -1349,6 +1380,8 @@ void Node::willRemove()
 void Node::detach()
 {
     setFlag(InDetachFlag);
+
+    printf("Detach %s\n", getNodeReplayIdentifier().utf8().data());
 
     if (renderer())
         renderer()->destroyAndCleanupAnonymousWrappers();

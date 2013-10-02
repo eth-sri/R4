@@ -155,6 +155,9 @@ public:
 
     virtual ~Node();
 
+    // WebERA: Node identifier used to replay traces.
+    String getNodeReplayIdentifier() const;
+
     // DOM methods & attributes for Node
 
     bool hasTagName(const QualifiedName&) const;
