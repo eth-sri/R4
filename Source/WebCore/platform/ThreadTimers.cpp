@@ -37,7 +37,6 @@
 #include <iostream>
 
 #include <platform/schedule/DefaultScheduler.h>
-#include <platform/schedule/RepeatScheduler.h>
 #include <platform/schedule/TaskRegister.h>
 
 using namespace std;
