@@ -1,0 +1,138 @@
+/*
+ * Copyright (C) 2009 Nokia Corporation and/or its subsidiary(-ies)
+ * Copyright (C) 2009 Girish Ramakrishnan <girish@forwardbias.in>
+ * Copyright (C) 2006 George Staikos <staikos@kde.org>
+ * Copyright (C) 2006 Dirk Mueller <mueller@kde.org>
+ * Copyright (C) 2006 Zack Rusin <zack@kde.org>
+ * Copyright (C) 2006 Simon Hausmann <hausmann@kde.org>
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <fstream>
+
+#include <QString>
+
+#include <WebCore/platform/ThreadTimers.h>
+
+#include "utils.h"
+#include "clientapplication.h"
+
+#include "record/recordschedule.h"
+
+class RecordClientApplication : public ClientApplication {
+    Q_OBJECT
+
+public:
+    RecordClientApplication(int& argc, char** argv);
+
+private:
+    void handleUserOptions();
+
+private:
+    QString m_schedulePath;
+    QString m_hbPath;
+    QString m_url;
+
+public slots:
+    void slOnCloseEvent();
+};
+
+RecordClientApplication::RecordClientApplication(int& argc, char** argv)
+    : ClientApplication(argc, argv)
+    , m_schedulePath("/tmp/schedule.data")
+    , m_hbPath("/tmp/happensbefore.data")
+{
+    QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
+    handleUserOptions();
+
+    WebCore::ThreadTimers::setScheduler(new RecordSchedule());
+
+    loadWebsite(m_url);
+}
+
+void RecordClientApplication::handleUserOptions()
+{
+    QStringList args = arguments();
+
+    if (args.contains("-help")) {
+        qDebug() << "Usage:" << m_programName.toLatin1().data()
+                 << "[-schedule-path]"
+                 << "[-happens-before-path]"
+                 << "URL";
+        exit(0);
+    }
+
+    int schedulePathIndex = args.indexOf("-schedule-path");
+    if (schedulePathIndex != -1) {
+        this->m_schedulePath = takeOptionValue(&args, schedulePathIndex);
+    }
+
+    int hbPathIndex = args.indexOf("-happens-before-path");
+    if (hbPathIndex != -1) {
+        this->m_hbPath = takeOptionValue(&args, hbPathIndex);
+    }
+
+    int lastArg = args.lastIndexOf(QRegExp("^-.*"));
+    QStringList urls = (lastArg != -1) ? args.mid(++lastArg) : args.mid(1);
+
+    if (urls.length() == 0) {
+        qDebug() << "URL required";
+        exit(1);
+        return;
+    }
+
+    m_url = urls.at(0);
+}
+
+void RecordClientApplication::slOnCloseEvent()
+{
+    std::ofstream hbfile;
+    hbfile.open(m_hbPath.toStdString());
+    WebCore::ThreadTimers::eventActionsHB().serialize(hbfile);
+    hbfile.close();
+
+    std::ofstream schedulefile;
+    schedulefile.open(m_schedulePath.toStdString());
+    WebCore::ThreadTimers::eventActionSchedule().serialize(schedulefile);
+    schedulefile.close();
+
+    m_window->close();
+}
+
+
+int main(int argc, char **argv)
+{
+    RecordClientApplication app(argc, argv);
+
+#ifndef NDEBUG
+    int retVal = app.exec();
+    QWebSettings::clearMemoryCaches();
+    return retVal;
+#else
+    return app.exec();
+#endif
+}
+
+#include "main.moc"
