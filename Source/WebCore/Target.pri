@@ -1210,7 +1210,6 @@ SOURCES += \
     platform/ThreadTimers.cpp \
     platform/Timer.cpp \
     platform/schedule/DefaultScheduler.cpp \
-    platform/schedule/RepeatScheduler.cpp \
     platform/text/UnicodeRange.cpp \
     platform/text/transcoder/FontTranscoder.cpp \
     platform/UUID.cpp \
@@ -2391,7 +2390,6 @@ HEADERS += \
     platform/schedule/Scheduler.h \
     platform/schedule/TaskRegister.h \
     platform/schedule/DefaultScheduler.h \
-    platform/schedule/RepeatScheduler.h \
     platform/Widget.h \
     platform/PlatformStrategies.h \
     platform/LocalizedStrings.h \
