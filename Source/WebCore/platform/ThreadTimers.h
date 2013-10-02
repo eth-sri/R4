@@ -42,6 +42,7 @@ namespace WebCore {
 
     class SharedTimer;
     class TimerBase;
+    class TaskRegister;
 
     /**
       *
@@ -80,6 +81,8 @@ namespace WebCore {
 
         static void setScheduler(Scheduler* scheduler);
 
+        TaskRegister* taskRegister() { return m_taskRegister; }
+
     private:
         static void sharedTimerFired();
 
@@ -91,6 +94,8 @@ namespace WebCore {
         bool m_firingTimers; // Reentrancy guard.
 
         // WebERA
+        TaskRegister* m_taskRegister;
+
         static EventActionSchedule m_eventActionSchedule;
         static EventActionsHB m_eventActionsHB;
         static Scheduler* m_scheduler;

@@ -73,7 +73,8 @@ SOURCES += \
     accessibility/AXObjectCache.cpp \
     bindings/generic/ActiveDOMCallback.cpp \
     bindings/generic/RuntimeEnabledFeatures.cpp \
-    platform/schedule/Scheduler.cpp
+    platform/schedule/Scheduler.cpp \
+    platform/schedule/TaskRegister.cpp
 
 v8 {
     include($$PWD/../JavaScriptCore/yarr/yarr.pri)
@@ -2388,6 +2389,7 @@ HEADERS += \
     platform/ThreadTimers.h \
     platform/Timer.h \
     platform/schedule/Scheduler.h \
+    platform/schedule/TaskRegister.h \
     platform/schedule/DefaultScheduler.h \
     platform/schedule/RepeatScheduler.h \
     platform/Widget.h \

@@ -36,8 +36,9 @@
 #include <stdio.h>
 #include <iostream>
 
-#include <platform/schedule/RepeatScheduler.h>
 #include <platform/schedule/DefaultScheduler.h>
+#include <platform/schedule/RepeatScheduler.h>
+#include <platform/schedule/TaskRegister.h>
 
 using namespace std;
 
@@ -70,6 +71,7 @@ static MainThreadSharedTimer* mainThreadSharedTimer()
 ThreadTimers::ThreadTimers()
     : m_sharedTimer(0)
     , m_firingTimers(false)
+	, m_taskRegister(new TaskRegister)
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
@@ -77,6 +79,7 @@ ThreadTimers::ThreadTimers()
 
 ThreadTimers::~ThreadTimers()
 {
+	delete m_taskRegister;
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.
