@@ -39,10 +39,16 @@ namespace WebCore {
     public:
         static int YIELD;
 
-        Scheduler() {}
-        virtual ~Scheduler() {}
+        Scheduler();
+        virtual ~Scheduler();
         virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items) = 0;
 
+        // Schedules a specific task for execution. Some schedulers may not execute the task immediately, but
+        // delay it instead.
+        virtual void scheduleTask(const char* name, const char* params) = 0;
+
+        // Execute delayed tasks if there are any.
+        virtual void executeDelayedTasks() = 0;
     };
 }
 

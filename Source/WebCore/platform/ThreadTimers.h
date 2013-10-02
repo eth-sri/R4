@@ -79,12 +79,14 @@ namespace WebCore {
         static EventActionSchedule& eventActionSchedule() { return ThreadTimers::m_eventActionSchedule; }
         static EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
 
-        static void setScheduler(Scheduler* scheduler);
+        void setScheduler(Scheduler* scheduler);
 
         TaskRegister* taskRegister() { return m_taskRegister; }
 
     private:
         static void sharedTimerFired();
+
+        static bool fireTimerCallback(void* object, const char* params);
 
         void sharedTimerFiredInternal();
         void fireTimersInNestedEventLoopInternal();
@@ -95,10 +97,10 @@ namespace WebCore {
 
         // WebERA
         TaskRegister* m_taskRegister;
+        Scheduler* m_scheduler;
 
         static EventActionSchedule m_eventActionSchedule;
         static EventActionsHB m_eventActionsHB;
-        static Scheduler* m_scheduler;
     };
 
 }

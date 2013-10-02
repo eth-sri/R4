@@ -48,14 +48,13 @@ namespace WebCore {
 // This is to prevent UI freeze when there are too many timers or machine performance is low.
 static const double maxDurationOfFiringTimers = 0.050;
 
-Scheduler* ThreadTimers::m_scheduler = new DefaultScheduler();
 EventActionSchedule ThreadTimers::m_eventActionSchedule;
 EventActionsHB ThreadTimers::m_eventActionsHB;
 
 void ThreadTimers::setScheduler(Scheduler* scheduler)
 {
-    delete ThreadTimers::m_scheduler;
-    ThreadTimers::m_scheduler = scheduler;
+	delete m_scheduler;
+    m_scheduler = scheduler;
 }
 
 // Timers are created, started and fired on the same thread, and each thread has its own ThreadTimers
@@ -71,6 +70,7 @@ ThreadTimers::ThreadTimers()
     : m_sharedTimer(0)
     , m_firingTimers(false)
 	, m_taskRegister(new TaskRegister)
+	, m_scheduler(new DefaultScheduler(m_taskRegister))
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
@@ -78,6 +78,7 @@ ThreadTimers::ThreadTimers()
 
 ThreadTimers::~ThreadTimers()
 {
+	delete m_scheduler;
 	delete m_taskRegister;
 }
 
@@ -104,7 +105,9 @@ void ThreadTimers::updateSharedTimer()
         return;
         
     if (m_firingTimers || m_timerHeap.isEmpty())
-        m_sharedTimer->stop();
+    	// WebERA: Regardless of whether there are timers, keep running every 50ms milliseconds.
+    	// This is to allow for delayed events to trigger.
+        m_sharedTimer->setFireInterval(0.05);
     else
         m_sharedTimer->setFireInterval(max(m_timerHeap.first()->m_nextFireTime - monotonicallyIncreasingTime(), 0.0));
 }
@@ -115,6 +118,24 @@ void ThreadTimers::sharedTimerFired()
     threadGlobalData().threadTimers().sharedTimerFiredInternal();
 }
 
+bool ThreadTimers::fireTimerCallback(void* object, const char* params) {
+	TimerBase* timer = (TimerBase*)object;
+
+    double interval = timer->repeatInterval();
+    timer->setNextFireTime(interval ? monotonicallyIncreasingTime() + interval : 0);
+
+    // WebERA: Denote that currently a timer with a given name is executed.
+    ThreadTimers::eventActionSchedule().eventActionDispatchStart(timer->eventActionDescriptor());
+
+    // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
+    timer->fired();
+
+    // WebERA: Denote that we are finished dispatching this event action
+    ThreadTimers::eventActionSchedule().eventActionDispatchEnd();
+
+    return true;
+}
+
 void ThreadTimers::sharedTimerFiredInternal()
 {
     // Do a re-entrancy check.
@@ -122,33 +143,27 @@ void ThreadTimers::sharedTimerFiredInternal()
         return;
     m_firingTimers = true;
 
+    m_scheduler->executeDelayedTasks();
+
     double fireTime = monotonicallyIncreasingTime();
     double timeToQuit = fireTime + maxDurationOfFiringTimers;
 
     while (!m_timerHeap.isEmpty() && m_timerHeap.first()->m_nextFireTime <= fireTime) {
-
-        int timer_index = ThreadTimers::m_scheduler->selectNextSchedulableItem(m_timerHeap);
-
-        if (timer_index == Scheduler::YIELD) {
-            break;
-        }
-
-        TimerBase* timer = m_timerHeap.at(timer_index);
+        TimerBase* timer = m_timerHeap.at(0);
 
         timer->m_nextFireTime = 0;
         timer->heapDelete();
 
-        double interval = timer->repeatInterval();
-        timer->setNextFireTime(interval ? fireTime + interval : 0);
-
-        // WebERA: Denote that currently a timer with a given name is executed.
-        ThreadTimers::eventActionSchedule().eventActionDispatchStart(timer->eventActionDescriptor());
-
-        // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
-        timer->fired();
-
-        // WebERA: Denote that we are finished dispatching this event action
-        ThreadTimers::eventActionSchedule().eventActionDispatchEnd();
+        if (timer->eventActionDescriptor().isNull()) {
+        	// Run the timer immediately.
+        	fireTimerCallback(timer, "");
+        } else {
+        	// Run the timer through the scheduler.
+        	const char* name = timer->eventActionDescriptor().getDescription().c_str();
+        	m_taskRegister->RegisterTarget(timer, name, &fireTimerCallback);
+        	m_scheduler->scheduleTask(name, "");
+        	m_scheduler->executeDelayedTasks();
+        }
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
         if (!m_firingTimers || timeToQuit < monotonicallyIncreasingTime())

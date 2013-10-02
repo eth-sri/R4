@@ -29,6 +29,7 @@
 #include <wtf/Noncopyable.h>
 
 #include "Scheduler.h"
+#include "TaskRegister.h"
 
 #ifndef DefaultScheduler_h
 #define DefaultScheduler_h
@@ -39,10 +40,16 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(DefaultScheduler);
 
     public:
-        DefaultScheduler();
+        DefaultScheduler(TaskRegister* taskReg);
         ~DefaultScheduler();
 
         virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items);
+
+        virtual void scheduleTask(const char* name, const char* params);
+        virtual void executeDelayedTasks();
+
+    private:
+        TaskRegister* m_taskReg;
     };
 
 }

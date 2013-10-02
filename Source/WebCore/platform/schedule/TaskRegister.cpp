@@ -99,6 +99,7 @@ bool TaskRegister::RunTaskOnTarget(const char* name, const char* params) {
 	// Execute the function.
 	if (l.size() > 1)
 		fprintf(stderr, "Warning: multiple targets may fire with name %s, params %s\n", name, params);
+	printf("Running %s %s\n", name, params);
 	return (l[0].function)(l[0].object, params);
 }
 

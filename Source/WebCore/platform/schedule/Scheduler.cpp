@@ -26,6 +26,12 @@
 
 namespace WebCore {
 
+Scheduler::Scheduler() {
+}
+
+Scheduler::~Scheduler() {
+}
+
 int Scheduler::YIELD = -1;
 
 }

@@ -1353,7 +1353,7 @@ void Node::attach()
     ASSERT(!attached());
     ASSERT(!renderer() || (renderer()->style() && renderer()->parent()));
 
-    printf("Attach %s\n", getNodeReplayIdentifier().utf8().data());
+    // printf("Attach %s\n", getNodeReplayIdentifier().utf8().data());
 
     // FIXME: This is O(N^2) for the innerHTML case, where all children are replaced at once (and not attached).
     // If this node got a renderer it may be the previousRenderer() of sibling text nodes and thus affect the
@@ -1381,7 +1381,7 @@ void Node::detach()
 {
     setFlag(InDetachFlag);
 
-    printf("Detach %s\n", getNodeReplayIdentifier().utf8().data());
+    // printf("Detach %s\n", getNodeReplayIdentifier().utf8().data());
 
     if (renderer())
         renderer()->destroyAndCleanupAnonymousWrappers();
