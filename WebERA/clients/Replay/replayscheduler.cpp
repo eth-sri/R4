@@ -51,10 +51,11 @@ int ReplayScheduler::selectNextSchedulableItem(const WTF::Vector<WebCore::TimerB
 
     // Search for the next timer and return its index
     for(WTF::Vector<WebCore::TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        if ((*it)->eventActionDescriptor().compareDescription(nextToSchedule)) {
+        if ((*it)->eventActionDescriptor().compareDescription(nextToSchedule) ||
+                ((*it)->eventActionDescriptor().isNull() && nextToSchedule.isNull())) {
 
             std::cout << "DISPATCH " << nextToSchedule.getDescription() << std::endl;
-            //debugPrintTimers(items); // TODO(WebERA): DEBUG
+            m_schedule.remove(0);
 
             m_scheduleWaits = 0;
             return it - items.begin();

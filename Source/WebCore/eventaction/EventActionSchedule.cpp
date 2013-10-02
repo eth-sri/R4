@@ -56,7 +56,11 @@ void EventActionSchedule::serialize(std::ostream& stream) const
     stream << m_nextEventActionDescriptorId << std::endl;
 
     for (WTF::Vector<EventActionDescriptor>::const_iterator it = m_schedule.begin(); it != m_schedule.end(); it++) {
-        stream << (*it).getId() << ";" << (*it).getDescription() << std::endl;
+        if ((*it).isNull()) {
+            stream << "NULL" << std::endl;
+        } else {
+            stream << (*it).getId() << ";" << (*it).getDescription() << std::endl;
+        }
     }
 }
 
@@ -78,6 +82,11 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
 
         if (eventaction.compare("") == 0) {
             continue; // ignore blank lines
+        }
+
+        if (eventaction.compare("NULL") == 0) {
+            schedule->m_schedule.append(EventActionDescriptor::null);
+            continue;
         }
 
         std::stringstream eventactionStream(eventaction);
