@@ -18,6 +18,9 @@
     the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA 02110-1301, USA.
 */
+
+#include <sstream>
+
 #include "config.h"
 #include "QNetworkReplyHandler.h"
 
@@ -389,6 +392,8 @@ QNetworkReplyHandler::QNetworkReplyHandler(ResourceHandle* handle, LoadType load
     , m_dataReceivedDelayTimer(this, &QNetworkReplyHandler::delayedDataReceived)
     , m_deferredBytesSent(-1)
     , m_deferredBytesTotal(-1)
+    , m_sequence_number(0)
+    , m_sequence_upload_number(0)
 {
     const ResourceRequest &r = m_resourceHandle->firstRequest();
 
@@ -672,9 +677,10 @@ void QNetworkReplyHandler::forwardData()
         m_queue.lock();
 
         std::string url =  m_request.url().toString().toAscii().data();
-        std::string dataName = std::string("QNetworkReplyHandler(DATA, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
+        std::stringstream dataName;
+        dataName << "QNetworkReplyHandler(DATA, " << m_sequence_number++ << ", " << url << ")";
 
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(dataName);
+        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(dataName.str());
 
         m_dataReceivedDelayTimer.setEventActionDescriptor(descriptor);
         m_dataReceivedDelayTimer.startOneShot(0);
@@ -701,9 +707,10 @@ void QNetworkReplyHandler::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
     m_queue.lock();
 
     std::string url =  m_request.url().toString().toAscii().data();
-    std::string uploadName = std::string("QNetworkReplyHandler(UPLOAD, <chunk-seq-number>, ") + url + ")";     // TODO(WebERA) Insert sequence numbers
+    std::stringstream uploadName;
+    uploadName << "QNetworkReplyHandler(UPLOAD, " << m_sequence_upload_number++ << ", " << url << ")";
 
-    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(uploadName);
+    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(uploadName.str());
 
     m_dataSentDelayTimer.setEventActionDescriptor(descriptor);
     m_dataSentDelayTimer.startOneShot(0);
@@ -786,6 +793,12 @@ QNetworkReply* QNetworkReplyHandler::sendNetworkRequest(QNetworkAccessManager* m
 
 void QNetworkReplyHandler::start()
 {
+    // WebERA: reset sequence numbers
+    // we have multiple starts if a redirect occurs
+
+    m_sequence_number = 0;
+    m_sequence_upload_number = 0;
+
     ResourceHandleInternal* d = m_resourceHandle->getInternal();
     if (!d || !d->m_context)
         return;

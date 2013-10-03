@@ -222,6 +222,9 @@ private:
     qint64 m_deferredBytesSent;
     qint64 m_deferredBytesTotal;
     QByteArray m_deferredBytes;
+
+    unsigned long m_sequence_number;
+    unsigned long m_sequence_upload_number;
 };
 
 // Self destructing QIODevice for FormData
