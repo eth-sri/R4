@@ -23,14 +23,14 @@
 #include "MIMESniffing.h"
 #include <QObject>
 
-QT_BEGIN_NAMESPACE
-class QNetworkReply;
-QT_END_NAMESPACE
+namespace WebCore {
+    class QNetworkReplyControllable;
+}
 
 class QtMIMETypeSniffer : public QObject {
     Q_OBJECT
 public:
-    QtMIMETypeSniffer(QNetworkReply*, const QString& advertisedMimeType, bool isSupportedImageType);
+    QtMIMETypeSniffer(WebCore::QNetworkReplyControllable*, const QString& advertisedMimeType, bool isSupportedImageType);
     QString mimeType() const { return m_mimeType; }
     bool isFinished() const { return m_isFinished; }
 
@@ -43,7 +43,7 @@ private slots:
 private:
     bool sniff();
 
-    QNetworkReply* m_reply;
+    WebCore::QNetworkReplyControllable* m_reply;
     QString m_mimeType;
     MIMESniffer m_sniffer;
     bool m_isFinished;

@@ -22,9 +22,9 @@
 
 #include "MIMESniffing.h"
 #include <QCoreApplication>
-#include <QNetworkReply>
+#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
-QtMIMETypeSniffer::QtMIMETypeSniffer(QNetworkReply* reply, const QString& advertisedMimeType, bool isSupportedImageType)
+QtMIMETypeSniffer::QtMIMETypeSniffer(WebCore::QNetworkReplyControllable* reply, const QString& advertisedMimeType, bool isSupportedImageType)
     : QObject(0)
     , m_reply(reply)
     , m_mimeType(advertisedMimeType)
@@ -42,12 +42,12 @@ QtMIMETypeSniffer::QtMIMETypeSniffer(QNetworkReply* reply, const QString& advert
 bool QtMIMETypeSniffer::sniff()
 {
     // See QNetworkReplyWrapper::setFinished().
-    const bool isReplyFinished = m_reply->property("_q_isFinished").toBool();
+    const bool isReplyFinished = m_reply->snapshot()->property("_q_isFinished").toBool();
 
-    if (!isReplyFinished && m_reply->bytesAvailable() < m_sniffer.dataSize())
+    if (!isReplyFinished && m_reply->snapshot()->bytesAvailable() < m_sniffer.dataSize())
         return false;
 
-    QByteArray data = m_reply->peek(m_sniffer.dataSize());
+    QByteArray data = m_reply->snapshot()->peek(m_sniffer.dataSize());
     const char* sniffedMimeType = m_sniffer.sniff(data.constData(), data.size());
     if (sniffedMimeType)
         m_mimeType = QString::fromLatin1(sniffedMimeType);

@@ -20,22 +20,21 @@
 #define QNetworkReplyHandler_h
 
 #include <QObject>
+#include <QMutex>
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 
-#include "FormData.h"
-#include "QtMIMETypeSniffer.h"
 #include "WebCore/platform/Timer.h"
 
-#include "ResourceResponse.h"
-#include "ResourceRequest.h"
-#include "ResourceError.h"
+#include "FormData.h"
+#include "QtMIMETypeSniffer.h"
+
+#include <QNetworkReply>
 
 QT_BEGIN_NAMESPACE
 class QFile;
-class QNetworkReply;
 QT_END_NAMESPACE
 
 namespace WebCore {
@@ -46,6 +45,129 @@ class ResourceHandle;
 class ResourceRequest;
 class ResourceResponse;
 class QNetworkReplyHandler;
+class QNetworkReplyWrapper;
+
+/**
+ * WebERA:
+ *
+ * Change QNetworkReplyWrapper such that we can control the loading of resources in a detailed manner.
+ *
+ * All initial calls are made to the wrapper, which then queues sequences of finegrained events in the
+ * QNetworkReplyHandlerCallQueue. Each call to QNetworkReplyWrapper represents one atomic operation as seen
+ * from the network, and this is then further split into small events in JavaScript.
+ *
+ * Here we control the execution of these atomic blocks. We intercept each call to QNetworkReplyWrapper and
+ * saves that call in a queue including a complete snapshot of the state of QNetworkReply.
+ *
+ * This allows us to:
+ * 1. Control when these calls are processed without worring that calls queued later are interferring with the state
+ * 2. Save the snapshots in order to precisely replay the same sequence of atomic events
+ *
+ * A timer is registered as a callback to process the next atomic block in the queue.
+ *
+ * Right now this only allows for repeating the same sequence of events if it occurs again. It does not support
+ * replaying events reusing these snapshots.
+ *
+ * The following invariants are assumed:
+ * (1) The URL of the requested resource is unique*
+ * (2) The resulting sequence of timers are triggered in the same order as they are registered**
+ * (3) The response is divided into identical data chunks from execution to execution***
+ *   (This assumes that (3a) the response is identical from execution to execution and (3b) the underlying infrastructure divides this into equal chunks
+ *
+ * The following events are registered:
+ *
+ * NETWORK(<url>, <url-seq-number>, <seq-number>)
+ *
+ * Happens before relations are added between each of these atomic blocks.
+ *
+ * TODO(WebERA): Should upload events be allowed to be triggered out of sequence?
+ * TODO(WebERA): Concurrency, right now this is run in another thread than the main thread? How is this safe
+ * in any way during normal operation... I'm not sure if this is 100% thread safe.
+ * TODO(WebERA): Add the snapshotting functionality to the snapshots
+ *
+ */
+
+class QNetworkReplySnapshot {
+
+public:
+
+    QNetworkReplySnapshot(QNetworkReply* reply);
+
+    QVariant header(QNetworkRequest::KnownHeaders header) const { return m_reply->header(header); }
+    bool hasRawHeader(const QByteArray &headerName) const { return m_reply->hasRawHeader(headerName); }
+    QList<QByteArray> rawHeaderList() const { return m_reply->rawHeaderList(); }
+    QByteArray rawHeader(const QByteArray &headerName) const { return m_reply->rawHeader(headerName); }
+    const QList<QNetworkReply::RawHeaderPair>& rawHeaderPairs() const { return m_reply->rawHeaderPairs(); }
+
+    QVariant attribute(QNetworkRequest::Attribute code) const { return m_reply->attribute(code); }
+    QNetworkReply::NetworkError error() const { return m_reply->error(); }
+    QUrl url() const { return m_reply->url(); }
+
+    // QObject
+    QVariant property(const char * name) const { return m_reply->property(name); }
+
+    // QIODevice
+    qint64 bytesAvailable() const { return m_reply->bytesAvailable(); }
+    QByteArray read(qint64 maxlen) { return m_reply->read(maxlen); }
+    QByteArray peek(qint64 maxlen) { return m_reply->peek(maxlen); }
+    QString errorString() const { return m_reply->errorString(); }
+
+private:
+    QNetworkReply* m_reply;
+};
+
+/**
+ * Exposes the same API as a QNetworkReply, only that the current state is pulled from QNetworkReplySnapshots
+ */
+class QNetworkReplyControllable : public QObject {
+    Q_OBJECT
+
+public:
+    QNetworkReplyControllable(QNetworkReply*, QObject* parent = 0);
+    ~QNetworkReplyControllable();
+
+    QNetworkReplySnapshot* snapshot() { return m_currentSnapshot; }
+
+    QNetworkReply* release();
+
+    void updateSnapshot(Timer<QNetworkReplyControllable>* timer);
+
+signals:
+
+    void finished();
+    void readyRead();
+
+private slots:
+    void slFinished();
+    void slReadyRead();
+
+private:
+
+    void detachFromReply();
+
+    enum NetworkSignal {
+        FINISHED,
+        READY_READ
+    };
+
+    void enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot);
+    void scheduleNextSnapshotUpdate();
+
+    typedef QPair<NetworkSignal, QNetworkReplySnapshot*> QueuedSnapshot;
+    QList<QueuedSnapshot> m_snapshotQueue;
+    QNetworkReplySnapshot* m_currentSnapshot;
+
+
+    unsigned long m_sequenceNumber;
+    QMutex m_nextSnapshotUpdateTimerMutex;
+    Timer<QNetworkReplyControllable> m_nextSnapshotUpdateTimer;
+    EventActionDescriptor m_parentDescriptor;
+
+    QNetworkReply* m_reply;
+
+};
+
+// WebERA STOP
 
 class QNetworkReplyHandlerCallQueue : public QObject {
     Q_OBJECT
@@ -76,7 +198,7 @@ public:
     QNetworkReplyWrapper(QNetworkReplyHandlerCallQueue*, QNetworkReply*, bool sniffMIMETypes, QObject* parent = 0);
     ~QNetworkReplyWrapper();
 
-    QNetworkReply* reply() const { return m_reply; }
+    QNetworkReplyControllable* reply() const { return m_reply; }
     QNetworkReply* release();
 
     void synchronousLoad();
@@ -103,7 +225,7 @@ private:
     void resetConnections();
     void emitMetaDataChanged();
 
-    QNetworkReply* m_reply;
+    QNetworkReplyControllable* m_reply;
     QUrl m_redirectionTargetUrl;
 
     QString m_encoding;
@@ -117,43 +239,6 @@ private:
     bool m_sniffMIMETypes;
 };
 
-/**
- * WebERA:
- *
- * Change QNetworkReplyHandler such that we can control the loading of resources in a detailed manner.
- *
- * Roughly, incoming network data is processed as follows:
- * Qt network handing -> QNetworkReplyHandlerCallQueue -> QNetworkReplyHandler -> client
- *
- * We insert a delay between QNetworkReplyHandler and its client by registering timers in ThreadTimers. Each timer
- * is given a relevant event action descriptor representing the event it is delaying.
- *
- * Further processing of network events are stopped in QNetworkReplyHandlerCallQueue until the current timer has fired.
- *
- * The following invariants are assumed:
- * (1) The URL of the requested resource is unique*
- * (2) The resulting sequence of timers are triggered in the same order as they are registered**
- * (3) The response is divided into identical data chunks from execution to execution***
- *   (This assumes that (3a) the response is identical from execution to execution and (3b) the underlying infrastructure divides this into equal chunks
- *
- * The following events are registered:
- *
- * QNetworkReplyHandler(FAILURE, <url>)
- * QNetworkReplyHandler(FINISHED, <url>)
- * QNetworkReplyHandler(DATA, <chunk-seq-number>, <url>)
- * QNetworkReplyHandler(UPLOAD, <chunk-seq-number>, <url>)
- * QNetworkReplyHandler(RESPONSE, <url>)
- * QNetworkReplyHandler(REQUEST, <url>)
- *
- * * If we want to support multiple requets to the same URL then we need to improve the Timer names.
- * ** This holds as we do not expose the next timer before the previous timer has been fired
- * *** TODO(WebERA) check if this invariant holds - right now this does not hold. When we use the CallQueue to defer further processing new data is still received and added,
- *     thus depending on when we process the queue the chunks extracted will be different.
- *
- * TODO(WebERA): There is a bug in the happens before relations in the networking layer. HB relations are added correctly if the execution of one event action is followed
- * by another network-related event action (that is, another event is waiting in the defer queue). If this event is added later then a NULL event action descriptor is used.
- */
-
 class QNetworkReplyHandler : public QObject
 {
     Q_OBJECT
@@ -166,7 +251,7 @@ public:
     QNetworkReplyHandler(ResourceHandle*, LoadType, bool deferred = false);
     void setLoadingDeferred(bool deferred) { m_queue.setDeferSignals(deferred, m_loadType == SynchronousLoad); }
 
-    QNetworkReply* reply() const { return m_replyWrapper ? m_replyWrapper->reply() : 0; }
+    //QNetworkReply* reply() const { return m_replyWrapper ? m_replyWrapper->reply() : 0; } // WebERA: Lets see if we can avoid exposing this
 
     void abort();
 
@@ -176,15 +261,7 @@ public:
     void forwardData();
     void sendResponseIfNeeded();
 
-    // WebERA delayed callbacks
-    void delayedFinish(Timer<QNetworkReplyHandler>* timer);
-    void delayedFailure(Timer<QNetworkReplyHandler>* timer);
-    void delayedResponse(Timer<QNetworkReplyHandler>* timer);
-    void delayedRequest(Timer<QNetworkReplyHandler>* timer);
-    void delayedDataSent(Timer<QNetworkReplyHandler>* timer);
-    void delayedDataReceived(Timer<QNetworkReplyHandler>* timer);
-
-    static ResourceError errorForReply(QNetworkReply*);
+    static ResourceError errorForReply(QNetworkReplyControllable*);
 
 private slots:
     void uploadProgress(qint64 bytesSent, qint64 bytesTotal);
@@ -208,23 +285,6 @@ private:
     int m_redirectionTries;
 
     QNetworkReplyHandlerCallQueue m_queue;
-
-    Timer<QNetworkReplyHandler> m_finishedDelayTimer;
-    Timer<QNetworkReplyHandler> m_failureDelayTimer;
-    Timer<QNetworkReplyHandler> m_responseDelayTimer;
-    Timer<QNetworkReplyHandler> m_requestDelayTimer;
-    Timer<QNetworkReplyHandler> m_dataSentDelayTimer;
-    Timer<QNetworkReplyHandler> m_dataReceivedDelayTimer;
-
-    ResourceResponse m_deferredResponse;
-    ResourceRequest m_deferredRequest;
-    ResourceError m_deferredError;
-    qint64 m_deferredBytesSent;
-    qint64 m_deferredBytesTotal;
-    QByteArray m_deferredBytes;
-
-    unsigned long m_sequence_number;
-    unsigned long m_sequence_upload_number;
 };
 
 // Self destructing QIODevice for FormData

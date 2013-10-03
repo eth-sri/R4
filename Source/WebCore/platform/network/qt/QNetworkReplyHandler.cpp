@@ -37,7 +37,6 @@
 #include <QNetworkReply>
 #include <QNetworkCookie>
 
-#include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/eventaction/EventActionSchedule.h>
 
@@ -154,6 +153,144 @@ bool FormDataIODevice::isSequential() const
     return true;
 }
 
+/****************** QNetworkReplySnapshot ******************/
+
+QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReply* reply)
+    : m_reply(reply)
+{
+// TODO
+}
+
+/****************** QNetworkReplyControllable ******************/
+
+QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReply* reply, QObject* parent)
+    : QObject(parent)
+    , m_sequenceNumber(0)
+    , m_nextSnapshotUpdateTimer(this, &QNetworkReplyControllable::updateSnapshot)
+    , m_parentDescriptor(ThreadTimers::eventActionSchedule().currentEventActionDispatching())
+    , m_reply(reply)
+{
+    Q_ASSERT(m_reply);
+
+    connect(m_reply, SIGNAL(finished()), this, SLOT(slFinished()));
+    connect(m_reply, SIGNAL(readyRead()), this, SLOT(slReadyRead()));
+
+    m_currentSnapshot = new QNetworkReplySnapshot(reply);
+}
+
+QNetworkReplyControllable::~QNetworkReplyControllable()
+{
+
+    detachFromReply();
+
+    if (m_reply)
+        m_reply->deleteLater();
+}
+
+void QNetworkReplyControllable::slFinished()
+{
+    enqueueSnapshot(FINISHED, new QNetworkReplySnapshot(m_reply));
+}
+
+void QNetworkReplyControllable::slReadyRead()
+{
+    enqueueSnapshot(READY_READ, new QNetworkReplySnapshot(m_reply));
+}
+
+void QNetworkReplyControllable::detachFromReply()
+{
+    if (m_nextSnapshotUpdateTimer.isActive())
+    {
+        m_nextSnapshotUpdateTimer.stop();
+    }
+
+    foreach(QueuedSnapshot snapshot, m_snapshotQueue) {
+        delete snapshot.second;
+        snapshot.second = NULL; // debugging
+    }
+
+    m_snapshotQueue.clear();
+
+    m_reply->disconnect(this, SLOT(slFinished()));
+    m_reply->disconnect(this, SLOT(slReadyRead()));
+
+    QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
+}
+
+QNetworkReply* QNetworkReplyControllable::release()
+{
+    if (!m_reply)
+        return 0;
+
+    detachFromReply();
+
+    QNetworkReply* reply = m_reply;
+    m_reply = 0;
+
+    reply->setParent(0);
+    return reply;
+}
+
+// Notice, this function is called by the main thread
+void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*)
+{
+    QueuedSnapshot queuedSnapshot = m_snapshotQueue.takeFirst();
+
+    delete m_currentSnapshot;
+    m_currentSnapshot = queuedSnapshot.second;
+
+    switch(queuedSnapshot.first) {
+    case FINISHED:
+        emit finished();
+        return; // We are done and this structure has been freed
+    case READY_READ:
+        emit readyRead();
+        break;
+    default:
+        CRASH();
+    }
+
+    if (!m_snapshotQueue.empty()) {
+        scheduleNextSnapshotUpdate();
+    } else {
+        m_nextSnapshotUpdateTimerMutex.unlock();
+    }
+}
+
+// Notice, this function is called by non-main threads
+void QNetworkReplyControllable::enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot)
+{
+    m_snapshotQueue.append(QueuedSnapshot(signal, snapshot));
+
+    bool locked = m_nextSnapshotUpdateTimerMutex.tryLock();
+
+    if (locked) {
+        // the timer is not in use, lets schedule it
+        // leave the mutex locked as we expect the main thread to unlock it for us when it stops using the timer
+
+        scheduleNextSnapshotUpdate();
+    }
+}
+
+void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
+{
+    std::stringstream name;
+    name << "NETWORK(" << m_reply->url().toString().toStdString() << ", " << "<same-url-seq-number>" << ", " << m_sequenceNumber++ << ")"; // TODO(WebERA) set same-url-seq-number
+
+    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(name.str());
+    ThreadTimers::eventActionsHB().addExplicitArc(
+                m_parentDescriptor,
+                descriptor);
+
+    m_nextSnapshotUpdateTimer.setEventActionDescriptor(descriptor);
+    m_nextSnapshotUpdateTimer.startOneShot(0);
+
+    m_parentDescriptor = descriptor;
+}
+
+// WebERA STOP
+
+
 QNetworkReplyHandlerCallQueue::QNetworkReplyHandlerCallQueue(QNetworkReplyHandler* handler, bool deferSignals)
     : m_replyHandler(handler)
     , m_locks(0)
@@ -215,13 +352,11 @@ private:
 
 QNetworkReplyWrapper::QNetworkReplyWrapper(QNetworkReplyHandlerCallQueue* queue, QNetworkReply* reply, bool sniffMIMETypes, QObject* parent)
     : QObject(parent)
-    , m_reply(reply)
+    , m_reply(new QNetworkReplyControllable(reply, this))
     , m_queue(queue)
     , m_responseContainsData(false)
     , m_sniffMIMETypes(sniffMIMETypes)
 {
-    Q_ASSERT(m_reply);
-
     // setFinished() must be the first that we connect, so isFinished() is updated when running other slots.
     connect(m_reply, SIGNAL(finished()), this, SLOT(setFinished()));
     connect(m_reply, SIGNAL(finished()), this, SLOT(receiveMetaData()));
@@ -230,23 +365,17 @@ QNetworkReplyWrapper::QNetworkReplyWrapper(QNetworkReplyHandlerCallQueue* queue,
 
 QNetworkReplyWrapper::~QNetworkReplyWrapper()
 {
-    if (m_reply)
-        m_reply->deleteLater();
     m_queue->clear();
 }
 
+// WebERA: This exposes the non-snapshot version of reply,
+// however this is not a problem since, in practice, this is only used for aborting
 QNetworkReply* QNetworkReplyWrapper::release()
 {
-    if (!m_reply)
-        return 0;
-
     resetConnections();
-    QNetworkReply* reply = m_reply;
-    m_reply = 0;
     m_sniffer = nullptr;
 
-    reply->setParent(0);
-    return reply;
+    return m_reply->release();
 }
 
 void QNetworkReplyWrapper::synchronousLoad()
@@ -272,11 +401,11 @@ void QNetworkReplyWrapper::receiveMetaData()
     resetConnections();
 
 
-    WTF::String contentType = m_reply->header(QNetworkRequest::ContentTypeHeader).toString();
+    WTF::String contentType = m_reply->snapshot()->header(QNetworkRequest::ContentTypeHeader).toString();
     m_encoding = extractCharsetFromMediaType(contentType);
     m_advertisedMIMEType = extractMIMETypeFromMediaType(contentType);
 
-    m_redirectionTargetUrl = m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+    m_redirectionTargetUrl = m_reply->snapshot()->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
     if (m_redirectionTargetUrl.isValid()) {
         QueueLocker lock(m_queue);
         m_queue->push(&QNetworkReplyHandler::sendResponseIfNeeded);
@@ -328,7 +457,7 @@ void QNetworkReplyWrapper::emitMetaDataChanged()
     QueueLocker lock(m_queue);
     m_queue->push(&QNetworkReplyHandler::sendResponseIfNeeded);
 
-    if (m_reply->bytesAvailable()) {
+    if (m_reply->snapshot()->bytesAvailable()) {
         m_responseContainsData = true;
         m_queue->push(&QNetworkReplyHandler::forwardData);
     }
@@ -345,7 +474,7 @@ void QNetworkReplyWrapper::emitMetaDataChanged()
 
 void QNetworkReplyWrapper::didReceiveReadyRead()
 {
-    if (m_reply->bytesAvailable())
+    if (m_reply->snapshot()->bytesAvailable())
         m_responseContainsData = true;
     m_queue->push(&QNetworkReplyHandler::forwardData);
 }
@@ -384,16 +513,6 @@ QNetworkReplyHandler::QNetworkReplyHandler(ResourceHandle* handle, LoadType load
     , m_loadType(loadType)
     , m_redirectionTries(gMaxRedirections)
     , m_queue(this, deferred)
-    , m_finishedDelayTimer(this, &QNetworkReplyHandler::delayedFinish)
-    , m_failureDelayTimer(this, &QNetworkReplyHandler::delayedFailure)
-    , m_responseDelayTimer(this, &QNetworkReplyHandler::delayedResponse)
-    , m_requestDelayTimer(this, &QNetworkReplyHandler::delayedRequest)
-    , m_dataSentDelayTimer(this, &QNetworkReplyHandler::delayedDataSent)
-    , m_dataReceivedDelayTimer(this, &QNetworkReplyHandler::delayedDataReceived)
-    , m_deferredBytesSent(-1)
-    , m_deferredBytesTotal(-1)
-    , m_sequence_number(0)
-    , m_sequence_upload_number(0)
 {
     const ResourceRequest &r = m_resourceHandle->firstRequest();
 
@@ -435,9 +554,9 @@ QNetworkReply* QNetworkReplyHandler::release()
     return reply;
 }
 
-static bool shouldIgnoreHttpError(QNetworkReply* reply, bool receivedData)
+static bool shouldIgnoreHttpError(QNetworkReplyControllable* reply, bool receivedData)
 {
-    int httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    int httpStatusCode = reply->snapshot()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (httpStatusCode == 401 || httpStatusCode == 407)
         return true;
@@ -464,46 +583,19 @@ void QNetworkReplyHandler::finish()
         return;
     }
 
-    if (!m_replyWrapper->reply()->error() || shouldIgnoreHttpError(m_replyWrapper->reply(), m_replyWrapper->responseContainsData())) {
-        // WEbERA: delay
-        m_queue.lock();
+    if (!m_replyWrapper->reply()->snapshot()->error() || shouldIgnoreHttpError(m_replyWrapper->reply(), m_replyWrapper->responseContainsData()))
+        client->didFinishLoading(m_resourceHandle, 0);
+    else
+        client->didFail(m_resourceHandle, errorForReply(m_replyWrapper->reply()));
 
-        std::string url =  m_request.url().toString().toAscii().data();
-        std::string finishedName = std::string("QNetworkReplyHandler(FINISHED, ") + url + ")";
-
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(finishedName);
-
-        m_finishedDelayTimer.setEventActionDescriptor(descriptor);
-        m_finishedDelayTimer.startOneShot(0);
-
-        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                    descriptor);
-
-    } else {
-        // WebERA: delay
-        m_deferredError = errorForReply(m_replyWrapper->reply());
-        m_queue.lock();
-
-        std::string url =  m_request.url().toString().toAscii().data();
-        std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
-
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(failureName);
-
-        m_failureDelayTimer.setEventActionDescriptor(descriptor);
-        m_failureDelayTimer.startOneShot(0);
-
-        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                    descriptor);
-    }
+    m_replyWrapper = nullptr;
 }
 
 void QNetworkReplyHandler::sendResponseIfNeeded()
 {
     ASSERT(m_replyWrapper && m_replyWrapper->reply() && !wasAborted());
 
-    if (m_replyWrapper->reply()->error() && m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).isNull())
+    if (m_replyWrapper->reply()->snapshot()->error() && m_replyWrapper->reply()->snapshot()->attribute(QNetworkRequest::HttpStatusCodeAttribute).isNull())
         return;
 
     ResourceHandleClient* client = m_resourceHandle->client();
@@ -514,41 +606,24 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
 
     if (mimeType.isEmpty()) {
         // let's try to guess from the extension
-        mimeType = MIMETypeRegistry::getMIMETypeForPath(m_replyWrapper->reply()->url().path());
+        mimeType = MIMETypeRegistry::getMIMETypeForPath(m_replyWrapper->reply()->snapshot()->url().path());
     }
 
-    KURL url(m_replyWrapper->reply()->url());
+    KURL url(m_replyWrapper->reply()->snapshot()->url());
     ResourceResponse response(url, mimeType.lower(),
-                              m_replyWrapper->reply()->header(QNetworkRequest::ContentLengthHeader).toLongLong(),
+                              m_replyWrapper->reply()->snapshot()->header(QNetworkRequest::ContentLengthHeader).toLongLong(),
                               m_replyWrapper->encoding(), String());
 
     if (url.isLocalFile()) {
-        // WebERA: delay
-        m_deferredResponse = response;
-        m_queue.lock();
-
-        std::string request_url =  m_request.url().toString().toAscii().data();
-        std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + request_url + ")";
-
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(responseName);
-
-        m_responseDelayTimer.setEventActionDescriptor(descriptor);
-        m_responseDelayTimer.startOneShot(0);
-
-        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                    descriptor);
-
-        //client->didReceiveResponse(m_resourceHandle, response);
-
+        client->didReceiveResponse(m_resourceHandle, response);
         return;
     }
 
     // The status code is equal to 0 for protocols not in the HTTP family.
-    int statusCode = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    int statusCode = m_replyWrapper->reply()->snapshot()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (url.protocolIsInHTTPFamily()) {
-        String suggestedFilename = filenameFromHTTPContentDisposition(QString::fromLatin1(m_replyWrapper->reply()->rawHeader("Content-Disposition")));
+        String suggestedFilename = filenameFromHTTPContentDisposition(QString::fromLatin1(m_replyWrapper->reply()->snapshot()->rawHeader("Content-Disposition")));
 
         if (!suggestedFilename.isEmpty())
             response.setSuggestedFilename(suggestedFilename);
@@ -556,69 +631,38 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
             response.setSuggestedFilename(url.lastPathComponent());
 
         response.setHTTPStatusCode(statusCode);
-        response.setHTTPStatusText(m_replyWrapper->reply()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray().constData());
+        response.setHTTPStatusText(m_replyWrapper->reply()->snapshot()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toByteArray().constData());
 
         // Add remaining headers.
-        foreach (const QNetworkReply::RawHeaderPair& pair, m_replyWrapper->reply()->rawHeaderPairs())
+        foreach (const QNetworkReply::RawHeaderPair& pair, m_replyWrapper->reply()->snapshot()->rawHeaderPairs())
             response.setHTTPHeaderField(QString::fromLatin1(pair.first), QString::fromLatin1(pair.second));
     }
 
-    QUrl redirection = m_replyWrapper->reply()->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+    QUrl redirection = m_replyWrapper->reply()->snapshot()->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
     if (redirection.isValid()) {
         redirect(response, redirection);
         return;
     }
 
-    // WebERA: delay
-    m_deferredResponse = response;
-    m_queue.lock();
-
-    std::string request_url =  m_request.url().toString().toAscii().data();
-    std::string responseName = std::string("QNetworkReplyHandler(RESPONSE, ") + request_url + ")";
-
-    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(responseName);
-
-    m_responseDelayTimer.setEventActionDescriptor(descriptor);
-    m_responseDelayTimer.startOneShot(0);
-
-    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                descriptor);
-
-    //client->didReceiveResponse(m_resourceHandle, response);
+    client->didReceiveResponse(m_resourceHandle, response);
 }
 
 void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redirection)
 {
-    QUrl newUrl = m_replyWrapper->reply()->url().resolved(redirection);
+    QUrl newUrl = m_replyWrapper->reply()->snapshot()->url().resolved(redirection);
 
-    //ResourceHandleClient* client = m_resourceHandle->client();
-    //ASSERT(client);
+    ResourceHandleClient* client = m_resourceHandle->client();
+    ASSERT(client);
 
-    int statusCode = m_replyWrapper->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    int statusCode = m_replyWrapper->reply()->snapshot()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     m_redirectionTries--;
     if (!m_redirectionTries) {
         ResourceError error("HTTP", 400 /*bad request*/,
                             newUrl.toString(),
                             QCoreApplication::translate("QWebPage", "Redirection limit reached"));
-
-        // WebERA: delay
-        m_deferredError = error;
-        m_queue.lock();
-
-        std::string url =  m_request.url().toString().toAscii().data();
-        std::string failureName = std::string("QNetworkReplyHandler(FAILURE, ") + url + ")";
-
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(failureName);
-
-        m_failureDelayTimer.setEventActionDescriptor(descriptor);
-        m_failureDelayTimer.startOneShot(0);
-
-        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                    descriptor);
-
+        client->didFail(m_resourceHandle, error);
+        m_replyWrapper = nullptr;
         return;
     }
 
@@ -637,30 +681,18 @@ void QNetworkReplyHandler::redirect(ResourceResponse& response, const QUrl& redi
     if (!newRequest.url().protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https"))
         newRequest.clearHTTPReferrer();
 
-    // WebERA: delay
-    m_deferredRequest = newRequest;
-    m_deferredResponse = response;
+    client->willSendRequest(m_resourceHandle, newRequest, response);
+    if (wasAborted()) // Network error cancelled the request.
+        return;
 
-    m_queue.lock();
-
-    std::string url =  newUrl.toString().toAscii().data();
-    std::string requestName = std::string("QNetworkReplyHandler(REQUEST, ") + url + ")";
-
-    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(requestName);
-
-    m_requestDelayTimer.setEventActionDescriptor(descriptor);
-    m_requestDelayTimer.startOneShot(0);
-
-    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                descriptor);
+    m_request = newRequest.toNetworkRequest(m_resourceHandle->getInternal()->m_context.get());
 }
 
 void QNetworkReplyHandler::forwardData()
 {
     ASSERT(m_replyWrapper && m_replyWrapper->reply() && !wasAborted() && !m_replyWrapper->wasRedirected());
 
-    QByteArray data = m_replyWrapper->reply()->read(m_replyWrapper->reply()->bytesAvailable());
+    QByteArray data = m_replyWrapper->reply()->snapshot()->read(m_replyWrapper->reply()->snapshot()->bytesAvailable());
 
     ResourceHandleClient* client = m_resourceHandle->client();
     if (!client)
@@ -669,26 +701,8 @@ void QNetworkReplyHandler::forwardData()
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=19793
     // -1 means we do not provide any data about transfer size to inspector so it would use
     // Content-Length headers or content size to show transfer size.
-    if (!data.isEmpty()) {
-
-        // WebERA: delay
-        m_deferredBytes = data;
-
-        m_queue.lock();
-
-        std::string url =  m_request.url().toString().toAscii().data();
-        std::stringstream dataName;
-        dataName << "QNetworkReplyHandler(DATA, " << m_sequence_number++ << ", " << url << ")";
-
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(dataName.str());
-
-        m_dataReceivedDelayTimer.setEventActionDescriptor(descriptor);
-        m_dataReceivedDelayTimer.startOneShot(0);
-
-        threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                    descriptor);
-    }
+    if (!data.isEmpty())
+        client->didReceiveData(m_resourceHandle, data.constData(), data.length(), -1);
 }
 
 void QNetworkReplyHandler::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
@@ -700,24 +714,7 @@ void QNetworkReplyHandler::uploadProgress(qint64 bytesSent, qint64 bytesTotal)
     if (!client)
         return;
 
-    // WebERA: delay
-    m_deferredBytesSent = bytesSent;
-    m_deferredBytesTotal = bytesTotal;
-
-    m_queue.lock();
-
-    std::string url =  m_request.url().toString().toAscii().data();
-    std::stringstream uploadName;
-    uploadName << "QNetworkReplyHandler(UPLOAD, " << m_sequence_upload_number++ << ", " << url << ")";
-
-    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(uploadName.str());
-
-    m_dataSentDelayTimer.setEventActionDescriptor(descriptor);
-    m_dataSentDelayTimer.startOneShot(0);
-
-    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
-                descriptor);
+    client->didSendData(m_resourceHandle, bytesSent, bytesTotal);
 }
 
 void QNetworkReplyHandler::clearContentHeaders()
@@ -793,12 +790,6 @@ QNetworkReply* QNetworkReplyHandler::sendNetworkRequest(QNetworkAccessManager* m
 
 void QNetworkReplyHandler::start()
 {
-    // WebERA: reset sequence numbers
-    // we have multiple starts if a redirect occurs
-
-    m_sequence_number = 0;
-    m_sequence_upload_number = 0;
-
     ResourceHandleInternal* d = m_resourceHandle->getInternal();
     if (!d || !d->m_context)
         return;
@@ -819,91 +810,15 @@ void QNetworkReplyHandler::start()
         connect(m_replyWrapper->reply(), SIGNAL(uploadProgress(qint64, qint64)), this, SLOT(uploadProgress(qint64, qint64)));
 }
 
-ResourceError QNetworkReplyHandler::errorForReply(QNetworkReply* reply)
+ResourceError QNetworkReplyHandler::errorForReply(QNetworkReplyControllable* reply)
 {
-    QUrl url = reply->url();
-    int httpStatusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QUrl url = reply->snapshot()->url();
+    int httpStatusCode = reply->snapshot()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (httpStatusCode)
-        return ResourceError("HTTP", httpStatusCode, url.toString(), reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString());
+        return ResourceError("HTTP", httpStatusCode, url.toString(), reply->snapshot()->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString());
 
-    return ResourceError("QtNetwork", reply->error(), url.toString(), reply->errorString());
-}
-
-void QNetworkReplyHandler::delayedFinish(Timer<QNetworkReplyHandler>*)
-{
-    ResourceHandleClient* client = m_resourceHandle->client();
-
-    client->didFinishLoading(m_resourceHandle, 0);
-    m_replyWrapper = nullptr;
-
-    m_queue.unlock();
-}
-
-void QNetworkReplyHandler::delayedFailure(Timer<QNetworkReplyHandler>*)
-{
-    ResourceHandleClient* client = m_resourceHandle->client();
-
-    client->didFail(m_resourceHandle, m_deferredError);
-    m_replyWrapper = nullptr;
-
-    m_queue.unlock();
-}
-
-void QNetworkReplyHandler::delayedResponse(Timer<QNetworkReplyHandler>*)
-{
-    ASSERT(!m_deferredResponse.isNull());
-
-    ResourceHandleClient* client = m_resourceHandle->client();
-    client->didReceiveResponse(m_resourceHandle, m_deferredResponse);
-    m_deferredResponse = ResourceResponse(); // destroy the old response
-
-    m_queue.unlock();
-}
-
-void QNetworkReplyHandler::delayedRequest(Timer<QNetworkReplyHandler>*)
-{
-    ASSERT(!m_deferredResponse.isNull());
-    ASSERT(!m_deferredRequest.isNull());
-
-    ResourceHandleClient* client = m_resourceHandle->client();
-
-    client->willSendRequest(m_resourceHandle, m_deferredRequest, m_deferredResponse);
-
-    if (!wasAborted()) { // Network error did not cancel the request.
-        m_request = m_deferredRequest.toNetworkRequest(m_resourceHandle->getInternal()->m_context.get());
-    }
-
-    m_deferredResponse = ResourceResponse(); // destroy the old response
-    m_deferredRequest = ResourceRequest(); // destroy the old request
-
-    m_queue.unlock();
-}
-
-void QNetworkReplyHandler::delayedDataSent(Timer<QNetworkReplyHandler>* timer)
-{
-    ASSERT(m_deferredBytesSent != -1);
-    ASSERT(m_deferredBytesTotal != -1);
-
-    ResourceHandleClient* client = m_resourceHandle->client();
-    client->didSendData(m_resourceHandle, m_deferredBytesSent, m_deferredBytesTotal);
-
-    m_deferredBytesSent = -1;
-    m_deferredBytesTotal = -1;
-
-    m_queue.unlock();
-}
-
-void QNetworkReplyHandler::delayedDataReceived(Timer<QNetworkReplyHandler>*)
-{
-    ASSERT(!m_deferredBytes.isNull());
-
-    ResourceHandleClient* client = m_resourceHandle->client();
-    client->didReceiveData(m_resourceHandle, m_deferredBytes.constData(), m_deferredBytes.length(), -1);
-
-    m_deferredBytes = QByteArray();
-
-    m_queue.unlock();
+    return ResourceError("QtNetwork", reply->snapshot()->error(), url.toString(), reply->snapshot()->errorString());
 }
 
 }
