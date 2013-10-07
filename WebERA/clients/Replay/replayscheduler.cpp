@@ -34,32 +34,31 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath)
 {
     std::ifstream fp;
     fp.open(schedulePath);
-    WebCore::EventActionSchedule* schedule = WebCore::EventActionSchedule::deserialize(fp);
-    m_schedule = schedule->getVectorCopy();
-    delete schedule;
+    m_schedule = WebCore::EventActionSchedule::deserialize(fp);
     fp.close();
 }
 
 ReplayScheduler::~ReplayScheduler()
 {
+    delete m_schedule;
 }
 
-int ReplayScheduler::selectNextSchedulableItem(const WTF::Vector<WebCore::TimerBase*>& items)
+void ReplayScheduler::eventActionScheduled(const WebCore::EventActionDescriptor& descriptor,
+                                           WebCore::EventActionRegister& eventActionRegister)
+{
+}
+
+void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister& eventActionRegister)
 {
 
-    WebCore::EventActionDescriptor nextToSchedule = m_schedule.first();
+    WebCore::EventActionDescriptor nextToSchedule = m_schedule->first();
 
-    // Search for the next timer and return its index
-    for(WTF::Vector<WebCore::TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        if ((*it)->eventActionDescriptor().fuzzyCompare(nextToSchedule) ||
-                ((*it)->eventActionDescriptor().isNull() && nextToSchedule.isNull())) {
+    bool found = eventActionRegister.runEventAction(nextToSchedule);
 
-            std::cout << "DISPATCH " << nextToSchedule.getName() << std::endl;
-            m_schedule.remove(0);
-
-            m_scheduleWaits = 0;
-            return it - items.begin();
-        }
+    if (found) {
+        m_schedule->remove(0);
+        m_scheduleWaits = 0;
+        return;
     }
 
     // timer not registered yet
@@ -68,30 +67,25 @@ int ReplayScheduler::selectNextSchedulableItem(const WTF::Vector<WebCore::TimerB
         std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
         std::cerr << "This is the current queue of events" << std::endl;
 
-        debugPrintTimers(items); // TODO(WebERA): DEBUG
+        debugPrintTimers(eventActionRegister); // TODO(WebERA): DEBUG
 
         std::exit(1);
     }
 
     m_scheduleWaits++;
-
-    return Scheduler::YIELD;
-
 }
 
 bool ReplayScheduler::isFinished()
 {
-    return m_schedule.isEmpty();
+    return m_schedule->isEmpty();
 }
 
-void ReplayScheduler::debugPrintTimers(const WTF::Vector<WebCore::TimerBase*>& items)
+void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister& eventActionRegister)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "NEXT -> " << m_schedule.first().getName() << std::endl << std::endl;
+    std::cout << "NEXT -> " << m_schedule->first().getName() << "(" << m_schedule->first().getParams() << ")" << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 
-    for(Vector<WebCore::TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        std::cout << "| " << (*it)->eventActionDescriptor().getName() << std::endl;
-    }
+    eventActionRegister.debugPrintNames();
 
 }

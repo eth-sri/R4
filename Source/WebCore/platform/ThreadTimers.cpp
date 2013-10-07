@@ -50,11 +50,12 @@ static const double maxDurationOfFiringTimers = 0.050;
 
 EventActionRegister ThreadTimers::m_eventActionRegister;
 EventActionsHB ThreadTimers::m_eventActionsHB;
+Scheduler* ThreadTimers::m_scheduler = new DefaultScheduler();
 
 void ThreadTimers::setScheduler(Scheduler* scheduler)
 {
-	delete m_scheduler;
-    m_scheduler = scheduler;
+    delete ThreadTimers::m_scheduler;
+    ThreadTimers::m_scheduler = scheduler;
 }
 
 // Timers are created, started and fired on the same thread, and each thread has its own ThreadTimers
@@ -69,7 +70,6 @@ static MainThreadSharedTimer* mainThreadSharedTimer()
 ThreadTimers::ThreadTimers()
     : m_sharedTimer(0)
     , m_firingTimers(false)
-    , m_scheduler(new DefaultScheduler())
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
@@ -77,7 +77,6 @@ ThreadTimers::ThreadTimers()
 
 ThreadTimers::~ThreadTimers()
 {
-	delete m_scheduler;
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.

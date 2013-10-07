@@ -82,8 +82,7 @@ namespace WebCore {
         // support multiple threads either way (nor workers) so this should not result in any problems in practice.
         static EventActionRegister& eventActionRegister() { return ThreadTimers::m_eventActionRegister; }
         static EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
-
-        void setScheduler(Scheduler* scheduler);
+        static void setScheduler(Scheduler* scheduler);
 
     private:
         static void sharedTimerFired();
@@ -98,8 +97,7 @@ namespace WebCore {
         bool m_firingTimers; // Reentrancy guard.
 
         // WebERA
-        Scheduler* m_scheduler;
-
+        static Scheduler* m_scheduler;
         static EventActionRegister m_eventActionRegister;
         static EventActionsHB m_eventActionsHB;
     };

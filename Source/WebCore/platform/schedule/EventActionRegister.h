@@ -46,6 +46,8 @@ public:
 
     EventActionSchedule* dispatchHistory() { return m_dispatchHistory; }
 
+    void debugPrintNames() const;
+
 private:
 
     void eventActionDispatchStart(const EventActionDescriptor& descriptor)

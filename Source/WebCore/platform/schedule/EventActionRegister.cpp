@@ -7,6 +7,7 @@
 
 #include "EventActionRegister.h"
 
+#include <iostream>
 #include <stdio.h>
 #include <stddef.h>
 #include <map>
@@ -121,6 +122,14 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 EventActionDescriptor EventActionRegister::allocateEventDescriptor(const std::string& name, const std::string& params)
 {
     return EventActionDescriptor(m_nextEventActionDescriptorId++, name, params);
+}
+
+void EventActionRegister::debugPrintNames() const
+{
+    EventActionRegisterMaps::NameToProvider::const_iterator it = m_maps->m_nameToProvider.begin();
+    for (; it != m_maps->m_nameToProvider.end(); it++) {
+        std::cout << (*it).first << std::endl;
+    }
 }
 
 }  // namespace WebCore
