@@ -74,13 +74,13 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         // TODO(WebERA) Select a better name for this timer
         std::string name = "XMLHttpRequestProgressEventThrottle(BASE)";
 
-        EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(name);
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor(name);
 
         setEventActionDescriptor(descriptor);
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
 
         threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                    ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
+                    threadGlobalData().threadTimers().eventActionRegister().currentEventActionDispatching(),
                     descriptor);
 
         return;
@@ -222,13 +222,13 @@ void XMLHttpRequestProgressEventThrottle::resume()
 
     std::string deferredName = "XMLHttpRequestProgressEventThrottle(DEFERRED)";
 
-    EventActionDescriptor descriptor = ThreadTimers::eventActionSchedule().allocateEventDescriptor(deferredName);
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor(deferredName);
 
     m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
     m_dispatchDeferredEventsTimer.startOneShot(0);
 
     threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                ThreadTimers::eventActionSchedule().currentEventActionDispatching(),
+                threadGlobalData().threadTimers().eventActionRegister().currentEventActionDispatching(),
                 descriptor);
 }
 

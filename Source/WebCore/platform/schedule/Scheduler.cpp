@@ -32,6 +32,4 @@ Scheduler::Scheduler() {
 Scheduler::~Scheduler() {
 }
 
-int Scheduler::YIELD = -1;
-
 }

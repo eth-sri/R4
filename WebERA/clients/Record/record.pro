@@ -7,9 +7,7 @@
 include(../BaseClient/baseclient.pri)
 
 SOURCES += \
-    main.cpp \
-    record/recordschedule.cpp
+    main.cpp
 
-HEADERS += \
-    record/recordschedule.h
+HEADERS +=
 

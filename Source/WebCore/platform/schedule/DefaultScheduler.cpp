@@ -26,8 +26,7 @@
 
 namespace WebCore {
 
-DefaultScheduler::DefaultScheduler(TaskRegister* taskReg)
-	: m_taskReg(taskReg)
+DefaultScheduler::DefaultScheduler()
 {
 }
 
@@ -35,17 +34,13 @@ DefaultScheduler::~DefaultScheduler()
 {
 }
 
-int DefaultScheduler::selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items)
+void DefaultScheduler::eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister& eventActionRegister)
 {
-    return 0;
+    eventActionRegister.runEventAction(descriptor);
 }
 
-
-void DefaultScheduler::scheduleTask(const char* name, const char* params) {
-	m_taskReg->RunTaskOnTarget(name, params);
-}
-
-void DefaultScheduler::executeDelayedTasks() {
+void DefaultScheduler::executeDelayedEventActions(EventActionRegister&)
+{
 	// Do nothing.
 }
 

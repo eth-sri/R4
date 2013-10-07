@@ -42,7 +42,7 @@ namespace WebCore {
 
     class SharedTimer;
     class TimerBase;
-    class TaskRegister;
+    class EventActionRegister;
 
     /**
       *
@@ -76,17 +76,19 @@ namespace WebCore {
         void fireTimersInNestedEventLoop();
 
         // WebERA:
-        static EventActionSchedule& eventActionSchedule() { return ThreadTimers::m_eventActionSchedule; }
+        // These are static because we can't (for some unknown reason) access these through threadglobaldata
+        // from the clients. If we do that we will get an invalid pointer back.
+        // Making these static is not correct since multiple threads will be merged together, however we do not
+        // support multiple threads either way (nor workers) so this should not result in any problems in practice.
+        static EventActionRegister& eventActionRegister() { return ThreadTimers::m_eventActionRegister; }
         static EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
 
         void setScheduler(Scheduler* scheduler);
 
-        TaskRegister* taskRegister() { return m_taskRegister; }
-
     private:
         static void sharedTimerFired();
 
-        static bool fireTimerCallback(void* object, const char* params);
+        static bool fireTimerCallback(void* object, const std::string& params);
 
         void sharedTimerFiredInternal();
         void fireTimersInNestedEventLoopInternal();
@@ -96,10 +98,9 @@ namespace WebCore {
         bool m_firingTimers; // Reentrancy guard.
 
         // WebERA
-        TaskRegister* m_taskRegister;
         Scheduler* m_scheduler;
 
-        static EventActionSchedule m_eventActionSchedule;
+        static EventActionRegister m_eventActionRegister;
         static EventActionsHB m_eventActionsHB;
     };
 

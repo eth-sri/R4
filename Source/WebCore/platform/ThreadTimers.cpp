@@ -37,7 +37,7 @@
 #include <iostream>
 
 #include <platform/schedule/DefaultScheduler.h>
-#include <platform/schedule/TaskRegister.h>
+#include <platform/schedule/EventActionRegister.h>
 
 using namespace std;
 
@@ -48,7 +48,7 @@ namespace WebCore {
 // This is to prevent UI freeze when there are too many timers or machine performance is low.
 static const double maxDurationOfFiringTimers = 0.050;
 
-EventActionSchedule ThreadTimers::m_eventActionSchedule;
+EventActionRegister ThreadTimers::m_eventActionRegister;
 EventActionsHB ThreadTimers::m_eventActionsHB;
 
 void ThreadTimers::setScheduler(Scheduler* scheduler)
@@ -69,8 +69,7 @@ static MainThreadSharedTimer* mainThreadSharedTimer()
 ThreadTimers::ThreadTimers()
     : m_sharedTimer(0)
     , m_firingTimers(false)
-	, m_taskRegister(new TaskRegister)
-	, m_scheduler(new DefaultScheduler(m_taskRegister))
+    , m_scheduler(new DefaultScheduler())
 {
     if (isMainThread())
         setSharedTimer(mainThreadSharedTimer());
@@ -79,7 +78,6 @@ ThreadTimers::ThreadTimers()
 ThreadTimers::~ThreadTimers()
 {
 	delete m_scheduler;
-	delete m_taskRegister;
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.
@@ -118,20 +116,14 @@ void ThreadTimers::sharedTimerFired()
     threadGlobalData().threadTimers().sharedTimerFiredInternal();
 }
 
-bool ThreadTimers::fireTimerCallback(void* object, const char* params) {
+bool ThreadTimers::fireTimerCallback(void* object, const std::string& params) {
 	TimerBase* timer = (TimerBase*)object;
 
     double interval = timer->repeatInterval();
     timer->setNextFireTime(interval ? monotonicallyIncreasingTime() + interval : 0);
 
-    // WebERA: Denote that currently a timer with a given name is executed.
-    ThreadTimers::eventActionSchedule().eventActionDispatchStart(timer->eventActionDescriptor());
-
     // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
     timer->fired();
-
-    // WebERA: Denote that we are finished dispatching this event action
-    ThreadTimers::eventActionSchedule().eventActionDispatchEnd();
 
     return true;
 }
@@ -142,8 +134,6 @@ void ThreadTimers::sharedTimerFiredInternal()
     if (m_firingTimers)
         return;
     m_firingTimers = true;
-
-    m_scheduler->executeDelayedTasks();
 
     double fireTime = monotonicallyIncreasingTime();
     double timeToQuit = fireTime + maxDurationOfFiringTimers;
@@ -159,10 +149,8 @@ void ThreadTimers::sharedTimerFiredInternal()
         	fireTimerCallback(timer, "");
         } else {
         	// Run the timer through the scheduler.
-        	const char* name = timer->eventActionDescriptor().getDescription().c_str();
-        	m_taskRegister->RegisterTarget(timer, name, &fireTimerCallback);
-        	m_scheduler->scheduleTask(name, "");
-        	m_scheduler->executeDelayedTasks();
+            eventActionRegister().registerEventActionProvider(timer, timer->eventActionDescriptor().getName().c_str(), &fireTimerCallback);
+            m_scheduler->eventActionScheduled(timer->eventActionDescriptor(), eventActionRegister());
         }
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
@@ -170,6 +158,8 @@ void ThreadTimers::sharedTimerFiredInternal()
             break;
 
     }
+
+    m_scheduler->executeDelayedEventActions(eventActionRegister());
 
     m_firingTimers = false;
 

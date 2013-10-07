@@ -35,11 +35,10 @@
 #include <QString>
 
 #include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/platform/ThreadGlobalData.h>
 
 #include "utils.h"
 #include "clientapplication.h"
-
-#include "record/recordschedule.h"
 
 class RecordClientApplication : public ClientApplication {
     Q_OBJECT
@@ -66,8 +65,6 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
-
-    WebCore::ThreadTimers::setScheduler(new RecordSchedule());
 
     loadWebsite(m_url);
 }
@@ -115,7 +112,7 @@ void RecordClientApplication::slOnCloseEvent()
 
     std::ofstream schedulefile;
     schedulefile.open(m_schedulePath.toStdString());
-    WebCore::ThreadTimers::eventActionSchedule().serialize(schedulefile);
+    WebCore::ThreadTimers::eventActionRegister().dispatchHistory()->serialize(schedulefile);
     schedulefile.close();
 
     m_window->close();

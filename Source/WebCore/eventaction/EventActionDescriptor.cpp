@@ -27,44 +27,59 @@
 
 namespace WebCore {
 
-StringSet EventActionDescriptor::m_descriptions;
+StringSet EventActionDescriptor::m_strings;
 EventActionDescriptor EventActionDescriptor::null;
 
-EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& description)
+EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& name)
     : m_id(id)
-    , m_descriptionIndex(EventActionDescriptor::descriptions()->addString(description.c_str()))
+    , m_nameIndex(EventActionDescriptor::m_strings.addString(name.c_str()))
+    , m_paramsIndex(EventActionDescriptor::m_strings.addString(""))
     , m_isNull(false)
 {
 }
 
-EventActionDescriptor::EventActionDescriptor(const std::string& description)
+EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& name, const std::string& params)
+    : m_id(id)
+    , m_nameIndex(EventActionDescriptor::m_strings.addString(name.c_str()))
+    , m_paramsIndex(EventActionDescriptor::m_strings.addString(params.c_str()))
+    , m_isNull(false)
+{
+}
+
+EventActionDescriptor::EventActionDescriptor(const std::string& name, const std::string& params)
     : m_id(UINT_MAX)
-    , m_descriptionIndex(EventActionDescriptor::descriptions()->addString(description.c_str()))
+    , m_nameIndex(EventActionDescriptor::m_strings.addString(name.c_str()))
+    , m_paramsIndex(EventActionDescriptor::m_strings.addString(params.c_str()))
     , m_isNull(false)
 {
 }
 
 EventActionDescriptor::EventActionDescriptor()
     : m_id(0)
-    , m_descriptionIndex(-1)
+    , m_nameIndex(-1)
+    , m_paramsIndex(-1)
     , m_isNull(true)
 {
 }
 
 bool EventActionDescriptor::operator==(const EventActionDescriptor &other) const
 {
-    return m_id == other.m_id && m_descriptionIndex == other.m_descriptionIndex;
+    return m_id == other.m_id && m_nameIndex == other.m_nameIndex && m_paramsIndex == other.m_paramsIndex;
 }
 
-bool EventActionDescriptor::compareDescription(const EventActionDescriptor &other) const
+bool EventActionDescriptor::fuzzyCompare(const EventActionDescriptor &other) const
 {
-    return m_descriptionIndex == other.m_descriptionIndex;
+    return m_nameIndex == other.m_nameIndex && m_paramsIndex == other.m_paramsIndex;
 }
 
-std::string EventActionDescriptor::getDescription() const
+std::string EventActionDescriptor::getName() const
 {
-    return EventActionDescriptor::descriptions()->getString(m_descriptionIndex);
+    return EventActionDescriptor::m_strings.getString(m_nameIndex);
 }
 
+std::string EventActionDescriptor::getParams() const
+{
+    return EventActionDescriptor::m_strings.getString(m_paramsIndex);
+}
 
 }

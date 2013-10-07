@@ -29,7 +29,9 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
 
-#include <platform/Timer.h>
+#include "eventaction/EventActionDescriptor.h"
+
+#include "EventActionRegister.h"
 
 namespace WebCore {
 
@@ -37,18 +39,16 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(Scheduler);
 
     public:
-        static int YIELD;
-
         Scheduler();
         virtual ~Scheduler();
-        virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items) = 0;
 
-        // Schedules a specific task for execution. Some schedulers may not execute the task immediately, but
-        // delay it instead.
-        virtual void scheduleTask(const char* name, const char* params) = 0;
+        // Notifies the scheduler that a new event action has been registered to the EventActionRegister by ThreadTimers
+        // Some schedulers may not execute the event action immediately, but delay it instead.
+        virtual void eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister& eventActionRegister) = 0;
 
-        // Execute delayed tasks if there are any.
-        virtual void executeDelayedTasks() = 0;
+        // Ask the scheduler to execute any delayed tasks
+        // Called at every tick, after scheduling any new event actions
+        virtual void executeDelayedEventActions(EventActionRegister& eventActionRegister) = 0;
     };
 }
 

@@ -32,26 +32,31 @@ namespace WebCore {
     class EventActionDescriptor {
 
     public:
-        EventActionDescriptor(unsigned long id, const std::string& description);
-        EventActionDescriptor(const std::string& description);
+        EventActionDescriptor(unsigned long id, const std::string& name);
+        EventActionDescriptor(unsigned long id, const std::string& name, const std::string& params);
+        EventActionDescriptor(const std::string& name, const std::string& params);
         EventActionDescriptor();
 
         bool isNull() const { return m_isNull; }
 
-        std::string getDescription() const;
+        std::string getName() const;
+        std::string getParams() const;
+
         unsigned long getId() const { return m_id; }
 
         bool operator==(const EventActionDescriptor& other) const;
-        bool compareDescription(const EventActionDescriptor& other) const;
+        bool fuzzyCompare(const EventActionDescriptor& other) const;
 
         static EventActionDescriptor null;
 
     private:
-        static StringSet* descriptions() { return &EventActionDescriptor::m_descriptions; }
-        static StringSet m_descriptions;
+        static StringSet m_strings;
 
         unsigned long m_id;
-        int m_descriptionIndex;
+
+        int m_nameIndex;
+        int m_paramsIndex;
+
         bool m_isNull;
     };
 

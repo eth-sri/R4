@@ -74,7 +74,7 @@ SOURCES += \
     bindings/generic/ActiveDOMCallback.cpp \
     bindings/generic/RuntimeEnabledFeatures.cpp \
     platform/schedule/Scheduler.cpp \
-    platform/schedule/TaskRegister.cpp
+    platform/schedule/EventActionRegister.cpp
 
 v8 {
     include($$PWD/../JavaScriptCore/yarr/yarr.pri)
@@ -1408,7 +1408,8 @@ HEADERS += \
     accessibility/AXObjectCache.h \
     bindings/ScriptControllerBase.h \
     bindings/generic/ActiveDOMCallback.h \
-    bindings/generic/RuntimeEnabledFeatures.h
+    bindings/generic/RuntimeEnabledFeatures.h \
+    platform/schedule/EventActionRegister.h
 
 v8 {
     HEADERS += \
@@ -2388,7 +2389,6 @@ HEADERS += \
     platform/ThreadTimers.h \
     platform/Timer.h \
     platform/schedule/Scheduler.h \
-    platform/schedule/TaskRegister.h \
     platform/schedule/DefaultScheduler.h \
     platform/Widget.h \
     platform/PlatformStrategies.h \

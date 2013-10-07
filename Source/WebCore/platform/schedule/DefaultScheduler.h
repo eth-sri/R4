@@ -22,14 +22,10 @@
  *
  */
 
-#include <string>
-#include <fstream>
-
 #include <wtf/ExportMacros.h>
 #include <wtf/Noncopyable.h>
 
 #include "Scheduler.h"
-#include "TaskRegister.h"
 
 #ifndef DefaultScheduler_h
 #define DefaultScheduler_h
@@ -40,16 +36,13 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(DefaultScheduler);
 
     public:
-        DefaultScheduler(TaskRegister* taskReg);
+        DefaultScheduler();
         ~DefaultScheduler();
 
-        virtual int selectNextSchedulableItem(const WTF::Vector<TimerBase*>& items);
+        void eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister& eventActionRegister);
 
-        virtual void scheduleTask(const char* name, const char* params);
-        virtual void executeDelayedTasks();
+        void executeDelayedEventActions(EventActionRegister& eventActionRegister);
 
-    private:
-        TaskRegister* m_taskReg;
     };
 
 }

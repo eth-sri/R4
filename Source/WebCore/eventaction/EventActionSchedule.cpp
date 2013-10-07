@@ -30,36 +30,17 @@
 namespace WebCore {
 
 EventActionSchedule::EventActionSchedule()
-    : m_nextEventActionDescriptorId(0)
-    , m_isDispatching(false)
+    : WTF::Vector<EventActionDescriptor>()
 {
-}
-
-EventActionSchedule::EventActionSchedule(const WTF::Vector<EventActionDescriptor>& schedule)
-    : m_schedule(schedule)
-    , m_nextEventActionDescriptorId(0)
-    , m_isDispatching(false)
-{
-}
-
-EventActionSchedule::~EventActionSchedule()
-{
-}
-
-EventActionDescriptor EventActionSchedule::allocateEventDescriptor(const std::string& description)
-{
-    return EventActionDescriptor(m_nextEventActionDescriptorId++, description);
 }
 
 void EventActionSchedule::serialize(std::ostream& stream) const
 {
-    stream << m_nextEventActionDescriptorId << std::endl;
-
-    for (WTF::Vector<EventActionDescriptor>::const_iterator it = m_schedule.begin(); it != m_schedule.end(); it++) {
+    for (EventActionSchedule::const_iterator it = this->begin(); it != this->end(); it++) {
         if ((*it).isNull()) {
             stream << "NULL" << std::endl;
         } else {
-            stream << (*it).getId() << ";" << (*it).getDescription() << std::endl;
+            stream << (*it).getId() << ";" << (*it).getName() << std::endl;
         }
     }
 }
@@ -71,11 +52,6 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
 
     EventActionSchedule* schedule = new EventActionSchedule();
 
-    std::string nextEventActionDescriptorId;
-    std::getline(stream, nextEventActionDescriptorId);
-
-    schedule->m_nextEventActionDescriptorId = strtoul(nextEventActionDescriptorId.c_str(), NULL, 10);
-
     while (stream.good()) {
         std::string eventaction;
         std::getline(stream, eventaction);
@@ -85,7 +61,7 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
         }
 
         if (eventaction.compare("NULL") == 0) {
-            schedule->m_schedule.append(EventActionDescriptor::null);
+            schedule->append(EventActionDescriptor::null);
             continue;
         }
 
@@ -99,7 +75,7 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
 
         EventActionDescriptor descriptor(strtoul(id.c_str(), NULL, 10), description);
 
-        schedule->m_schedule.append(descriptor);
+        schedule->append(descriptor);
     }
 
     return schedule;

@@ -51,10 +51,10 @@ int ReplayScheduler::selectNextSchedulableItem(const WTF::Vector<WebCore::TimerB
 
     // Search for the next timer and return its index
     for(WTF::Vector<WebCore::TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        if ((*it)->eventActionDescriptor().compareDescription(nextToSchedule) ||
+        if ((*it)->eventActionDescriptor().fuzzyCompare(nextToSchedule) ||
                 ((*it)->eventActionDescriptor().isNull() && nextToSchedule.isNull())) {
 
-            std::cout << "DISPATCH " << nextToSchedule.getDescription() << std::endl;
+            std::cout << "DISPATCH " << nextToSchedule.getName() << std::endl;
             m_schedule.remove(0);
 
             m_scheduleWaits = 0;
@@ -87,11 +87,11 @@ bool ReplayScheduler::isFinished()
 void ReplayScheduler::debugPrintTimers(const WTF::Vector<WebCore::TimerBase*>& items)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "NEXT -> " << m_schedule.first().getDescription() << std::endl << std::endl;
+    std::cout << "NEXT -> " << m_schedule.first().getName() << std::endl << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 
     for(Vector<WebCore::TimerBase*>::const_iterator it = items.begin(); it != items.end(); ++it) {
-        std::cout << "| " << (*it)->eventActionDescriptor().getDescription() << std::endl;
+        std::cout << "| " << (*it)->eventActionDescriptor().getName() << std::endl;
     }
 
 }
