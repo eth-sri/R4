@@ -30,7 +30,8 @@
 #include "replayscheduler.h"
 
 ReplayScheduler::ReplayScheduler(const std::string& schedulePath)
-    : Scheduler()
+    : QObject(NULL)
+    , Scheduler()
 {
     std::ifstream fp;
     fp.open(schedulePath);
@@ -50,6 +51,11 @@ void ReplayScheduler::eventActionScheduled(const WebCore::EventActionDescriptor&
 
 void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister& eventActionRegister)
 {
+
+    if (m_schedule->isEmpty()) {
+        emit sigDone();
+        return;
+    }
 
     WebCore::EventActionDescriptor nextToSchedule = m_schedule->first();
 

@@ -25,6 +25,8 @@
 
 #include <string>
 
+#include <QObject>
+
 #include <wtf/ExportMacros.h>
 #include <wtf/Vector.h>
 
@@ -37,8 +39,10 @@
 #ifndef REPLAYSCHEDULER_H
 #define REPLAYSCHEDULER_H
 
-class ReplayScheduler : public WebCore::Scheduler
+class ReplayScheduler : public QObject, public WebCore::Scheduler
 {
+    Q_OBJECT
+
 public:
     ReplayScheduler(const std::string& schedulePath);
     ~ReplayScheduler();
@@ -56,6 +60,9 @@ private:
     WebCore::EventActionSchedule* m_schedule;
 
     unsigned int m_scheduleWaits;
+
+signals:
+    void sigDone();
 };
 
 #endif // REPLAYSCHEDULER_H

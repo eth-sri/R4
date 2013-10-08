@@ -30,6 +30,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <iostream>
+
+#include <QObject>
 #include <WebCore/platform/ThreadTimers.h>
 
 #include "clientapplication.h"
@@ -46,14 +49,23 @@ private:
 
     QString m_url;
     QString m_schedulePath;
+
+    bool m_isStopping;
+
+public slots:
+    void slSchedulerDone();
 };
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
+    , m_isStopping(false)
 {
     handleUserOptions();
 
-    WebCore::ThreadTimers::setScheduler(new ReplayScheduler(m_schedulePath.toStdString()));
+    ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString());
+    QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
+
+    WebCore::ThreadTimers::setScheduler(scheduler);
 
     loadWebsite(m_url);
 }
@@ -69,6 +81,15 @@ void ReplayClientApplication::handleUserOptions()
 
     m_url = args.at(1);
     m_schedulePath = args.at(2);
+}
+
+void ReplayClientApplication::slSchedulerDone()
+{
+    if (m_isStopping == false) {
+        std::cout << "Schedule executed successfully" << std::endl;
+        m_window->close();
+        m_isStopping = true;
+    }
 }
 
 
