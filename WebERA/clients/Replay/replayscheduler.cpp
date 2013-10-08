@@ -45,8 +45,8 @@ ReplayScheduler::~ReplayScheduler()
     delete m_schedule;
 }
 
-void ReplayScheduler::eventActionScheduled(const WebCore::EventActionDescriptor& descriptor,
-                                           WebCore::EventActionRegister& eventActionRegister)
+void ReplayScheduler::eventActionScheduled(const WebCore::EventActionDescriptor&,
+                                           WebCore::EventActionRegister&)
 {
 }
 
