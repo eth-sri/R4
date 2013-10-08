@@ -117,33 +117,37 @@ private:
 };
 
 /**
- * Exposes the same API as a QNetworkReply, only that the current state is pulled from QNetworkReplySnapshots
+ * WebERA:
+ *
+ * Exposes the same API as a QNetworkReply, only that the current state is pulled from QNetworkReplySnapshots.
+ *
+ * Notice that this class is subclassable, such that alternative wrappers (e.g. a replay wrapper) can be used.
+ * Change the QNetworkReplyControllableFactory if you want to instanciate connections using different subclasses.
+ *
+ * This base class handles scheduling through timers and signalling to clients. Subclasses should use the
+ * enqueueSnapshot function to queue relevant snapshots.
  */
 class QNetworkReplyControllable : public QObject {
     Q_OBJECT
 
 public:
-    QNetworkReplyControllable(QNetworkReply*, QObject* parent = 0);
+    QNetworkReplyControllable(QNetworkReply* reply, QObject* parent = 0);
     ~QNetworkReplyControllable();
 
     QNetworkReplySnapshot* snapshot() { return m_currentSnapshot; }
 
-    QNetworkReply* release();
+    // Subclasses should use this as an early dereference
+    virtual QNetworkReply* release();
 
     void updateSnapshot(Timer<QNetworkReplyControllable>* timer);
 
 signals:
-
     void finished();
     void readyRead();
 
-private slots:
-    void slFinished();
-    void slReadyRead();
+protected:
 
-private:
-
-    void detachFromReply();
+    virtual void detachFromReply();
 
     enum NetworkSignal {
         FINISHED,
@@ -163,10 +167,30 @@ private:
     Timer<QNetworkReplyControllable> m_nextSnapshotUpdateTimer;
     EventActionDescriptor m_parentDescriptor;
 
+protected slots:
+    void scheduleNextSnapshotUpdate();
+
+protected:
     QNetworkReply* m_reply;
 
-private slots:
-    void scheduleNextSnapshotUpdate();
+};
+
+/**
+ * WebERA: This subclass of QNetworkReplyControllable uses the reply and communicates with the outside world.
+ */
+class QNetworkReplyControllableLive : public QNetworkReplyControllable {
+    Q_OBJECT
+
+public:
+    QNetworkReplyControllableLive(QNetworkReply*, QObject* parent = 0);
+    ~QNetworkReplyControllableLive();
+
+protected:
+    virtual void detachFromReply();
+
+public slots:
+    void slFinished();
+    void slReadyRead();
 
 };
 
