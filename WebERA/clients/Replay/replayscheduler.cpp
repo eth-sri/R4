@@ -32,6 +32,7 @@
 ReplayScheduler::ReplayScheduler(const std::string& schedulePath)
     : QObject(NULL)
     , Scheduler()
+    , m_scheduleWaits(0)
 {
     std::ifstream fp;
     fp.open(schedulePath);
