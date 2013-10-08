@@ -220,8 +220,10 @@ void QNetworkReplyControllable::detachFromReply()
     // TODO(WebERA): We have a race here... if the thread handing the IO has already started handing a signal from the reply then this signal
     // will still be processed in the near future - e.g. it could be waiting on the mutex above. Should we add some bool signalling to the other
     // threads that they should stop processing?
-    m_reply->disconnect(this, SLOT(slFinished()));
-    m_reply->disconnect(this, SLOT(slReadyRead()));
+    if (m_reply) {
+        m_reply->disconnect(this, SLOT(slFinished()));
+        m_reply->disconnect(this, SLOT(slReadyRead()));
+    }
 
     QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
 }
