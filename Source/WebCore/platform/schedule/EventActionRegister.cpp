@@ -100,18 +100,27 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     std::string name = descriptor.getName();
     std::string params = descriptor.getParams();
 
-    EventActionRegisterMaps::NameToProvider::iterator it2 =
-            m_maps->m_nameToProvider.find(name.c_str());
-    if (it2 == m_maps->m_nameToProvider.end()) return false;  // Target with the given name not found.
-    const EventActionRegisterMaps::ProviderList& l = it2->second;
-	if (l.empty()) return false;
+    EventActionRegisterMaps::NameToProvider::iterator it =
+            m_maps->m_nameToProvider.find(name);
+
+    if (it == m_maps->m_nameToProvider.end()) {
+        return false;  // Target with the given name not found.
+    }
+
+    const EventActionRegisterMaps::ProviderList& l = it->second;
+
+    if (l.empty()) {
+        return false; // No provider for target
+    }
 
     eventActionDispatchStart(descriptor);
 
 	// Execute the function.
-	if (l.size() > 1)
-        fprintf(stderr, "Warning: multiple targets may fire with name %s, params %s\n", name.c_str(), params.c_str());
-    printf("Running %s %s\n", name.c_str(), params.c_str());
+    if (l.size() > 1) {
+        std::cerr << "Warning: multiple targets may fire with name " << name << ", params " << params << std::endl;
+    }
+
+    std::cout << "Running " << name << "(" << params << ")" << std::endl; // TODO(WebERA): DEBUG
     bool result = (l[0].function)(l[0].object, params);
 
     eventActionDispatchEnd();

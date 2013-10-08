@@ -83,7 +83,7 @@ public:
     void checkForYieldBeforeScript(PumpSession&);
 
     void scheduleForResume();
-    bool isScheduledForResume() const { return m_isSuspendedWithActiveTimer || m_continueNextChunkTimer.isActive(); }
+    bool isScheduledForResume() const { return m_isSuspendedWithActiveTimer || m_continueNextChunkTimerActive; }
 
     void suspend();
     void resume();
@@ -101,6 +101,10 @@ private:
     int m_parserChunkSize;
     Timer<HTMLParserScheduler> m_continueNextChunkTimer;
     bool m_isSuspendedWithActiveTimer;
+
+    // WebERA: local state tracking if the timer is active - we need this because the isActive() on the
+    // timer does not return the correct value if it has moved into the EventActionRegister.
+    bool m_continueNextChunkTimerActive;
 };
 
 }

@@ -74,6 +74,7 @@ HTMLParserScheduler::HTMLParserScheduler(HTMLDocumentParser* parser)
     , m_parserChunkSize(parserChunkSize(m_parser->document()->page()))
     , m_continueNextChunkTimer(this, &HTMLParserScheduler::continueNextChunkTimerFired)
     , m_isSuspendedWithActiveTimer(false)
+    , m_continueNextChunkTimerActive(false)
 {
     // TODO(WebERA-HB): The EventRacer implementation mentions an exception caused by a network request, should we add this?
 }
@@ -92,9 +93,12 @@ void HTMLParserScheduler::continueNextChunkTimerFired(Timer<HTMLParserScheduler>
 
         updateTimerName(); // WebERA
         m_continueNextChunkTimer.startOneShot(0);
+        m_continueNextChunkTimerActive = true;
 
         return;
     }
+
+    m_continueNextChunkTimerActive = false;
     m_parser->resumeParsingAfterYield();
 }
 
@@ -112,26 +116,31 @@ void HTMLParserScheduler::scheduleForResume()
 {
     updateTimerName(); // WebERA
     m_continueNextChunkTimer.startOneShot(0);
+    m_continueNextChunkTimerActive = true;
 }
 
 
 void HTMLParserScheduler::suspend()
 {
     ASSERT(!m_isSuspendedWithActiveTimer);
-    if (!m_continueNextChunkTimer.isActive())
-        return;
     m_isSuspendedWithActiveTimer = true;
-    m_continueNextChunkTimer.stop();
+
+    // TODO(WebERA): Warning, we are assuming that the timer is still active and has not been moved into
+    // the EventActionRegister. If that is the case then this operation is not safe.
+    if (m_continueNextChunkTimer.isActive())
+    {
+        m_continueNextChunkTimer.stop();
+    }
 }
 
 void HTMLParserScheduler::resume()
 {
-    ASSERT(!m_continueNextChunkTimer.isActive());
     if (!m_isSuspendedWithActiveTimer)
         return;
+
     m_isSuspendedWithActiveTimer = false;
 
-    updateTimerName(); // WebERA
+    // WebERA - we are assuming that the timer was suspended and already contains the correct descriptor
     m_continueNextChunkTimer.startOneShot(0);
 }
 
