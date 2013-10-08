@@ -167,6 +167,7 @@ QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReply* reply)
 QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReply* reply, QObject* parent)
     : QObject(parent)
     , m_sequenceNumber(0)
+    , m_nextSnapshotUpdateTimerRunning(false)
     , m_nextSnapshotUpdateTimer(this, &QNetworkReplyControllable::updateSnapshot)
     , m_parentDescriptor(threadGlobalData().threadTimers().eventActionRegister().currentEventActionDispatching())
     , m_reply(reply)
@@ -186,6 +187,8 @@ QNetworkReplyControllable::~QNetworkReplyControllable()
 
     if (m_reply)
         m_reply->deleteLater();
+
+    m_nextSnapshotUpdateTimer.stop();
 }
 
 void QNetworkReplyControllable::slFinished()
@@ -205,13 +208,18 @@ void QNetworkReplyControllable::detachFromReply()
         m_nextSnapshotUpdateTimer.stop();
     }
 
+    m_snapshotQueueMutex.lock();
     foreach(QueuedSnapshot snapshot, m_snapshotQueue) {
         delete snapshot.second;
         snapshot.second = NULL; // debugging
     }
 
     m_snapshotQueue.clear();
+    m_snapshotQueueMutex.unlock();
 
+    // TODO(WebERA): We have a race here... if the thread handing the IO has already started handing a signal from the reply then this signal
+    // will still be processed in the near future - e.g. it could be waiting on the mutex above. Should we add some bool signalling to the other
+    // threads that they should stop processing?
     m_reply->disconnect(this, SLOT(slFinished()));
     m_reply->disconnect(this, SLOT(slReadyRead()));
 
@@ -235,7 +243,9 @@ QNetworkReply* QNetworkReplyControllable::release()
 // Notice, this function is called by the main thread
 void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*)
 {
+    m_snapshotQueueMutex.lock();
     QueuedSnapshot queuedSnapshot = m_snapshotQueue.takeFirst();
+    m_snapshotQueueMutex.unlock();
 
     delete m_currentSnapshot;
     m_currentSnapshot = queuedSnapshot.second;
@@ -251,30 +261,39 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
         CRASH();
     }
 
-    if (!m_snapshotQueue.empty()) {
-        scheduleNextSnapshotUpdate();
-    } else {
-        m_nextSnapshotUpdateTimerMutex.unlock();
-    }
+    m_nextSnapshotUpdateTimerRunning = false;
+
+    scheduleNextSnapshotUpdate();
 }
 
 // Notice, this function is called by non-main threads
+// Thus, control should NEVER! leave this function without explicit locking with the main thread
 void QNetworkReplyControllable::enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot)
 {
+    m_snapshotQueueMutex.lock();
     m_snapshotQueue.append(QueuedSnapshot(signal, snapshot));
+    m_snapshotQueueMutex.unlock();
 
-    bool locked = m_nextSnapshotUpdateTimerMutex.tryLock();
-
-    if (locked) {
-        // the timer is not in use, lets schedule it
-        // leave the mutex locked as we expect the main thread to unlock it for us when it stops using the timer
-
-        scheduleNextSnapshotUpdate();
-    }
+    // get the main thread to invoke the scheduleNextSnapshotUpdate function
+    QMetaObject::invokeMethod(this, "scheduleNextSnapshotUpdate",  Qt::QueuedConnection);
 }
 
 void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
 {
+    if (m_nextSnapshotUpdateTimerRunning) {
+        return; // we are already processing an item from the queue
+    }
+
+    m_snapshotQueueMutex.lock();
+    bool isEmpty = m_snapshotQueue.empty();
+    m_snapshotQueueMutex.unlock();
+
+    if (isEmpty) {
+        return; // no items in the queue
+    }
+
+    m_nextSnapshotUpdateTimerRunning = true;
+
     std::stringstream name;
     name << "NETWORK(" << m_reply->url().toString().toStdString() << ", " << "<same-url-seq-number>" << ", " << m_sequenceNumber++ << ")"; // TODO(WebERA) set same-url-seq-number
 

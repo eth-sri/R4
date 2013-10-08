@@ -151,19 +151,22 @@ private:
     };
 
     void enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot);
-    void scheduleNextSnapshotUpdate();
 
     typedef QPair<NetworkSignal, QNetworkReplySnapshot*> QueuedSnapshot;
     QList<QueuedSnapshot> m_snapshotQueue;
+    QMutex m_snapshotQueueMutex;
     QNetworkReplySnapshot* m_currentSnapshot;
 
 
     unsigned long m_sequenceNumber;
-    QMutex m_nextSnapshotUpdateTimerMutex;
+    bool m_nextSnapshotUpdateTimerRunning;
     Timer<QNetworkReplyControllable> m_nextSnapshotUpdateTimer;
     EventActionDescriptor m_parentDescriptor;
 
     QNetworkReply* m_reply;
+
+private slots:
+    void scheduleNextSnapshotUpdate();
 
 };
 
