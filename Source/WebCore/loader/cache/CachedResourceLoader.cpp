@@ -125,7 +125,7 @@ CachedResourceLoader::CachedResourceLoader(Document* document)
 {
     // WebERA: We can ignore this timer, however we still give it a name distinguish it from other timers
     m_garbageCollectDocumentResourcesTimer.setEventActionDescriptor(
-                threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor("CachedResourceLoaderGC()")
+                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor("CachedResourceLoaderGC()")
     );
 }
 

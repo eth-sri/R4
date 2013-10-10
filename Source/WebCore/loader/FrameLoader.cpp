@@ -199,12 +199,12 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     , m_forcedSandboxFlags(SandboxNone)
 {
 	// TODO(WebERA): Put name that identifies the document loaded.
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor("FrameLoader::CheckLoadedTimer");
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor("FrameLoader::CheckLoadedTimer");
 
     m_checkTimer.setEventActionDescriptor(descriptor);
 
-    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister().currentEventActionDispatching(),
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
                 descriptor);
 }
 

@@ -169,7 +169,7 @@ QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReply* reply, QObje
     , m_sequenceNumber(0)
     , m_nextSnapshotUpdateTimerRunning(false)
     , m_nextSnapshotUpdateTimer(this, &QNetworkReplyControllable::updateSnapshot)
-    , m_parentDescriptor(threadGlobalData().threadTimers().eventActionRegister().currentEventActionDispatching())
+    , m_parentDescriptor(threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching())
     , m_reply(reply)
 {
     Q_ASSERT(m_reply);
@@ -273,8 +273,9 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
     std::stringstream name;
     name << "NETWORK(" << m_reply->url().toString().toStdString() << ", " << "<same-url-seq-number>" << ", " << m_sequenceNumber++ << ")"; // TODO(WebERA) set same-url-seq-number
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor(name.str());
-    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
+    EventActionDescriptor descriptor =
+    		threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name.str());
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
                 m_parentDescriptor,
                 descriptor);
 

@@ -81,8 +81,8 @@ namespace WebCore {
         // from the clients. If we do that we will get an invalid pointer back.
         // Making these static is not correct since multiple threads will be merged together, however we do not
         // support multiple threads either way (nor workers) so this should not result in any problems in practice.
-        EventActionRegister& eventActionRegister() { return ThreadTimers::m_eventActionRegister; }
-        EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
+        EventActionRegister* eventActionRegister() { return &m_eventActionRegister; }
+        EventActionsHB* eventActionsHB() { return &m_eventActionsHB; }
 
         // Only the scheduler can be static. All the other objects are thread-local.
         static void setScheduler(Scheduler* scheduler);

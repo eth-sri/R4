@@ -146,9 +146,9 @@ void ThreadTimers::sharedTimerFiredInternal()
         	fireTimerCallback(timer, "");
         } else {
         	// Run the timer through the scheduler.
-            eventActionRegister().registerEventActionProvider(
+            eventActionRegister()->registerEventActionProvider(
             		timer, timer->eventActionDescriptor().getName(), &fireTimerCallback);
-            m_scheduler->eventActionScheduled(timer->eventActionDescriptor(), &eventActionRegister());
+            m_scheduler->eventActionScheduled(timer->eventActionDescriptor(), eventActionRegister());
         }
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
@@ -157,7 +157,7 @@ void ThreadTimers::sharedTimerFiredInternal()
 
     }
 
-    m_scheduler->executeDelayedEventActions(&eventActionRegister());
+    m_scheduler->executeDelayedEventActions(eventActionRegister());
 
     m_firingTimers = false;
 
