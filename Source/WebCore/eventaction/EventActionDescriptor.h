@@ -24,13 +24,11 @@
 #ifndef EventActionDescriptor_h
 #define EventActionDescriptor_h
 
-#include <wtf/StringSet.h>
 #include <string>
 
 namespace WebCore {
 
     class EventActionDescriptor {
-
     public:
         EventActionDescriptor(unsigned long id, const std::string& name);
         EventActionDescriptor(unsigned long id, const std::string& name, const std::string& params);
@@ -39,8 +37,8 @@ namespace WebCore {
 
         bool isNull() const { return m_isNull; }
 
-        std::string getName() const;
-        std::string getParams() const;
+        const char* getName() const;
+        const char* getParams() const;
 
         unsigned long getId() const { return m_id; }
 
@@ -50,12 +48,10 @@ namespace WebCore {
         static EventActionDescriptor null;
 
     private:
-        static StringSet m_strings;
-
         unsigned long m_id;
 
-        int m_nameIndex;
-        int m_paramsIndex;
+        std::string m_name;
+        std::string m_params;
 
         bool m_isNull;
     };

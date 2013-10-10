@@ -35,6 +35,7 @@
 
 #include <platform/schedule/Scheduler.h>
 
+#include "schedule/EventActionRegister.h"
 #include "eventaction/EventActionSchedule.h"
 #include "eventaction/EventActionHB.h"
 
@@ -80,8 +81,10 @@ namespace WebCore {
         // from the clients. If we do that we will get an invalid pointer back.
         // Making these static is not correct since multiple threads will be merged together, however we do not
         // support multiple threads either way (nor workers) so this should not result in any problems in practice.
-        static EventActionRegister& eventActionRegister() { return ThreadTimers::m_eventActionRegister; }
-        static EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
+        EventActionRegister& eventActionRegister() { return ThreadTimers::m_eventActionRegister; }
+        EventActionsHB& eventActionsHB() { return ThreadTimers::m_eventActionsHB; }
+
+        // Only the scheduler can be static. All the other objects are thread-local.
         static void setScheduler(Scheduler* scheduler);
 
     private:
@@ -97,9 +100,13 @@ namespace WebCore {
         bool m_firingTimers; // Reentrancy guard.
 
         // WebERA
+
+        // Only the scheduler is static. The other WebERA objects must be thread-local.
         static Scheduler* m_scheduler;
-        static EventActionRegister m_eventActionRegister;
-        static EventActionsHB m_eventActionsHB;
+
+        // Thread-local.
+        EventActionRegister m_eventActionRegister;
+        EventActionsHB m_eventActionsHB;
     };
 
 }

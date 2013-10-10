@@ -27,59 +27,55 @@
 
 namespace WebCore {
 
-StringSet EventActionDescriptor::m_strings;
 EventActionDescriptor EventActionDescriptor::null;
 
 EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& name)
     : m_id(id)
-    , m_nameIndex(EventActionDescriptor::m_strings.addString(name.c_str()))
-    , m_paramsIndex(EventActionDescriptor::m_strings.addString(""))
+    , m_name(name)
     , m_isNull(false)
 {
 }
 
 EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& name, const std::string& params)
     : m_id(id)
-    , m_nameIndex(EventActionDescriptor::m_strings.addString(name.c_str()))
-    , m_paramsIndex(EventActionDescriptor::m_strings.addString(params.c_str()))
-    , m_isNull(false)
+	, m_name(name)
+	, m_params(params)
+	, m_isNull(false)
 {
 }
 
 EventActionDescriptor::EventActionDescriptor(const std::string& name, const std::string& params)
     : m_id(UINT_MAX)
-    , m_nameIndex(EventActionDescriptor::m_strings.addString(name.c_str()))
-    , m_paramsIndex(EventActionDescriptor::m_strings.addString(params.c_str()))
+	, m_name(name)
+	, m_params(params)
     , m_isNull(false)
 {
 }
 
 EventActionDescriptor::EventActionDescriptor()
     : m_id(0)
-    , m_nameIndex(-1)
-    , m_paramsIndex(-1)
     , m_isNull(true)
 {
 }
 
-bool EventActionDescriptor::operator==(const EventActionDescriptor &other) const
+bool EventActionDescriptor::operator==(const EventActionDescriptor& other) const
 {
-    return m_id == other.m_id && m_nameIndex == other.m_nameIndex && m_paramsIndex == other.m_paramsIndex;
+    return m_id == other.m_id && m_name == other.m_name && m_params == other.m_params;
 }
 
 bool EventActionDescriptor::fuzzyCompare(const EventActionDescriptor &other) const
 {
-    return m_nameIndex == other.m_nameIndex && m_paramsIndex == other.m_paramsIndex;
+    return m_name == other.m_name && m_params == other.m_params;
 }
 
-std::string EventActionDescriptor::getName() const
+const char* EventActionDescriptor::getName() const
 {
-    return EventActionDescriptor::m_strings.getString(m_nameIndex);
+    return m_name.c_str();
 }
 
-std::string EventActionDescriptor::getParams() const
+const char* EventActionDescriptor::getParams() const
 {
-    return EventActionDescriptor::m_strings.getString(m_paramsIndex);
+    return m_params.c_str();
 }
 
 }

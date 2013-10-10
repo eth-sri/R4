@@ -23,6 +23,7 @@
  */
 
 #include "DefaultScheduler.h"
+#include "EventActionRegister.h"
 
 namespace WebCore {
 
@@ -34,12 +35,13 @@ DefaultScheduler::~DefaultScheduler()
 {
 }
 
-void DefaultScheduler::eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister& eventActionRegister)
+void DefaultScheduler::eventActionScheduled(
+		const EventActionDescriptor& descriptor, EventActionRegister* eventActionRegister)
 {
-    eventActionRegister.runEventAction(descriptor);
+    eventActionRegister->runEventAction(descriptor);
 }
 
-void DefaultScheduler::executeDelayedEventActions(EventActionRegister&)
+void DefaultScheduler::executeDelayedEventActions(EventActionRegister*)
 {
 	// Do nothing.
 }

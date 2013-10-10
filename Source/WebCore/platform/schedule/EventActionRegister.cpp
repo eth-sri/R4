@@ -97,8 +97,8 @@ void EventActionRegister::unregisterActionProvider(void* object) {
 }
 
 bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor) {
-    std::string name = descriptor.getName();
-    std::string params = descriptor.getParams();
+	const char* name = descriptor.getName();
+	const char* params = descriptor.getParams();
 
     EventActionRegisterMaps::NameToProvider::iterator it =
             m_maps->m_nameToProvider.find(name);

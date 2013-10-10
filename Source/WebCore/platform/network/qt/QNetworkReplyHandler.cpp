@@ -274,7 +274,7 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
     name << "NETWORK(" << m_reply->url().toString().toStdString() << ", " << "<same-url-seq-number>" << ", " << m_sequenceNumber++ << ")"; // TODO(WebERA) set same-url-seq-number
 
     EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor(name.str());
-    ThreadTimers::eventActionsHB().addExplicitArc(
+    threadGlobalData().threadTimers().eventActionsHB().addExplicitArc(
                 m_parentDescriptor,
                 descriptor);
 

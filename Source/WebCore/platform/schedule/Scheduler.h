@@ -31,9 +31,9 @@
 
 #include "eventaction/EventActionDescriptor.h"
 
-#include "EventActionRegister.h"
-
 namespace WebCore {
+
+class EventActionRegister;
 
     class Scheduler {
         WTF_MAKE_NONCOPYABLE(Scheduler);
@@ -44,11 +44,11 @@ namespace WebCore {
 
         // Notifies the scheduler that a new event action has been registered to the EventActionRegister by ThreadTimers
         // Some schedulers may not execute the event action immediately, but delay it instead.
-        virtual void eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister& eventActionRegister) = 0;
+        virtual void eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister* eventActionRegister) = 0;
 
         // Ask the scheduler to execute any delayed tasks
         // Called at every tick, after scheduling any new event actions
-        virtual void executeDelayedEventActions(EventActionRegister& eventActionRegister) = 0;
+        virtual void executeDelayedEventActions(EventActionRegister* eventActionRegister) = 0;
     };
 }
 

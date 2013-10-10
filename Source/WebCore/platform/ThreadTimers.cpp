@@ -48,8 +48,6 @@ namespace WebCore {
 // This is to prevent UI freeze when there are too many timers or machine performance is low.
 static const double maxDurationOfFiringTimers = 0.050;
 
-EventActionRegister ThreadTimers::m_eventActionRegister;
-EventActionsHB ThreadTimers::m_eventActionsHB;
 Scheduler* ThreadTimers::m_scheduler = new DefaultScheduler();
 
 void ThreadTimers::setScheduler(Scheduler* scheduler)
@@ -148,8 +146,9 @@ void ThreadTimers::sharedTimerFiredInternal()
         	fireTimerCallback(timer, "");
         } else {
         	// Run the timer through the scheduler.
-            eventActionRegister().registerEventActionProvider(timer, timer->eventActionDescriptor().getName().c_str(), &fireTimerCallback);
-            m_scheduler->eventActionScheduled(timer->eventActionDescriptor(), eventActionRegister());
+            eventActionRegister().registerEventActionProvider(
+            		timer, timer->eventActionDescriptor().getName(), &fireTimerCallback);
+            m_scheduler->eventActionScheduled(timer->eventActionDescriptor(), &eventActionRegister());
         }
 
         // Catch the case where the timer asked timers to fire in a nested event loop, or we are over time limit.
@@ -158,7 +157,7 @@ void ThreadTimers::sharedTimerFiredInternal()
 
     }
 
-    m_scheduler->executeDelayedEventActions(eventActionRegister());
+    m_scheduler->executeDelayedEventActions(&eventActionRegister());
 
     m_firingTimers = false;
 

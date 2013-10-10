@@ -110,11 +110,11 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     DOMTimer* timer = new DOMTimer(context, action, timeout, singleShot);
 
     // TODO(WebERA): Select an appropiate timer name
-    EventActionDescriptor descriptor = ThreadTimers::eventActionRegister().allocateEventDescriptor(name);
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister().allocateEventDescriptor(name);
     timer->setEventActionDescriptor(descriptor);
 
     threadGlobalData().threadTimers().eventActionsHB().addTimedArc(
-                ThreadTimers::eventActionRegister().currentEventActionDispatching(),
+    			threadGlobalData().threadTimers().eventActionRegister().currentEventActionDispatching(),
                 descriptor,
                 timeout);
 
