@@ -123,6 +123,9 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     std::cout << "Running " << name << "(" << params << ")" << std::endl; // TODO(WebERA): DEBUG
     bool result = (l[0].function)(l[0].object, params);
 
+    // WebERA: DEBUG lets try to remove this from the list now
+    this->unregisterActionProvider(l[0].object);
+
     eventActionDispatchEnd();
 
     return result;
