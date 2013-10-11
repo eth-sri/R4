@@ -226,24 +226,23 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
     delete m_currentSnapshot;
     m_currentSnapshot = queuedSnapshot.second;
 
+    m_nextSnapshotUpdateTimerRunning = false;
+    scheduleNextSnapshotUpdate();
+
     switch(queuedSnapshot.first) {
     case FINISHED:
         emit finished();
         return; // We are done and this structure has been freed
     case READY_READ:
         emit readyRead();
-        break;
+        return; // readyRead() can deallocate this object if the request has finished
     default:
         CRASH();
     }
-
-    m_nextSnapshotUpdateTimerRunning = false;
-
-    scheduleNextSnapshotUpdate();
 }
 
-// Notice, this function is called by non-main threads
-// Thus, control should NEVER! leave this function without explicit locking with the main thread
+// Notice, this function is called by non-main threads and the main thread
+// Thus, control should NEVER! leave this function, only send signals into the main thread
 void QNetworkReplyControllable::enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot)
 {
     m_snapshotQueueMutex.lock();
@@ -251,7 +250,7 @@ void QNetworkReplyControllable::enqueueSnapshot(NetworkSignal signal, QNetworkRe
     m_snapshotQueueMutex.unlock();
 
     // get the main thread to invoke the scheduleNextSnapshotUpdate function
-    QMetaObject::invokeMethod(this, "scheduleNextSnapshotUpdate",  Qt::QueuedConnection);
+    QMetaObject::invokeMethod(this, "scheduleNextSnapshotUpdate",  Qt::AutoConnection);
 }
 
 void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
