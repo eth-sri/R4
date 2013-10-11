@@ -112,7 +112,9 @@ void RecordClientApplication::slOnCloseEvent()
 
     std::ofstream schedulefile;
     schedulefile.open(m_schedulePath.toStdString());
-    WebCore::ThreadTimers::eventActionRegister().dispatchHistory()->serialize(schedulefile);
+
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
+
     schedulefile.close();
 
     m_window->close();
