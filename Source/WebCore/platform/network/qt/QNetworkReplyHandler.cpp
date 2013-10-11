@@ -190,14 +190,12 @@ void QNetworkReplyControllable::detachFromReply()
         m_nextSnapshotUpdateTimer.stop();
     }
 
-    m_snapshotQueueMutex.lock();
     foreach(QueuedSnapshot snapshot, m_snapshotQueue) {
         delete snapshot.second;
         snapshot.second = NULL; // debugging
     }
 
     m_snapshotQueue.clear();
-    m_snapshotQueueMutex.unlock();
 
     QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
 }
@@ -216,12 +214,9 @@ QNetworkReply* QNetworkReplyControllable::release()
     return reply;
 }
 
-// Notice, this function is called by the main thread
 void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*)
 {
-    m_snapshotQueueMutex.lock();
     QueuedSnapshot queuedSnapshot = m_snapshotQueue.takeFirst();
-    m_snapshotQueueMutex.unlock();
 
     delete m_currentSnapshot;
     m_currentSnapshot = queuedSnapshot.second;
@@ -241,16 +236,11 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
     }
 }
 
-// Notice, this function is called by non-main threads and the main thread
-// Thus, control should NEVER! leave this function, only send signals into the main thread
 void QNetworkReplyControllable::enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot)
 {
-    m_snapshotQueueMutex.lock();
     m_snapshotQueue.append(QueuedSnapshot(signal, snapshot));
-    m_snapshotQueueMutex.unlock();
 
-    // get the main thread to invoke the scheduleNextSnapshotUpdate function
-    QMetaObject::invokeMethod(this, "scheduleNextSnapshotUpdate",  Qt::AutoConnection);
+    scheduleNextSnapshotUpdate();
 }
 
 void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
@@ -259,11 +249,7 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
         return; // we are already processing an item from the queue
     }
 
-    m_snapshotQueueMutex.lock();
-    bool isEmpty = m_snapshotQueue.empty();
-    m_snapshotQueueMutex.unlock();
-
-    if (isEmpty) {
+    if (m_snapshotQueue.empty()) {
         return; // no items in the queue
     }
 
@@ -299,11 +285,13 @@ QNetworkReplyControllableLive::~QNetworkReplyControllableLive()
 
 void QNetworkReplyControllableLive::slFinished()
 {
+    // this is always handled by the main thread, Qt signal magic
     enqueueSnapshot(FINISHED, new QNetworkReplySnapshot(m_reply));
 }
 
 void QNetworkReplyControllableLive::slReadyRead()
 {
+    // this is always handled by the main thread, Qt signal magic
     enqueueSnapshot(READY_READ, new QNetworkReplySnapshot(m_reply));
 }
 
@@ -311,9 +299,6 @@ void QNetworkReplyControllableLive::detachFromReply()
 {
     QNetworkReplyControllable::detachFromReply();
 
-    // TODO(WebERA): We have a race here... if the thread handing the IO has already started handing a signal from the reply then this signal
-    // will still be processed in the near future - e.g. it could be waiting on the mutex above. Should we add some bool signalling to the other
-    // threads that they should stop processing?
     if (m_reply) {
         m_reply->disconnect(this, SLOT(slFinished()));
         m_reply->disconnect(this, SLOT(slReadyRead()));

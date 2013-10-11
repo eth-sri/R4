@@ -20,7 +20,6 @@
 #define QNetworkReplyHandler_h
 
 #include <QObject>
-#include <QMutex>
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -158,7 +157,6 @@ protected:
 
     typedef QPair<NetworkSignal, QNetworkReplySnapshot*> QueuedSnapshot;
     QList<QueuedSnapshot> m_snapshotQueue;
-    QMutex m_snapshotQueueMutex;
     QNetworkReplySnapshot* m_currentSnapshot;
 
 
