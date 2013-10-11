@@ -468,7 +468,7 @@ void QNetworkReplyWrapper::setFinished()
     // finished state ourselves. This limitation is fixed in 4.8, but we'll still have applications
     // that don't use the solution. See http://bugreports.qt.nokia.com/browse/QTBUG-11737.
     Q_ASSERT(!isFinished());
-    m_reply->setProperty("_q_isFinished", true);
+    m_reply->snapshot()->setProperty("_q_isFinished", true);
 }
 
 void QNetworkReplyWrapper::emitMetaDataChanged()

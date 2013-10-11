@@ -104,6 +104,7 @@ public:
 
     // QObject
     QVariant property(const char * name) const { return m_reply->property(name); }
+    bool setProperty(const char *name, const QVariant &value) { return m_reply->setProperty(name, value); }
 
     // QIODevice
     qint64 bytesAvailable() const { return m_reply->bytesAvailable(); }
@@ -237,7 +238,7 @@ public:
     bool wasRedirected() const { return m_redirectionTargetUrl.isValid(); }
 
     // See setFinished().
-    bool isFinished() const { return m_reply->property("_q_isFinished").toBool(); }
+    bool isFinished() const { return m_reply->snapshot()->property("_q_isFinished").toBool(); }
 
 private Q_SLOTS:
     void receiveMetaData();
