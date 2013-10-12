@@ -7,15 +7,15 @@ DESTDIR = bin
 RCC_DIR = build
 
 INCLUDEPATH += \
-    ${WebERA_DIR}/WebKitBuild/Release/include/QtWebKit/ \
-    ${WebERA_DIR}/Source/ \
-    ${WebERA_DIR}/Source/WebKit/qt/WebCoreSupport/ \
-    ${WebERA_DIR}/Source/WTF/ \
-    ${WebERA_DIR}/Source/WebCore/ \
+    ../../../WebKitBuild/Release/include/QtWebKit/ \
+    ../../../Source/ \
+    ../../../Source/WebKit/qt/WebCoreSupport/ \
+    ../../../Source/WTF/ \
+    ../../../Source/WebCore/ \
     ../BaseClient/
 
 LIBS += \
-    ${WebERA_DIR}/WebKitBuild/Release/lib/libQtWebKit.so
+    ../../../WebKitBuild/Release/lib/libQtWebKit.so
 
 QT += network
 
