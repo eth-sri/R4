@@ -47,15 +47,15 @@ public:
     ReplayScheduler(const std::string& schedulePath);
     ~ReplayScheduler();
 
-    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister& eventActionRegister);
+    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
 
-    void executeDelayedEventActions(WebCore::EventActionRegister& eventActionRegister);
+    void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
     bool isFinished();
 
 private:
 
-    void debugPrintTimers(WebCore::EventActionRegister& eventActionRegister);
+    void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
 
     WebCore::EventActionSchedule* m_schedule;
 

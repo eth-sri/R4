@@ -107,7 +107,9 @@ void RecordClientApplication::slOnCloseEvent()
 {
     std::ofstream hbfile;
     hbfile.open(m_hbPath.toStdString());
-    WebCore::ThreadTimers::eventActionsHB().serialize(hbfile);
+
+    WebCore::threadGlobalData().threadTimers().eventActionsHB()->serialize(hbfile);
+
     hbfile.close();
 
     std::ofstream schedulefile;

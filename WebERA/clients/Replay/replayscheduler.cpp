@@ -27,6 +27,8 @@
 #include <fstream>
 #include <string>
 
+#include "platform/schedule/EventActionRegister.h"
+
 #include "replayscheduler.h"
 
 ReplayScheduler::ReplayScheduler(const std::string& schedulePath)
@@ -46,11 +48,11 @@ ReplayScheduler::~ReplayScheduler()
 }
 
 void ReplayScheduler::eventActionScheduled(const WebCore::EventActionDescriptor&,
-                                           WebCore::EventActionRegister&)
+                                           WebCore::EventActionRegister*)
 {
 }
 
-void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister& eventActionRegister)
+void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
 {
 
     if (m_schedule->isEmpty()) {
@@ -60,7 +62,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister& e
 
     WebCore::EventActionDescriptor nextToSchedule = m_schedule->first();
 
-    bool found = eventActionRegister.runEventAction(nextToSchedule);
+    bool found = eventActionRegister->runEventAction(nextToSchedule);
 
     if (found) {
         m_schedule->remove(0);
@@ -87,12 +89,12 @@ bool ReplayScheduler::isFinished()
     return m_schedule->isEmpty();
 }
 
-void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister& eventActionRegister)
+void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister* eventActionRegister)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
     std::cout << "NEXT -> " << m_schedule->first().getName() << "(" << m_schedule->first().getParams() << ")" << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 
-    eventActionRegister.debugPrintNames();
+    eventActionRegister->debugPrintNames();
 
 }

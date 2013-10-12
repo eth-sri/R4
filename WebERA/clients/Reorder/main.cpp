@@ -66,14 +66,16 @@ WebCore::EventActionSchedule* readScheduleData(const std::string& filepath)
     return schedule;
 }
 
-typedef WTF::Vector<WebCore::EventActionDescriptor>::const_iterator iter;
-typedef WTF::Vector<WebCore::EventActionDescriptor> Schedule;
-
-iter findFirstOccurrenceOfRelation(const WebCore::EventActionsHB* const hb, const iter needle, const iter start, const iter end)
+WebCore::EventActionSchedule::const_iterator findFirstOccurrenceOfRelation(const WebCore::EventActionsHB* const hb,
+                                                                           const WebCore::EventActionDescriptor needle,
+                                                                           WebCore::EventActionSchedule::const_iterator start,
+                                                                           WebCore::EventActionSchedule::const_iterator end)
 {
-    for (iter pointer = start; pointer != end; pointer++) {
+    WebCore::EventActionSchedule::const_iterator pointer;
 
-        if (hb->haveAnyOrderRelation((*needle), (*pointer))) {
+    for (pointer = start; pointer != end; pointer++) {
+
+        if (hb->haveAnyOrderRelation(needle, (*pointer))) {
             return pointer;
         }
     }
@@ -81,35 +83,35 @@ iter findFirstOccurrenceOfRelation(const WebCore::EventActionsHB* const hb, cons
     return end;
 }
 
-Schedule reorder(unsigned int from,
-                 unsigned int to,
-                 const Schedule& original)
+WebCore::EventActionSchedule* reorder(unsigned int from,
+                                     unsigned int to,
+                                     WebCore::EventActionSchedule* original)
 {
 
-    Schedule newSchedule = original;
+    WebCore::EventActionSchedule* newSchedule =  new WebCore::EventActionSchedule(*original);
 
-    WebCore::EventActionDescriptor item = newSchedule.at(from);
-    newSchedule.remove(from);
+    WebCore::EventActionDescriptor item = newSchedule->at(from);
+    newSchedule->remove(from);
 
     if (to == UINT_MAX) {
-        newSchedule.append(item);
+        newSchedule->append(item);
     } else {
-        newSchedule.insert(to-1, item); // -1 because we have removed an item thus the index has moved
+        newSchedule->insert(to-1, item); // -1 because we have removed an item thus the index has moved
     }
 
-    ASSERT(newSchedule.size() == original.size());
+    ASSERT(newSchedule->size() == original->size());
 
     return newSchedule;
 }
 
-void save(const Schedule& schedule, unsigned int serialId)
+void save(WebCore::EventActionSchedule* schedule, unsigned int serialId)
 {
     std::ostringstream filename;
     filename << "/tmp/schedule-" << serialId << ".data";
 
     std::ofstream outputfp;
     outputfp.open(filename.str());
-    WebCore::EventActionSchedule(schedule).serialize(outputfp);
+    schedule->serialize(outputfp);
     outputfp.close();
 }
 
@@ -121,7 +123,7 @@ int main(int argc, char **argv)
         std::exit(0);
     }
 
-    WebCore::EventActionSchedule* schedule = readScheduleData(argv[1]);
+    WebCore::EventActionSchedule* original = readScheduleData(argv[1]);
     WebCore::EventActionsHB* hb = readHappensBeforeData(argv[2]);
 
     // This implements a worst-case delay reordering
@@ -145,17 +147,15 @@ int main(int argc, char **argv)
 
             // Default: Move A to the position just before B.
 
-    Schedule original = schedule->getVectorCopy();
-
     unsigned int serialId = 0;
 
-    for (iter A = original.begin(); A != original.end(); A++) {
+    for (WebCore::EventActionSchedule::const_iterator A = original->begin(); A != original->end(); A++) {
 
-        if ((A+1) == original.end()) {
+        if ((A+1) == original->end()) {
             continue;
         }
 
-        iter B = findFirstOccurrenceOfRelation(hb, A, A+1, original.end());
+        WebCore::EventActionSchedule::const_iterator B = findFirstOccurrenceOfRelation(hb, (*A), A+1, original->end());
 
         unsigned int distance = B - A;
 
@@ -163,14 +163,14 @@ int main(int argc, char **argv)
             continue;
         }
 
-        unsigned int Apos = A-original.begin();
-        unsigned int Bpos = (B == original.end()) ? UINT_MAX : B-original.begin();
+        unsigned int Apos = A-original->begin();
+        unsigned int Bpos = (B == original->end()) ? UINT_MAX : B-original->begin();
 
         std::cout << "Move: " << Apos << " -> " << Bpos << std::endl;
 
-        Schedule newSchedule = reorder(Apos,
-                                       Bpos,
-                                       original);
+        WebCore::EventActionSchedule* newSchedule = reorder(Apos,
+                                                           Bpos,
+                                                           original);
 
         save(newSchedule, serialId);
         serialId++;
