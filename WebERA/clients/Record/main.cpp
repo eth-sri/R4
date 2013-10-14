@@ -33,6 +33,7 @@
 #include <fstream>
 
 #include <QString>
+#include <QTimer>
 
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/platform/ThreadGlobalData.h>
@@ -77,6 +78,7 @@ void RecordClientApplication::handleUserOptions()
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-schedule-path]"
                  << "[-happens-before-path]"
+                 << "[-timeout]"
                  << "URL";
         exit(0);
     }
@@ -89,6 +91,12 @@ void RecordClientApplication::handleUserOptions()
     int hbPathIndex = args.indexOf("-happens-before-path");
     if (hbPathIndex != -1) {
         this->m_hbPath = takeOptionValue(&args, hbPathIndex);
+    }
+
+    int timeoutIndex = args.indexOf("-timeout");
+    if (timeoutIndex != -1) {
+        int timeout = takeOptionValue(&args, timeoutIndex).toInt();
+        QTimer::singleShot(timeout, this, SLOT(slOnCloseEvent()));
     }
 
     int lastArg = args.lastIndexOf(QRegExp("^-.*"));
