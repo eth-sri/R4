@@ -12,6 +12,7 @@ def abs_path(rel_path):
 if __name__ == '__main__':
 
     sites = (
+	'http://cs.au.dk/~semadk/',
         'http://maps.google.com',
         'http://dir.bg'
     )

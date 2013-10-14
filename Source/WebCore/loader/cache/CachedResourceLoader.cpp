@@ -123,10 +123,6 @@ CachedResourceLoader::CachedResourceLoader(Document* document)
     , m_autoLoadImages(true)
     , m_allowStaleResources(false)
 {
-    // WebERA: We can ignore this timer, however we still give it a name distinguish it from other timers
-    m_garbageCollectDocumentResourcesTimer.setEventActionDescriptor(
-                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor("CachedResourceLoaderGC()")
-    );
 }
 
 CachedResourceLoader::~CachedResourceLoader()
