@@ -20,7 +20,7 @@
 #ifndef QtMIMETypeSniffer_h
 #define QtMIMETypeSniffer_h
 
-#include "MIMESniffing.h"
+#include "WebCore/platform/network/MIMESniffing.h"
 #include <QObject>
 
 namespace WebCore {

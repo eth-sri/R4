@@ -42,7 +42,7 @@ QtMIMETypeSniffer::QtMIMETypeSniffer(WebCore::QNetworkReplyControllable* reply, 
 bool QtMIMETypeSniffer::sniff()
 {
     // See QNetworkReplyWrapper::setFinished().
-    const bool isReplyFinished = m_reply->snapshot()->property("_q_isFinished").toBool();
+    const bool isReplyFinished = m_reply->property("_q_isFinished").toBool();
 
     if (!isReplyFinished && m_reply->snapshot()->bytesAvailable() < m_sniffer.dataSize())
         return false;

@@ -27,7 +27,7 @@
 #define KURL_h
 
 #include "KURLWTFURLImpl.h"
-#include "PlatformString.h"
+#include "WebCore/platform/text/PlatformString.h"
 #include <wtf/HashMap.h>
 
 #if USE(CF)
@@ -49,7 +49,7 @@ QT_END_NAMESPACE
 #endif
 
 #if USE(JSC)
-#include <runtime/UString.h>
+#include <JavaScriptCore/runtime/UString.h>
 #endif
 
 namespace WebCore {

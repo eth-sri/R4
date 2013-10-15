@@ -20,8 +20,8 @@
 #ifndef FormData_h
 #define FormData_h
 
-#include "KURL.h"
-#include "PlatformString.h"
+#include "WebCore/platform/KURL.h"
+#include "WebCore/platform/text/PlatformString.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>

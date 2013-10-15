@@ -19,15 +19,19 @@
 #ifndef QNetworkReplyHandler_h
 #define QNetworkReplyHandler_h
 
+#include <algorithm>
+
 #include <QObject>
+#include <QList>
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 
+#include "wtf/ExportMacros.h"
 #include "WebCore/platform/Timer.h"
 
-#include "FormData.h"
+#include "WebCore/platform/network/FormData.h"
 #include "QtMIMETypeSniffer.h"
 
 #include <QNetworkReply>
@@ -84,46 +88,138 @@ class QNetworkReplyWrapper;
  *
  */
 
-class QNetworkReplySnapshot {
+class QNetworkReplySnapshot;
+
+class QNetworkReplyInitialSnapshot
+{
+    friend class QNetworkReplySnapshot;
 
 public:
 
-    QNetworkReplySnapshot(QNetworkReply* reply);
+    enum NetworkSignal {
+        INITIAL,
+        FINISHED,
+        READY_READ,
+        END
+    };
 
-    QVariant header(QNetworkRequest::KnownHeaders header) const { return m_reply->header(header); }
-    bool hasRawHeader(const QByteArray &headerName) const { return m_reply->hasRawHeader(headerName); }
-    QList<QByteArray> rawHeaderList() const { return m_reply->rawHeaderList(); }
-    QByteArray rawHeader(const QByteArray &headerName) const { return m_reply->rawHeader(headerName); }
-    const QList<QNetworkReply::RawHeaderPair>& rawHeaderPairs() const { return m_reply->rawHeaderPairs(); }
+    QNetworkReplyInitialSnapshot(QNetworkReply* reply);
+    ~QNetworkReplyInitialSnapshot();
 
-    QVariant attribute(QNetworkRequest::Attribute code) const { return m_reply->attribute(code); }
-    QNetworkReply::NetworkError error() const { return m_reply->error(); }
-    QUrl url() const { return m_reply->url(); }
+    QNetworkReplySnapshot* takeSnapshot(NetworkSignal signal, QNetworkReply* reply);
 
-    // QObject
-    QVariant property(const char * name) const { return m_reply->property(name); }
-    bool setProperty(const char *name, const QVariant &value) { return m_reply->setProperty(name, value); }
+    const QString& getDescriptor() {
+        return m_descriptor;
+    }
 
-    // QIODevice
-    qint64 bytesAvailable() const { return m_reply->bytesAvailable(); }
-    QByteArray read(qint64 maxlen) { return m_reply->read(maxlen); }
-    QByteArray peek(qint64 maxlen) { return m_reply->peek(maxlen); }
-    QString errorString() const { return m_reply->errorString(); }
+    const QUrl& getUrl() {
+        return m_url;
+    }
+
+    typedef QPair<NetworkSignal, QNetworkReplySnapshot*> QNetworkReplySnapshotEntry;
+    QList<QNetworkReplySnapshotEntry>* getSnapshots() {
+        return &m_snapshots;
+    }
+
+    void serialize(QIODevice* stream) const;
+    static QNetworkReplyInitialSnapshot* deserialize(QIODevice* stream);
+
+    static QString getDescriptor(const QUrl& url);
+
+protected:
+
+    QNetworkReplyInitialSnapshot();
+
+    qint64 streamPosition() const { return m_streamPosition; }
+    qint64 streamSize() const { return m_stream.size(); }
+
+    QByteArray read(qint64 maxlen);
+    QByteArray peek(qint64 maxlen);
+
+    QList<QNetworkReply::RawHeaderPair> m_headers;
+    QString m_descriptor;
+    QUrl m_url;
+
+    qint64 m_streamPosition; // points at the next value to read
+    QByteArray m_stream;
+
+    QList<QNetworkReplySnapshotEntry> m_snapshots;
 
 private:
-    QNetworkReply* m_reply;
+    static QHash<QString, int> m_nextUrlDescriptorId;
+
+};
+
+class QNetworkReplySnapshot
+{
+    friend class QNetworkReplyInitialSnapshot;
+
+private:
+
+    QNetworkReplySnapshot(QNetworkReply* reply, QNetworkReplyInitialSnapshot* base);
+    QNetworkReplySnapshot(QNetworkReplyInitialSnapshot* base);
+
+
+public:
+
+    // Base values
+
+    QByteArray rawHeader(const QByteArray &headerName) const;
+    const QList<QNetworkReply::RawHeaderPair>& rawHeaderPairs() const { return m_base->m_headers; }
+
+    QUrl url() const { return m_base->m_url; }
+
+    // Snapshot state
+
+    QNetworkReply::NetworkError error() const { return m_error; }
+    QString errorString() const { return m_errorString; }
+
+    QVariant attribute(QNetworkRequest::Attribute code) const {
+        ASSERT(code <= 2); // We only store the 3 first attributes, it seems we are only using these
+        return m_attributes.at(code);
+    }
+
+    // Snapshot stream
+
+    qint64 bytesAvailable() const {
+        return m_streamSize - m_base->streamPosition();
+    }
+
+    QByteArray read(qint64 maxlen) {
+        return m_base->read(std::min(bytesAvailable(), maxlen));
+    }
+
+    QByteArray peek(qint64 maxlen) {
+        return m_base->peek(std::min(bytesAvailable(), maxlen));
+    }
+
+private:
+    QNetworkReplyInitialSnapshot* m_base;
+
+    QNetworkReply::NetworkError m_error;
+    QString m_errorString;
+    QList<QVariant> m_attributes;
+
+    qint64 m_streamSize;
 };
 
 /**
  * WebERA:
  *
- * Exposes the same API as a QNetworkReply, only that the current state is pulled from QNetworkReplySnapshots.
+ * Wraps QNetworkReply and acts as a proxy between QNetworkReply and the rest of the network code. QNetworkReplyControllable
+ * exposes a similar API as QNetworkReply, making the same signals avaialble and all relevant functions for inspecting a reply
+ * are exposed through QNetworkReplay snapshots.
  *
- * Notice that this class is subclassable, such that alternative wrappers (e.g. a replay wrapper) can be used.
- * Change the QNetworkReplyControllableFactory if you want to instanciate connections using different subclasses.
+ * The purpose of this wrapper is to monitor and control when and how the state of QNetworkReply changes. QNetworkReplyControllable
+ * exposes a generic interface in which snapshots of the QNetworkReply is presented, and relevant signals are emitted to the network
+ * code when the current snapshot is updated. Timers are used to control (by the scheduler) when the snapshot updates.
  *
- * This base class handles scheduling through timers and signalling to clients. Subclasses should use the
- * enqueueSnapshot function to queue relevant snapshots.
+ * The default behaviour (implemented in QNetworkReplyControllableLive) is to create these snapshots as the real QNetworkReply emits
+ * updates, and queue them for consumption by the network code.
+ *
+ * This architecture allows for subclasses to implement alternative behaviour, such as fetching snapshots previously observed snapshots
+ * (replaying). Change the QNetworkReplyControllableFactory to inject alternative subclasses.
+ *
  */
 class QNetworkReplyControllable : public QObject {
     Q_OBJECT
@@ -147,15 +243,12 @@ protected:
 
     virtual void detachFromReply();
 
-    enum NetworkSignal {
-        FINISHED,
-        READY_READ
-    };
+    void enqueueSnapshot(QNetworkReplyInitialSnapshot::NetworkSignal signal, QNetworkReplySnapshot* snapshot);
 
-    void enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot);
-
-    typedef QPair<NetworkSignal, QNetworkReplySnapshot*> QueuedSnapshot;
+    typedef QPair<QNetworkReplyInitialSnapshot::NetworkSignal, QNetworkReplySnapshot*> QueuedSnapshot;
     QList<QueuedSnapshot> m_snapshotQueue;
+
+    QNetworkReplyInitialSnapshot* m_initialSnapshot;
     QNetworkReplySnapshot* m_currentSnapshot;
 
 
@@ -180,7 +273,7 @@ class QNetworkReplyControllableLive : public QNetworkReplyControllable {
 
 public:
     QNetworkReplyControllableLive(QNetworkReply*, QObject* parent = 0);
-    ~QNetworkReplyControllableLive();
+    virtual ~QNetworkReplyControllableLive();
 
 protected:
     virtual void detachFromReply();
@@ -190,6 +283,33 @@ public slots:
     void slReadyRead();
 
 };
+
+/** Controllable Factory **/
+
+class QNetworkReplyControllableFactory
+{
+
+public:
+    virtual QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0) = 0;
+    virtual ~QNetworkReplyControllableFactory();
+
+    static QNetworkReplyControllableFactory* getFactory();
+    static void setFactory(QNetworkReplyControllableFactory* factory);
+
+private:
+    static QNetworkReplyControllableFactory* m_factory;
+};
+
+class QNetworkReplyControllableFactoryLive : public QNetworkReplyControllableFactory
+{
+    ~QNetworkReplyControllableFactoryLive();
+
+public:
+    QNetworkReplyControllableLive* construct(QNetworkReply* reply, QObject* parent=0) {
+        return new QNetworkReplyControllableLive(reply, parent);
+    }
+};
+
 
 // WebERA STOP
 
@@ -236,7 +356,7 @@ public:
     bool wasRedirected() const { return m_redirectionTargetUrl.isValid(); }
 
     // See setFinished().
-    bool isFinished() const { return m_reply->snapshot()->property("_q_isFinished").toBool(); }
+    bool isFinished() const { return m_reply->property("_q_isFinished").toBool(); }
 
 private Q_SLOTS:
     void receiveMetaData();

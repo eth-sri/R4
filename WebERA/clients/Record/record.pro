@@ -7,7 +7,9 @@
 include(../BaseClient/baseclient.pri)
 
 SOURCES += \
-    main.cpp
+    main.cpp \
+    network.cpp
 
-HEADERS +=
+HEADERS += \
+    network.h
 

@@ -37,6 +37,7 @@
 
 #include "clientapplication.h"
 #include "replayscheduler.h"
+#include "network.h"
 
 class ReplayClientApplication : public ClientApplication {
     Q_OBJECT
@@ -66,6 +67,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
 
     WebCore::ThreadTimers::setScheduler(scheduler);
+    WebCore::QNetworkReplyControllableFactory::setFactory(new QNetworkReplyControllableFactoryReplay());
 
     loadWebsite(m_url);
 }
@@ -74,7 +76,7 @@ void ReplayClientApplication::handleUserOptions()
 {
     QStringList args = arguments();
 
-    if (args.contains("-help") || args.size() == 1) {
+    if (args.contains(QString::fromAscii("-help")) || args.size() == 1) {
         qDebug() << "Usage:" << m_programName.toLatin1().data() << "<URL> <schedule>";
         exit(0);
     }

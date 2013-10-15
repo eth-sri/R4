@@ -8,8 +8,10 @@ include(../BaseClient/baseclient.pri)
 
 SOURCES += \
     main.cpp \
-    replayscheduler.cpp
+    replayscheduler.cpp \
+    network.cpp
 
 HEADERS += \
-    replayscheduler.h
+    replayscheduler.h \
+    network.h
 

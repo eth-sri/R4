@@ -40,6 +40,7 @@
 
 #include "utils.h"
 #include "clientapplication.h"
+#include "network.h"
 
 class RecordClientApplication : public ClientApplication {
     Q_OBJECT
@@ -54,6 +55,7 @@ private:
     QString m_schedulePath;
     QString m_hbPath;
     QString m_url;
+    QNetworkReplyControllableFactoryRecord* m_controllableFactory;
 
 public slots:
     void slOnCloseEvent();
@@ -63,9 +65,12 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_schedulePath("/tmp/schedule.data")
     , m_hbPath("/tmp/happensbefore.data")
+    , m_controllableFactory(new QNetworkReplyControllableFactoryRecord())
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
+
+    WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
 
     loadWebsite(m_url);
 }
@@ -126,6 +131,8 @@ void RecordClientApplication::slOnCloseEvent()
     WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
 
     schedulefile.close();
+
+    m_controllableFactory->writeNetworkFile();
 
     m_window->close();
 }

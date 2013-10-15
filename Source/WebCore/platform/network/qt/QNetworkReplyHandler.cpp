@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include "QNetworkReplyHandler.h"
+#include <QDataStream>
 
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
@@ -156,10 +157,156 @@ bool FormDataIODevice::isSequential() const
 
 /****************** QNetworkReplySnapshot ******************/
 
-QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReply* reply)
-    : m_reply(reply)
+QNetworkReplyInitialSnapshot::QNetworkReplyInitialSnapshot(QNetworkReply* reply)
+    : m_headers(reply->rawHeaderPairs())
+    , m_descriptor(QNetworkReplyInitialSnapshot::getDescriptor(reply->url()))
+    , m_url(reply->url())
+    , m_streamPosition(0)
 {
-// TODO
+    m_stream.append(reply->readAll());
+}
+
+QNetworkReplyInitialSnapshot::QNetworkReplyInitialSnapshot()
+    : m_streamPosition(0)
+{
+}
+
+QNetworkReplyInitialSnapshot::~QNetworkReplyInitialSnapshot()
+{
+    foreach (QNetworkReplySnapshotEntry entry, m_snapshots) {
+        delete entry.second;
+    }
+}
+
+QNetworkReplySnapshot* QNetworkReplyInitialSnapshot::takeSnapshot(NetworkSignal signal, QNetworkReply* reply)
+{
+    m_stream.append(reply->readAll());
+    m_snapshots.append(QNetworkReplySnapshotEntry(signal, new QNetworkReplySnapshot(reply, this)));
+
+    return m_snapshots.last().second;
+}
+
+QByteArray QNetworkReplyInitialSnapshot::read(qint64 maxlen)
+{
+    QByteArray chunk = peek(maxlen);
+    m_streamPosition += chunk.size();
+
+    return chunk;
+}
+
+QByteArray QNetworkReplyInitialSnapshot::peek(qint64 maxlen)
+{
+    qint64 chunkSize = std::min(maxlen, m_stream.size() - m_streamPosition);
+
+    QByteArray chunk;
+    QByteArray::const_iterator it = m_stream.begin() + m_streamPosition;
+    for (int i = 0; i < chunkSize; i++) {
+        chunk.append((*it));
+        ++it;
+    }
+
+    return chunk;
+}
+
+void QNetworkReplyInitialSnapshot::serialize(QIODevice* stream) const
+{
+    QDataStream out(stream);
+    out << m_headers;
+    out << m_descriptor;
+    out << m_url;
+    out << m_stream;
+
+    foreach (const QNetworkReplySnapshotEntry& entry, m_snapshots) {
+        out << (int)entry.first;
+        out << (int)entry.second->m_error;
+        out << entry.second->m_errorString;
+        out << entry.second->m_attributes;
+        out << entry.second->m_streamSize;
+    }
+
+    out << (int)END;
+}
+
+QNetworkReplyInitialSnapshot* QNetworkReplyInitialSnapshot::deserialize(QIODevice* stream)
+{
+    QNetworkReplyInitialSnapshot* initial = new QNetworkReplyInitialSnapshot();
+
+    QDataStream in(stream);
+
+    in >> initial->m_headers
+       >> initial->m_descriptor
+       >> initial->m_url
+       >> initial->m_stream;
+
+    while (true) {
+        int signal;
+        in >> signal;
+
+        if ((NetworkSignal)signal == END) {
+            // sentinel
+            break;
+        }
+
+        QNetworkReplySnapshot* snapshot = new QNetworkReplySnapshot(initial);
+
+        int error;
+        in >> error;
+        snapshot->m_error = (QNetworkReply::NetworkError)error;
+
+        in >> snapshot->m_errorString;
+        in >> snapshot->m_attributes;
+        in >> snapshot->m_streamSize;
+
+        initial->m_snapshots.append(QNetworkReplySnapshotEntry((NetworkSignal)signal, snapshot));
+    }
+
+    return initial;
+}
+
+QHash<QString, int> QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId;
+
+QString QNetworkReplyInitialSnapshot::getDescriptor(const QUrl& url)
+{
+    QString urlString = url.toString();
+    QHash<QString, int>::const_iterator iter = QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId.find(urlString);
+
+    int id = 0;
+    if (iter != QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId.end()) {
+        id = (*iter);
+    }
+
+    QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId.insert(urlString, id+1);
+
+    return urlString + QString::fromAscii("[") + QString::number(id) + QString::fromAscii("]");
+}
+
+QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReply* reply, QNetworkReplyInitialSnapshot* base)
+    : m_base(base)
+    , m_error(reply->error())
+    , m_errorString(reply->errorString())
+{
+    m_attributes.insert(QNetworkRequest::HttpStatusCodeAttribute, reply->attribute(QNetworkRequest::HttpStatusCodeAttribute));
+    m_attributes.insert(QNetworkRequest::HttpReasonPhraseAttribute, reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute));
+    m_attributes.insert(QNetworkRequest::RedirectionTargetAttribute, reply->attribute(QNetworkRequest::RedirectionTargetAttribute));
+
+    m_streamSize = m_base->streamSize();
+}
+
+QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReplyInitialSnapshot* base)
+    : m_base(base)
+{
+}
+
+
+QByteArray QNetworkReplySnapshot::rawHeader(const QByteArray &headerName) const
+{
+    foreach (const QNetworkReply::RawHeaderPair& pair, m_base->m_headers) {
+        if (pair.first == headerName) {
+            return pair.second;
+        }
+    }
+
+    return QByteArray();
 }
 
 /****************** QNetworkReplyControllable ******************/
@@ -190,11 +337,6 @@ void QNetworkReplyControllable::detachFromReply()
         m_nextSnapshotUpdateTimer.stop();
     }
 
-    foreach(QueuedSnapshot snapshot, m_snapshotQueue) {
-        delete snapshot.second;
-        snapshot.second = NULL; // debugging
-    }
-
     m_snapshotQueue.clear();
 
     QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
@@ -217,18 +359,16 @@ QNetworkReply* QNetworkReplyControllable::release()
 void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*)
 {
     QueuedSnapshot queuedSnapshot = m_snapshotQueue.takeFirst();
-
-    delete m_currentSnapshot;
     m_currentSnapshot = queuedSnapshot.second;
 
     m_nextSnapshotUpdateTimerRunning = false;
     scheduleNextSnapshotUpdate();
 
     switch(queuedSnapshot.first) {
-    case FINISHED:
+    case QNetworkReplyInitialSnapshot::FINISHED:
         emit finished();
         return; // We are done and this structure has been freed
-    case READY_READ:
+    case QNetworkReplyInitialSnapshot::READY_READ:
         emit readyRead();
         return; // readyRead() can deallocate this object if the request has finished
     default:
@@ -236,7 +376,7 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
     }
 }
 
-void QNetworkReplyControllable::enqueueSnapshot(NetworkSignal signal, QNetworkReplySnapshot* snapshot)
+void QNetworkReplyControllable::enqueueSnapshot(QNetworkReplyInitialSnapshot::NetworkSignal signal, QNetworkReplySnapshot* snapshot)
 {
     m_snapshotQueue.append(QueuedSnapshot(signal, snapshot));
 
@@ -276,7 +416,8 @@ QNetworkReplyControllableLive::QNetworkReplyControllableLive(QNetworkReply* repl
     connect(m_reply, SIGNAL(finished()), this, SLOT(slFinished()));
     connect(m_reply, SIGNAL(readyRead()), this, SLOT(slReadyRead()));
 
-    m_currentSnapshot = new QNetworkReplySnapshot(m_reply);
+    m_initialSnapshot = new QNetworkReplyInitialSnapshot(reply);
+    m_currentSnapshot = m_initialSnapshot->takeSnapshot(QNetworkReplyInitialSnapshot::INITIAL, reply);
 }
 
 QNetworkReplyControllableLive::~QNetworkReplyControllableLive()
@@ -286,13 +427,15 @@ QNetworkReplyControllableLive::~QNetworkReplyControllableLive()
 void QNetworkReplyControllableLive::slFinished()
 {
     // this is always handled by the main thread, Qt signal magic
-    enqueueSnapshot(FINISHED, new QNetworkReplySnapshot(m_reply));
+    enqueueSnapshot(QNetworkReplyInitialSnapshot::FINISHED,
+                    m_initialSnapshot->takeSnapshot(QNetworkReplyInitialSnapshot::FINISHED, m_reply));
 }
 
 void QNetworkReplyControllableLive::slReadyRead()
 {
     // this is always handled by the main thread, Qt signal magic
-    enqueueSnapshot(READY_READ, new QNetworkReplySnapshot(m_reply));
+    enqueueSnapshot(QNetworkReplyInitialSnapshot::READY_READ,
+                    m_initialSnapshot->takeSnapshot(QNetworkReplyInitialSnapshot::READY_READ, m_reply));
 }
 
 void QNetworkReplyControllableLive::detachFromReply()
@@ -305,6 +448,27 @@ void QNetworkReplyControllableLive::detachFromReply()
     }
 
     QCoreApplication::removePostedEvents(this, QEvent::MetaCall);
+}
+
+QNetworkReplyControllableFactory* QNetworkReplyControllableFactory::m_factory = new QNetworkReplyControllableFactoryLive();
+
+QNetworkReplyControllableFactory* QNetworkReplyControllableFactory::getFactory()
+{
+    return QNetworkReplyControllableFactory::m_factory;
+}
+
+void QNetworkReplyControllableFactory::setFactory(QNetworkReplyControllableFactory* factory)
+{
+    delete QNetworkReplyControllableFactory::m_factory;
+    QNetworkReplyControllableFactory::m_factory = factory;
+}
+
+QNetworkReplyControllableFactory::~QNetworkReplyControllableFactory()
+{
+}
+
+QNetworkReplyControllableFactoryLive::~QNetworkReplyControllableFactoryLive()
+{
 }
 
 // WebERA STOP
@@ -371,7 +535,7 @@ private:
 
 QNetworkReplyWrapper::QNetworkReplyWrapper(QNetworkReplyHandlerCallQueue* queue, QNetworkReply* reply, bool sniffMIMETypes, QObject* parent)
     : QObject(parent)
-    , m_reply(new QNetworkReplyControllableLive(reply, this))
+    , m_reply(QNetworkReplyControllableFactory::getFactory()->construct(reply, this))
     , m_queue(queue)
     , m_responseContainsData(false)
     , m_sniffMIMETypes(sniffMIMETypes)
@@ -420,7 +584,7 @@ void QNetworkReplyWrapper::receiveMetaData()
     resetConnections();
 
 
-    WTF::String contentType = m_reply->snapshot()->header(QNetworkRequest::ContentTypeHeader).toString();
+    WTF::String contentType = QString::fromLocal8Bit(m_reply->snapshot()->rawHeader("ContentType"));
     m_encoding = extractCharsetFromMediaType(contentType);
     m_advertisedMIMEType = extractMIMETypeFromMediaType(contentType);
 
@@ -468,7 +632,7 @@ void QNetworkReplyWrapper::setFinished()
     // finished state ourselves. This limitation is fixed in 4.8, but we'll still have applications
     // that don't use the solution. See http://bugreports.qt.nokia.com/browse/QTBUG-11737.
     Q_ASSERT(!isFinished());
-    m_reply->snapshot()->setProperty("_q_isFinished", true);
+    m_reply->setProperty("_q_isFinished", true);
 }
 
 void QNetworkReplyWrapper::emitMetaDataChanged()
@@ -630,7 +794,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
 
     KURL url(m_replyWrapper->reply()->snapshot()->url());
     ResourceResponse response(url, mimeType.lower(),
-                              m_replyWrapper->reply()->snapshot()->header(QNetworkRequest::ContentLengthHeader).toLongLong(),
+                              QString::fromLocal8Bit(m_replyWrapper->reply()->snapshot()->rawHeader("ContentLength")).toLongLong(),
                               m_replyWrapper->encoding(), String());
 
     if (url.isLocalFile()) {
@@ -642,7 +806,7 @@ void QNetworkReplyHandler::sendResponseIfNeeded()
     int statusCode = m_replyWrapper->reply()->snapshot()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (url.protocolIsInHTTPFamily()) {
-        String suggestedFilename = filenameFromHTTPContentDisposition(QString::fromLatin1(m_replyWrapper->reply()->snapshot()->rawHeader("Content-Disposition")));
+        String suggestedFilename = filenameFromHTTPContentDisposition(QString::fromLatin1(m_replyWrapper->reply()->snapshot()->rawHeader("Contentisposition")));
 
         if (!suggestedFilename.isEmpty())
             response.setSuggestedFilename(suggestedFilename);
