@@ -89,14 +89,17 @@ void HTMLParserScheduler::continueNextChunkTimerFired(Timer<HTMLParserScheduler>
     ASSERT_UNUSED(timer, timer == &m_continueNextChunkTimer);
     // FIXME: The timer class should handle timer priorities instead of this code.
     // If a layout is scheduled, wait again to let the layout timer run first.
-    if (m_parser->document()->isLayoutTimerActive()) {
+    //if (m_parser->document()->isLayoutTimerActive()) {
 
-        updateTimerName(); // WebERA
-        m_continueNextChunkTimer.startOneShot(0);
-        m_continueNextChunkTimerActive = true;
+    //    updateTimerName(); // WebERA
+    //    m_continueNextChunkTimer.startOneShot(0);
+    //    m_continueNextChunkTimerActive = true;
 
-        return;
-    }
+    //    return;
+    //}
+
+    // WebERA: A timer should always finish its task when called. It can't reschedule itself otherwise the
+    // scheduler would think that this timer has been executed and move on - causing a deadlock.
 
     m_continueNextChunkTimerActive = false;
     m_parser->resumeParsingAfterYield();
