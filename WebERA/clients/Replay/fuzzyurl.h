@@ -24,35 +24,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef FUZZYURL_H
+#define FUZZYURL_H
 
-#include <QMultiHash>
+#include <QUrl>
+#include <QString>
+#include <limits>
 
-#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
-
-class QNetworkReplyControllableFactoryReplay;
-
-class QNetworkReplyControllableReplay : public WebCore::QNetworkReplyControllable {
-    Q_OBJECT
-
-public:
-    QNetworkReplyControllableReplay(QNetworkReply*, WebCore::QNetworkReplyInitialSnapshot*, QObject* parent = 0);
-
-};
-
-
-class QNetworkReplyControllableFactoryReplay : public WebCore::QNetworkReplyControllableFactory
+class FuzzyUrlMatcher
 {
-
 public:
-    QNetworkReplyControllableFactoryReplay();
+    enum {
+        MATCH = UINT_MAX,
+        MISMATCH = 0
+    };
 
-    WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
+    FuzzyUrlMatcher(const QUrl&);
+
+    unsigned int score(const QUrl&);
 
 private:
-    typedef QMultiHash<QString, WebCore::QNetworkReplyInitialSnapshot*> SnapshotMap;
-    SnapshotMap m_snapshots;
+    struct QUrl m_url;
+
 };
 
-#endif // NETWORK_H
+#endif // FUZZYURL_H

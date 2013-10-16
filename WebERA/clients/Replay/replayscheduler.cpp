@@ -29,6 +29,8 @@
 
 #include "platform/schedule/EventActionRegister.h"
 
+#include "fuzzyurl.h"
+
 #include "replayscheduler.h"
 
 ReplayScheduler::ReplayScheduler(const std::string& schedulePath)
@@ -62,7 +64,74 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
     WebCore::EventActionDescriptor nextToSchedule = m_schedule->first();
 
+    // try to execute this directly
     bool found = eventActionRegister->runEventAction(nextToSchedule);
+
+    if (!found)
+        // Try to do a fuzzy match (only networking at the moment)
+
+        // TODO(WebERA) We could also move the fuzzy matching into EventActionRegister...
+
+        /**
+          * Fuzzy match network related event actions
+          *
+          * With event action A, we will match an event action B iff
+          *
+          * Handled by fuzzyurl:
+          *     A's domain matches B's domain
+          *     A's fragments (before ?) matches B's fragments
+          *     A's keywords in query (?KEYWORD=VALUE) matches B's keywords
+          *
+          * Handled here:
+          *     A's url sequence number and segment number matches B's ...
+          *
+          * If we have multiple matches then we use the match score by fuzzyurl.
+          *
+          * This solves the problem of URLS containing timestamps.
+          *
+          */
+        if (nextToSchedule.getType() == "NETWORK") {
+
+            QString url = QString::fromStdString(nextToSchedule.getParameter(0));
+            unsigned int sameUrlSequenceNumber = QString::fromStdString(nextToSchedule.getParameter(1)).toUInt();
+            unsigned int sequenceNumber = QString::fromStdString(nextToSchedule.getParameter(2)).toUInt();
+
+            FuzzyUrlMatcher* matcher = new FuzzyUrlMatcher(QUrl(url));
+
+            std::vector<std::string> names = eventActionRegister->getWaitingNames();
+            std::vector<std::string>::const_iterator iter;
+
+            unsigned int bestScore = 0;
+            WebCore::EventActionDescriptor bestDescriptor;
+
+            for (iter = names.begin(); iter != names.end(); iter++) {
+
+                WebCore::EventActionDescriptor candidate(nextToSchedule.getId(), (*iter), nextToSchedule.getParams());
+
+                if (candidate.getType() != "NETWORK") {
+                    continue;
+                }
+
+                unsigned int candidateSameUrlSequenceNumber = QString::fromStdString(candidate.getParameter(1)).toUInt();
+                unsigned int candidateSequenceNumber = QString::fromStdString(candidate.getParameter(2)).toUInt();
+
+                if (sameUrlSequenceNumber != candidateSameUrlSequenceNumber || sequenceNumber != candidateSequenceNumber) {
+                    continue;
+                }
+
+                unsigned int score = matcher->score(QUrl(QString::fromStdString(candidate.getParameter(0))));
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestDescriptor = candidate;
+                }
+            }
+
+            if (bestScore > 0) {
+                std::cout << "Fuzzy match of scheduler name, renaming " << nextToSchedule.getName() << " to " << bestDescriptor.getName() << std::endl;
+                found = eventActionRegister->runEventAction(bestDescriptor);
+            }
+    }
 
     if (found) {
         m_schedule->remove(0);

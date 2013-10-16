@@ -159,11 +159,12 @@ bool FormDataIODevice::isSequential() const
 
 QNetworkReplyInitialSnapshot::QNetworkReplyInitialSnapshot(QNetworkReply* reply)
     : m_headers(reply->rawHeaderPairs())
-    , m_descriptor(QNetworkReplyInitialSnapshot::getDescriptor(reply->url()))
+    , m_sameUrlSequenceNumber(QNetworkReplyInitialSnapshot::getNextSameUrlSequenceNumber(reply->url()))
     , m_url(reply->url())
     , m_streamPosition(0)
 {
     m_stream.append(reply->readAll());
+    takeSnapshot(QNetworkReplyInitialSnapshot::INITIAL, reply);
 }
 
 QNetworkReplyInitialSnapshot::QNetworkReplyInitialSnapshot()
@@ -212,7 +213,7 @@ void QNetworkReplyInitialSnapshot::serialize(QIODevice* stream) const
 {
     QDataStream out(stream);
     out << m_headers;
-    out << m_descriptor;
+    out << m_sameUrlSequenceNumber;
     out << m_url;
     out << m_stream;
 
@@ -234,7 +235,7 @@ QNetworkReplyInitialSnapshot* QNetworkReplyInitialSnapshot::deserialize(QIODevic
     QDataStream in(stream);
 
     in >> initial->m_headers
-       >> initial->m_descriptor
+       >> initial->m_sameUrlSequenceNumber
        >> initial->m_url
        >> initial->m_stream;
 
@@ -263,21 +264,21 @@ QNetworkReplyInitialSnapshot* QNetworkReplyInitialSnapshot::deserialize(QIODevic
     return initial;
 }
 
-QHash<QString, int> QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId;
+QHash<QString, unsigned int> QNetworkReplyInitialSnapshot::m_nextSameUrlSequenceNumber;
 
-QString QNetworkReplyInitialSnapshot::getDescriptor(const QUrl& url)
+unsigned int QNetworkReplyInitialSnapshot::getNextSameUrlSequenceNumber(const QUrl& url)
 {
     QString urlString = url.toString();
-    QHash<QString, int>::const_iterator iter = QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId.find(urlString);
+    QHash<QString, unsigned int>::const_iterator iter = QNetworkReplyInitialSnapshot::m_nextSameUrlSequenceNumber.find(urlString);
 
-    int id = 0;
-    if (iter != QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId.end()) {
+    unsigned int id = 0;
+    if (iter != QNetworkReplyInitialSnapshot::m_nextSameUrlSequenceNumber.end()) {
         id = (*iter);
     }
 
-    QNetworkReplyInitialSnapshot::m_nextUrlDescriptorId.insert(urlString, id+1);
+    QNetworkReplyInitialSnapshot::m_nextSameUrlSequenceNumber.insert(urlString, id+1);
 
-    return urlString + QString::fromAscii("[") + QString::number(id) + QString::fromAscii("]");
+    return id;
 }
 
 QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReply* reply, QNetworkReplyInitialSnapshot* base)
@@ -396,7 +397,7 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
     m_nextSnapshotUpdateTimerRunning = true;
 
     std::stringstream name;
-    name << "NETWORK(" << m_reply->url().toString().toStdString() << ", " << "<same-url-seq-number>" << ", " << m_sequenceNumber++ << ")"; // TODO(WebERA) set same-url-seq-number
+    name << "NETWORK(" << m_reply->url().toString().toStdString() << "," << m_initialSnapshot->getSameUrlSequenceNumber() << "," << m_sequenceNumber++ << ")";
 
     EventActionDescriptor descriptor =
     		threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name.str());
@@ -417,7 +418,7 @@ QNetworkReplyControllableLive::QNetworkReplyControllableLive(QNetworkReply* repl
     connect(m_reply, SIGNAL(readyRead()), this, SLOT(slReadyRead()));
 
     m_initialSnapshot = new QNetworkReplyInitialSnapshot(reply);
-    m_currentSnapshot = m_initialSnapshot->takeSnapshot(QNetworkReplyInitialSnapshot::INITIAL, reply);
+    m_currentSnapshot = m_initialSnapshot->getSnapshots()->first().second;
 }
 
 QNetworkReplyControllableLive::~QNetworkReplyControllableLive()

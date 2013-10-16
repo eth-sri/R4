@@ -24,35 +24,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORK_H
-#define NETWORK_H
+#include "fuzzyurl.h"
 
-#include <QMultiHash>
-
-#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
-
-class QNetworkReplyControllableFactoryReplay;
-
-class QNetworkReplyControllableReplay : public WebCore::QNetworkReplyControllable {
-    Q_OBJECT
-
-public:
-    QNetworkReplyControllableReplay(QNetworkReply*, WebCore::QNetworkReplyInitialSnapshot*, QObject* parent = 0);
-
-};
-
-
-class QNetworkReplyControllableFactoryReplay : public WebCore::QNetworkReplyControllableFactory
+FuzzyUrlMatcher::FuzzyUrlMatcher(const QUrl& url)
+    : m_url(url)
 {
+}
 
-public:
-    QNetworkReplyControllableFactoryReplay();
+unsigned int FuzzyUrlMatcher::score(const QUrl& other)
+{
+    // fastpath, the urls matches 100%
+    if (m_url == other) {
+        return MATCH;
+    }
 
-    WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
+    // Reject domain mismatches
+    if (m_url.host() != other.host()) {
+        return MISMATCH;
+    }
 
-private:
-    typedef QMultiHash<QString, WebCore::QNetworkReplyInitialSnapshot*> SnapshotMap;
-    SnapshotMap m_snapshots;
-};
+    // Reject fragment mismatches
+    if (m_url.hasFragment() != other.hasFragment()) {
+        return MISMATCH;
+    }
 
-#endif // NETWORK_H
+    if (m_url.hasFragment() && (m_url.fragment() != other.fragment())) {
+        return MISMATCH;
+    }
+
+    // Reject query mismatches
+    if (m_url.hasQuery() != other.hasQuery()) {
+        return MISMATCH;
+    }
+
+    if (m_url.queryItems().size() != other.queryItems().size()) {
+        return MISMATCH;
+    }
+
+    // Calculate score
+
+    unsigned int score = 1; // give it a score of 1 because the domain, fragment and query length matches
+
+    QPair<QString, QString> item;
+    foreach (item, m_url.queryItems()) {
+        if (!other.hasQueryItem(item.first)) {
+            return MISMATCH; // query keys mismatch
+        }
+
+        if (item.second == other.queryItemValue(item.first)) {
+            score++;
+        }
+    }
+
+    return score;
+}

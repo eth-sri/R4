@@ -8,6 +8,8 @@
 #ifndef EVENTACTIONREGISTER_H_
 #define EVENTACTIONREGISTER_H_
 
+#include <vector>
+
 #include "eventaction/EventActionDescriptor.h"
 #include "eventaction/EventActionSchedule.h"
 
@@ -45,6 +47,8 @@ public:
     EventActionDescriptor allocateEventDescriptor(const std::string& name, const std::string& param = "");
 
     EventActionSchedule* dispatchHistory() { return m_dispatchHistory; }
+
+    std::vector<std::string> getWaitingNames();
 
     void debugPrintNames() const;
 

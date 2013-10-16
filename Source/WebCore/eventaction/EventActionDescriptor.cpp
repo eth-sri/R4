@@ -21,6 +21,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
 #include <climits>
 
 #include "EventActionDescriptor.h"
@@ -76,6 +77,38 @@ const char* EventActionDescriptor::getName() const
 const char* EventActionDescriptor::getParams() const
 {
     return m_params.c_str();
+}
+
+std::string EventActionDescriptor::getType() const
+{
+    size_t typeEnd = m_name.find('(');
+
+    if (typeEnd == std::string::npos) {
+        return std::string();
+    }
+
+    return m_name.substr(0, typeEnd);
+}
+
+std::string EventActionDescriptor::getParameter(unsigned int number) const
+{
+    size_t start;
+    size_t end = m_name.find('(');
+
+    assert(end != std::string::npos);
+
+    for (int i = 0; i <= number; i++) {
+        start = end;
+        end = m_name.find(',', start);
+
+        if (end == std::string::npos) {
+            end = m_name.find(')', start);
+        }
+
+        assert(end != std::string::npos);
+    }
+
+    return m_name.substr(start+1, end-start-1);
 }
 
 }

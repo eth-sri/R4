@@ -9,9 +9,11 @@ include(../BaseClient/baseclient.pri)
 SOURCES += \
     main.cpp \
     replayscheduler.cpp \
-    network.cpp
+    network.cpp \
+    fuzzyurl.cpp
 
 HEADERS += \
     replayscheduler.h \
-    network.h
+    network.h \
+    fuzzyurl.h
 

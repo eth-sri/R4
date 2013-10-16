@@ -28,6 +28,31 @@
 
 namespace WebCore {
 
+    /**
+     * An EventActionDescriptor represents a concrete event action to be executed in the system.
+     *
+     * Each descriptor contains a unique ID, a name string and a params string.
+     *
+     * ID: Used to uniquely identify this specific event action such that we can build an happens before graph.
+     * We can't use the name since we do not make any guarantees that the name is unique.
+     *
+     * The ID is assigned sequentially in one execution. For this reason it is often not feasible to correlate IDs
+     * across executions if reordering is used.
+     *
+     * // TODO(WebERA): It would be nice if we could use the name as a unique identifier and remove the ID
+     *
+     * Name: A name identifying the event action (not unique). The convention is write the name as follows:
+     *
+     * EVENTACTIONTYPE(arg1, arg2, arg3, arg4)
+     *
+     * We do some inspection of this string to do special casing.
+     *
+     * // TODO(WebERA) should we refactor the descriptor to remove the name and operate directly on its components?
+     *
+     * Params: Optional params. Not used at the moment.
+     *
+     * // TODO(WebERA) Remove params as part of the above TODO. We could just do proper matching on the descriptor.
+     */
     class EventActionDescriptor {
     public:
         EventActionDescriptor(unsigned long id, const std::string& name);
@@ -41,6 +66,10 @@ namespace WebCore {
         const char* getParams() const;
 
         unsigned long getId() const { return m_id; }
+
+        // Inspecting the name
+        std::string getType() const;
+        std::string getParameter(unsigned int number) const;
 
         bool operator==(const EventActionDescriptor& other) const;
         bool fuzzyCompare(const EventActionDescriptor& other) const;

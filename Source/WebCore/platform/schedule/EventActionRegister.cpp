@@ -144,4 +144,14 @@ void EventActionRegister::debugPrintNames() const
     }
 }
 
+std::vector<std::string> EventActionRegister::getWaitingNames()
+{
+    std::vector<std::string> v;
+    for(EventActionRegisterMaps::NameToProvider::iterator it = m_maps->m_nameToProvider.begin(); it != m_maps->m_nameToProvider.end(); ++it) {
+      v.push_back(it->first);
+    }
+
+    return v;
+}
+
 }  // namespace WebCore

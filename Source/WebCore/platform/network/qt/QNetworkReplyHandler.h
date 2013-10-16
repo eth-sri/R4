@@ -108,8 +108,8 @@ public:
 
     QNetworkReplySnapshot* takeSnapshot(NetworkSignal signal, QNetworkReply* reply);
 
-    const QString& getDescriptor() {
-        return m_descriptor;
+    unsigned int getSameUrlSequenceNumber() {
+        return m_sameUrlSequenceNumber;
     }
 
     const QUrl& getUrl() {
@@ -124,7 +124,7 @@ public:
     void serialize(QIODevice* stream) const;
     static QNetworkReplyInitialSnapshot* deserialize(QIODevice* stream);
 
-    static QString getDescriptor(const QUrl& url);
+    static unsigned int getNextSameUrlSequenceNumber(const QUrl& url);
 
 protected:
 
@@ -137,7 +137,7 @@ protected:
     QByteArray peek(qint64 maxlen);
 
     QList<QNetworkReply::RawHeaderPair> m_headers;
-    QString m_descriptor;
+    unsigned int m_sameUrlSequenceNumber;
     QUrl m_url;
 
     qint64 m_streamPosition; // points at the next value to read
@@ -146,7 +146,7 @@ protected:
     QList<QNetworkReplySnapshotEntry> m_snapshots;
 
 private:
-    static QHash<QString, int> m_nextUrlDescriptorId;
+    static QHash<QString, unsigned int> m_nextSameUrlSequenceNumber;
 
 };
 
