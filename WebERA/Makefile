@@ -7,3 +7,4 @@ build:
 	cd clients/Replay; qmake; make
 
 test:
+	python test.py

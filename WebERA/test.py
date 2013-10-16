@@ -13,6 +13,8 @@ if __name__ == '__main__':
 
     sites = (
 	'http://cs.au.dk/~semadk/',
+	'http://google.com',
+	'http://eth.ch',
         'http://maps.google.com',
         'http://dir.bg'
     )
