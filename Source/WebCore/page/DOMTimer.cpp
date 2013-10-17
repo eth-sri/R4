@@ -94,15 +94,13 @@ DOMTimer::~DOMTimer()
 
 int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int timeout, bool singleShot)
 {
-    // WebERA: Convert an unsigned long into a string
-    std::stringstream timeoutAsString;
-    timeoutAsString << timeout;
-
-    std::stringstream calledLineAsString;
-    calledLineAsString << action->getCalledLine();
 
     // WebERA: We need to access action before it is given to the DOMTimer, afterwards it will be NULL
-    std::string params =  timeoutAsString.str() + "," + (singleShot ? "true" : "false") + "," + action->getCalledUrl() + "," + calledLineAsString.str();
+    std::stringstream params;
+    params << (action->getCalledUrl().empty() ? std::string("-") : EventActionDescriptor::escapeParam(action->getCalledUrl())) << ","
+           << action->getCalledLine() << ","
+           << timeout << ","
+           << (singleShot ? "true" : "false");
 
     // DOMTimer constructor links the new timer into a list of ActiveDOMObjects held by the 'context'.
     // The timer is deleted when context is deleted (DOMTimer::contextDestroyed) or explicitly via DOMTimer::removeById(),
@@ -112,7 +110,7 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     // TODO(WebERA): Select an appropiate timer name
     EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
                 "DOMTimer",
-                params
+                params.str()
     );
     timer->setEventActionDescriptor(descriptor);
 

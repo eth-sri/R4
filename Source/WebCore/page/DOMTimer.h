@@ -43,7 +43,7 @@ namespace WebCore {
      *
      * Naming:
      *
-     * The timer will be named DOMTimer(<interval>, <oneshot>, <JavaScriptFunction>)
+     * The timer will be named DOMTimer(<JavaScriptFunction (URL)>, <linenumber>, <interval>, <oneshot>,)
      *
      * Note, that in principle multiple timers could share the same name/signature. However, we assume that this is
      * stable and unique accross executions.
