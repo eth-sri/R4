@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QStringList>
+
 #include "fuzzyurl.h"
 
 FuzzyUrlMatcher::FuzzyUrlMatcher(const QUrl& url)
@@ -43,8 +45,11 @@ unsigned int FuzzyUrlMatcher::score(const QUrl& other)
         return MISMATCH;
     }
 
+    QStringList pathFragments = m_url.path().split(QString::fromAscii("/"));
+    QStringList otherPathFragments = other.path().split(QString::fromAscii("/"));
+
     // Reject path mismatches
-    if (m_url.path() != other.path()) {
+    if (pathFragments.size() != otherPathFragments.size()) {
         return MISMATCH;
     }
 
@@ -65,7 +70,9 @@ unsigned int FuzzyUrlMatcher::score(const QUrl& other)
 
     // Calculate score
 
-    unsigned int score = 1; // give it a score of 1 because the domain, path, fragment and query length matches
+    unsigned int score = 1; // give it a score of 1 because the domain, path length, fragment and query length matches
+
+    // Score 1 for each matching query value
 
     QPair<QString, QString> item;
     foreach (item, m_url.queryItems()) {
@@ -75,6 +82,18 @@ unsigned int FuzzyUrlMatcher::score(const QUrl& other)
 
         if (item.second == other.queryItemValue(item.first)) {
             score++;
+        }
+    }
+
+    // Score (|query keywords| + 1) for each matching path fragment
+    // This way the query score only decides the winner of URLs with matching (score wise) paths
+
+    unsigned int scorePath = m_url.queryItems().size() + 1;
+
+    // TODO(WebERA) should we have some lower limit on the number of mismatches in the path we allow? E.g. for scheduling.
+    while (!pathFragments.empty()) {
+        if (pathFragments.takeFirst() == otherPathFragments.takeFirst()) {
+            score += scorePath;
         }
     }
 
