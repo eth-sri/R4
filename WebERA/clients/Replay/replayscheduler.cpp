@@ -144,7 +144,6 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     if (m_scheduleWaits > 500) { // TODO(WebERA) 500 is an arbitrary magic number, reason about a good number
         std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
         std::cerr << "This is the current queue of events" << std::endl;
-
         debugPrintTimers(eventActionRegister); // TODO(WebERA): DEBUG
 
         std::exit(1);

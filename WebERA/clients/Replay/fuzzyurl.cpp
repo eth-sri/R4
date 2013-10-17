@@ -43,12 +43,8 @@ unsigned int FuzzyUrlMatcher::score(const QUrl& other)
         return MISMATCH;
     }
 
-    // Reject fragment mismatches
-    if (m_url.hasFragment() != other.hasFragment()) {
-        return MISMATCH;
-    }
-
-    if (m_url.hasFragment() && (m_url.fragment() != other.fragment())) {
+    // Reject path mismatches
+    if (m_url.path() != other.path()) {
         return MISMATCH;
     }
 
@@ -61,9 +57,15 @@ unsigned int FuzzyUrlMatcher::score(const QUrl& other)
         return MISMATCH;
     }
 
+    // Reject fragment mismatch
+
+    if (m_url.hasFragment() != other.hasFragment()) {
+        return MISMATCH;
+    }
+
     // Calculate score
 
-    unsigned int score = 1; // give it a score of 1 because the domain, fragment and query length matches
+    unsigned int score = 1; // give it a score of 1 because the domain, path, fragment and query length matches
 
     QPair<QString, QString> item;
     foreach (item, m_url.queryItems()) {
