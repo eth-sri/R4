@@ -107,7 +107,9 @@ public:
     virtual void suspendScheduledTasks();
     virtual void resumeScheduledTasks();
 
-    std::string getPositionAsString();
+    // WebERA
+    std::string getDocumentUrl() const;
+    unsigned long getTokensSeen() const { return m_tokensSeen; }
 
 protected:
     virtual void insert(const SegmentedString&);

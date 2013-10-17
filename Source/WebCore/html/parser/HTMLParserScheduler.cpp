@@ -37,6 +37,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 
 // defaultParserChunkSize is used to define how many tokens the parser will
 // process before checking against parserTimeLimit and possibly yielding.
@@ -149,8 +150,15 @@ void HTMLParserScheduler::resume()
 
 void HTMLParserScheduler::updateTimerName()
 {
-    std::string name = "HTMLDocumentParser(" + m_parser->getPositionAsString() + ")";
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name);
+    // Convert an unsigned long into a string
+    std::stringstream name;
+    name << "HTMLDocumentParser(";
+    name << m_parser->getDocumentUrl();
+    name << ",";
+    name << m_parser->getTokensSeen();
+    name << ")";
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name.str());
 
     m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
 

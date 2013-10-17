@@ -42,7 +42,6 @@
 #include "Settings.h"
 
 #include <iostream>
-#include <sstream>
 
 namespace WebCore {
 
@@ -599,13 +598,9 @@ void HTMLDocumentParser::resumeScheduledTasks()
         m_parserScheduler->resume();
 }
 
-std::string HTMLDocumentParser::getPositionAsString()
+std::string HTMLDocumentParser::getDocumentUrl() const
 {
-    // Convert an unsigned long into a string
-    std::stringstream tokensSeenAsString;
-    tokensSeenAsString << m_tokensSeen;
-
-    return std::string(m_document->url().string().ascii().data()) + "[" + tokensSeenAsString.str() + "]";
+    return std::string(m_document->url().string().ascii().data());
 }
 
 }
