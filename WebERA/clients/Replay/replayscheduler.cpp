@@ -63,17 +63,21 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     }
 
     WebCore::EventActionDescriptor nextToSchedule = m_schedule->first();
+    std::string eventActionType = nextToSchedule.getType();
 
     // try to execute this directly
     bool found = eventActionRegister->runEventAction(nextToSchedule);
 
     if (!found)
+
+
         // Try to do a fuzzy match (only networking at the moment)
 
         // TODO(WebERA) We could also move the fuzzy matching into EventActionRegister...
 
         /**
-          * Fuzzy match network related event actions
+          * Fuzzy match the URL part of various event actions
+          * (Currently NETWORK and HTMLDocumentParser)
           *
           * With event action A, we will match an event action B iff
           *
@@ -82,19 +86,24 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
           *     A's fragments (before ?) matches B's fragments
           *     A's keywords in query (?KEYWORD=VALUE) matches B's keywords
           *
-          * Handled here:
+          * Network event actions:
           *     A's url sequence number and segment number matches B's ...
+          *
+          * HTMLDocumentParser event actions:
+          *     A's segment number matches B's segment number
           *
           * If we have multiple matches then we use the match score by fuzzyurl.
           *
           * This solves the problem of URLS containing timestamps.
           *
           */
-        if (nextToSchedule.getType() == "NETWORK") {
+
+        if (eventActionType == "NETWORK" || eventActionType == "HTMLDocumentParser") {
 
             QString url = QString::fromStdString(nextToSchedule.getParameter(0));
-            unsigned int sameUrlSequenceNumber = QString::fromStdString(nextToSchedule.getParameter(1)).toUInt();
-            unsigned int sequenceNumber = QString::fromStdString(nextToSchedule.getParameter(2)).toUInt();
+
+            unsigned int sequenceNumber1 = QString::fromStdString(nextToSchedule.getParameter(1)).toUInt();
+            unsigned int sequenceNumber2 = (eventActionType == "NETWORK") ? QString::fromStdString(nextToSchedule.getParameter(2)).toUInt() : 0;
 
             FuzzyUrlMatcher* matcher = new FuzzyUrlMatcher(QUrl(url));
 
@@ -108,14 +117,14 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
                 WebCore::EventActionDescriptor candidate(nextToSchedule.getId(), (*iter), nextToSchedule.getParams());
 
-                if (candidate.getType() != "NETWORK") {
+                if (candidate.getType() != eventActionType) {
                     continue;
                 }
 
-                unsigned int candidateSameUrlSequenceNumber = QString::fromStdString(candidate.getParameter(1)).toUInt();
-                unsigned int candidateSequenceNumber = QString::fromStdString(candidate.getParameter(2)).toUInt();
+                unsigned int candidateSequenceNumber1 = QString::fromStdString(candidate.getParameter(1)).toUInt();
+                unsigned int candidateSequenceNumber2 = (eventActionType == "NETWORK") ? QString::fromStdString(candidate.getParameter(2)).toUInt() : 0;
 
-                if (sameUrlSequenceNumber != candidateSameUrlSequenceNumber || sequenceNumber != candidateSequenceNumber) {
+                if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2) {
                     continue;
                 }
 
