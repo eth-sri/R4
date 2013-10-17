@@ -90,7 +90,7 @@ namespace WebCore {
     private:
         static void sharedTimerFired();
 
-        static bool fireTimerCallback(void* object, const std::string& params);
+        static bool fireTimerCallback(void* object, const EventActionDescriptor& descriptor);
 
         void sharedTimerFiredInternal();
         void fireTimersInNestedEventLoopInternal();

@@ -151,14 +151,14 @@ void HTMLParserScheduler::resume()
 void HTMLParserScheduler::updateTimerName()
 {
     // Convert an unsigned long into a string
-    std::stringstream name;
-    name << "HTMLDocumentParser(";
-    name << m_parser->getDocumentUrl();
-    name << ",";
-    name << m_parser->getTokensSeen();
-    name << ")";
+    std::stringstream params;
+    params << EventActionDescriptor::escapeParam(m_parser->getDocumentUrl());
+    params << ",";
+    params << m_parser->getTokensSeen();
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name.str());
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                "HTMLDocumentParser",
+                params.str());
 
     m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
 

@@ -15,10 +15,25 @@
 
 namespace WebCore {
 
-typedef bool (*EventActionProviderFunction)(void* object, const std::string& params);
+typedef bool (*EventActionHandlerFunction)(void* object, const EventActionDescriptor& descriptor);
 
 class EventActionRegisterMaps;
 
+/**
+ * The EventActionRegister maintains a register of event actions pending execution.
+ *
+ * A scheduler is used to decide when an event action is executed.
+ *
+ * Two types of handlers can be registered for event actions, event action handlers and event action providers.
+ *
+ * Event action handlers:
+ *    A one-shot handler registered for one specific event action. Matches on event action type and params.
+ *
+ * Event action provider:
+ *    A handler that gets the chance to handle any event action of a particular type before matching with
+ *    event action handlers.
+ *
+ */
 class EventActionRegister {
     WTF_MAKE_NONCOPYABLE(EventActionRegister);
 
@@ -26,15 +41,14 @@ public:
     EventActionRegister();
     virtual ~EventActionRegister();
 
-    // Registration of event action providers able to handle an even action with the name <name>
-    void registerEventActionProvider(void* object, const char* name, EventActionProviderFunction f);
+    // Registration of event action providers and handlers
+    void registerEventActionProvider(const std::string& type, EventActionHandlerFunction f, void* object);
+    void registerEventActionHandler(const EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object);
 
-    void updateActionProviderName(void* object, const char* name);
-    void unregisterActionProvider(void* object);
-
-    // Attempts to run execute an event action with the given name and parameters. Returns true on success.
+    // Attempts to execute an event action. Returns true on success.
     bool runEventAction(const EventActionDescriptor& descriptor);
 
+    // Used to inspect the currently executed event action globally
     const EventActionDescriptor& currentEventActionDispatching() const
     {
         if (m_isDispatching) {
@@ -44,7 +58,8 @@ public:
         return EventActionDescriptor::null;
     }
 
-    EventActionDescriptor allocateEventDescriptor(const std::string& name, const std::string& param = "");
+    // Allocates event descriptors giving them sequential IDs
+    EventActionDescriptor allocateEventDescriptor(const std::string& type, const std::string& params);
 
     EventActionSchedule* dispatchHistory() { return m_dispatchHistory; }
 
@@ -62,11 +77,15 @@ private:
         m_isDispatching = true;
     }
 
-    void eventActionDispatchEnd()
+    void eventActionDispatchEnd(bool commit)
     {
         ASSERT(m_isDispatching);
 
         m_isDispatching = false;
+
+        if (!commit) {
+            m_dispatchHistory->removeLast();
+        }
     }
 
     EventActionRegisterMaps* m_maps;

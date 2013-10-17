@@ -23,6 +23,8 @@
 
 #include <assert.h>
 #include <climits>
+#include <sstream>
+#include <algorithm>
 
 #include "EventActionDescriptor.h"
 
@@ -30,24 +32,18 @@ namespace WebCore {
 
 EventActionDescriptor EventActionDescriptor::null;
 
-EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& name)
-    : m_id(id)
-    , m_name(name)
-    , m_isNull(false)
-{
-}
 
-EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& name, const std::string& params)
+EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& type, const std::string& params)
     : m_id(id)
-	, m_name(name)
+    , m_type(type)
 	, m_params(params)
 	, m_isNull(false)
 {
 }
 
-EventActionDescriptor::EventActionDescriptor(const std::string& name, const std::string& params)
+EventActionDescriptor::EventActionDescriptor(const std::string& type, const std::string& params)
     : m_id(UINT_MAX)
-	, m_name(name)
+    , m_type(type)
 	, m_params(params)
     , m_isNull(false)
 {
@@ -61,54 +57,66 @@ EventActionDescriptor::EventActionDescriptor()
 
 bool EventActionDescriptor::operator==(const EventActionDescriptor& other) const
 {
-    return m_id == other.m_id && m_name == other.m_name && m_params == other.m_params;
+    return m_id == other.m_id && m_type == other.m_type && m_params == other.m_params;
 }
 
 bool EventActionDescriptor::fuzzyCompare(const EventActionDescriptor &other) const
 {
-    return m_name == other.m_name && m_params == other.m_params;
+    return m_type == other.m_type && m_params == other.m_params;
 }
 
-const char* EventActionDescriptor::getName() const
+std::string EventActionDescriptor::toString() const
 {
-    return m_name.c_str();
+    std::stringstream result;
+    result << m_type << "(" << m_params << ")";
+
+    return result.str();
 }
 
-const char* EventActionDescriptor::getParams() const
+std::string EventActionDescriptor::serialize() const
 {
-    return m_params.c_str();
+    return toString();
 }
 
-std::string EventActionDescriptor::getType() const
+EventActionDescriptor EventActionDescriptor::deserialize(const std::string& raw)
 {
-    size_t typeEnd = m_name.find('(');
+    return EventActionDescriptor::deserialize(UINT_MAX, raw);
+}
 
-    if (typeEnd == std::string::npos) {
-        return std::string();
-    }
+EventActionDescriptor EventActionDescriptor::deserialize(unsigned long id, const std::string& raw)
+{
+    size_t typeEndPos = raw.find('(');
+    assert(typeEndPos != std::string::npos);
 
-    return m_name.substr(0, typeEnd);
+
+    return EventActionDescriptor(id, raw.substr(0, typeEndPos), raw.substr(typeEndPos+1, raw.size()-typeEndPos-2));
 }
 
 std::string EventActionDescriptor::getParameter(unsigned int number) const
 {
-    size_t start;
-    size_t end = m_name.find('(');
-
-    assert(end != std::string::npos);
+    size_t start = 0; // start index of param
+    size_t end = 0; // index just after the param
 
     for (int i = 0; i <= number; i++) {
+        assert(end != m_params.size()); // indexing into non-existing param
+
         start = end;
-        end = m_name.find(',', start);
+        end = m_params.find(',', start);
 
         if (end == std::string::npos) {
-            end = m_name.find(')', start);
+           end = m_params.size();
         }
-
-        assert(end != std::string::npos);
     }
 
-    return m_name.substr(start+1, end-start-1);
+    return m_params.substr(start, end-start);
+}
+
+std::string EventActionDescriptor::escapeParam(const std::string& param)
+{
+    std::string newParam = param;
+    std::replace(newParam.begin(), newParam.end(), ',', '.');
+
+    return newParam;
 }
 
 }

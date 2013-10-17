@@ -2850,7 +2850,7 @@ public:
 		, m_timer(this, &DeferredMouseEventDispatcher::dispatchMouseEventDeferred) {
 
         EventActionDescriptor descriptor =
-        		threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor("DeferredMouseEvent");
+                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor("DeferredMouseEvent", "");
 
         m_timer.setEventActionDescriptor(descriptor);
 		m_timer.startOneShot(0);

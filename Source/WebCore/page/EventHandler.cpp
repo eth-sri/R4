@@ -3716,7 +3716,10 @@ void EventHandler::deferredEventTimerFired(Timer<EventHandler>* timer)
         DeferredPlatformEvent nextEvent = m_deferredEventQueue.first();
 
         EventActionDescriptor descriptor =
-        		threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(nextEvent.name);
+                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    nextEvent.name,
+                    ""
+        );
 
         m_deferredEventTimer.setEventActionDescriptor(descriptor);
         m_deferredEventTimer.startOneShot(0);
@@ -3730,7 +3733,10 @@ void EventHandler::scheduleEvent(DeferredPlatformEvent event)
     // reschedule
     if (!m_deferredEventTimer.isActive()) {
         EventActionDescriptor descriptor =
-        		threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(event.name);
+                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    event.name,
+                    ""
+                );
 
         m_deferredEventTimer.setEventActionDescriptor(descriptor);
         m_deferredEventTimer.startOneShot(0);

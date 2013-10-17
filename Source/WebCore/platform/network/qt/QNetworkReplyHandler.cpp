@@ -396,11 +396,16 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
 
     m_nextSnapshotUpdateTimerRunning = true;
 
-    std::stringstream name;
-    name << "NETWORK(" << m_reply->url().toString().toStdString() << "," << m_initialSnapshot->getSameUrlSequenceNumber() << "," << m_sequenceNumber++ << ")";
+    std::stringstream params;
+    params << EventActionDescriptor::escapeParam(m_reply->url().toString().toStdString())
+           << "," << m_initialSnapshot->getSameUrlSequenceNumber()
+           << "," << m_sequenceNumber++;
 
     EventActionDescriptor descriptor =
-    		threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name.str());
+            threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                "NETWORK",
+                params.str()
+            );
     threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
                 m_parentDescriptor,
                 descriptor);

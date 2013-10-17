@@ -113,7 +113,7 @@ void ThreadTimers::sharedTimerFired()
     threadGlobalData().threadTimers().sharedTimerFiredInternal();
 }
 
-bool ThreadTimers::fireTimerCallback(void* object, const std::string& params) {
+bool ThreadTimers::fireTimerCallback(void* object, const EventActionDescriptor&) {
 	TimerBase* timer = (TimerBase*)object;
 
     double interval = timer->repeatInterval();
@@ -143,11 +143,13 @@ void ThreadTimers::sharedTimerFiredInternal()
 
         if (timer->eventActionDescriptor().isNull()) {
         	// Run the timer immediately.
-        	fireTimerCallback(timer, "");
+            fireTimerCallback(timer, timer->eventActionDescriptor());
         } else {
         	// Run the timer through the scheduler.
-            eventActionRegister()->registerEventActionProvider(
-            		timer, timer->eventActionDescriptor().getName(), &fireTimerCallback);
+            eventActionRegister()->registerEventActionHandler(
+                        timer->eventActionDescriptor(),
+                        &fireTimerCallback,
+                        timer);
             m_scheduler->eventActionScheduled(timer->eventActionDescriptor(), eventActionRegister());
         }
 

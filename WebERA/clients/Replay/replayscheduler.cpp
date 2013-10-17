@@ -115,7 +115,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
             for (iter = names.begin(); iter != names.end(); iter++) {
 
-                WebCore::EventActionDescriptor candidate(nextToSchedule.getId(), (*iter), nextToSchedule.getParams());
+                WebCore::EventActionDescriptor candidate = WebCore::EventActionDescriptor::deserialize(nextToSchedule.getId(), (*iter));
 
                 if (candidate.getType() != eventActionType) {
                     continue;
@@ -137,7 +137,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
             }
 
             if (bestScore > 0) {
-                std::cout << "Fuzzy match of scheduler name, renaming " << nextToSchedule.getName() << " to " << bestDescriptor.getName() << std::endl;
+                std::cout << "Fuzzy match of scheduler name, renaming " << nextToSchedule.toString() << " to " << bestDescriptor.toString() << std::endl;
                 found = eventActionRegister->runEventAction(bestDescriptor);
             }
     }
@@ -169,7 +169,7 @@ bool ReplayScheduler::isFinished()
 void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister* eventActionRegister)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "NEXT -> " << m_schedule->first().getName() << "(" << m_schedule->first().getParams() << ")" << std::endl;
+    std::cout << "NEXT -> " << m_schedule->first().toString() << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 
     eventActionRegister->debugPrintNames();

@@ -81,8 +81,8 @@ void EventActionsHB::serialize(std::ostream& stream) const
 {
     for (WTF::Vector<const Arc*>::const_iterator it = m_arcs.begin(); it != m_arcs.end(); it++) {
         if (!(*it)->from.isNull()) {
-            stream << (*it)->from.getId() << ";" << (*it)->from.getName() << ";";
-            stream << (*it)->to.getId() << ";" << (*it)->to.getName() << ";";
+            stream << (*it)->from.getId() << ";" << (*it)->from.serialize() << ";";
+            stream << (*it)->to.getId() << ";" << (*it)->to.serialize() << ";";
             stream << (*it)->duration << std::endl;
         }
     }
@@ -120,8 +120,8 @@ EventActionsHB* EventActionsHB::deserialize(std::istream& stream)
         std::string duration;
         std::getline(arcStream, duration);
 
-        EventActionDescriptor from(strtoul(fromId.c_str(), NULL, 10), fromDescription);
-        EventActionDescriptor to(strtoul(toId.c_str(), NULL, 10), toDescription);
+        EventActionDescriptor from = EventActionDescriptor::deserialize(strtoul(fromId.c_str(), NULL, 10), fromDescription);
+        EventActionDescriptor to = EventActionDescriptor::deserialize(strtoul(toId.c_str(), NULL, 10), toDescription);
 
         int durationInt = atoi(duration.c_str());
 

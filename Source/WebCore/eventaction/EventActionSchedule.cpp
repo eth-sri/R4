@@ -40,7 +40,7 @@ void EventActionSchedule::serialize(std::ostream& stream) const
         if ((*it).isNull()) {
             stream << "NULL" << std::endl;
         } else {
-            stream << (*it).getId() << ";" << (*it).getName() << std::endl;
+            stream << (*it).getId() << ";" << (*it).serialize() << std::endl;
         }
     }
 }
@@ -73,7 +73,7 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
         std::string description;
         std::getline(eventactionStream, description);
 
-        EventActionDescriptor descriptor(strtoul(id.c_str(), NULL, 10), description);
+        EventActionDescriptor descriptor = EventActionDescriptor::deserialize(strtoul(id.c_str(), NULL, 10), description);
 
         schedule->append(descriptor);
     }

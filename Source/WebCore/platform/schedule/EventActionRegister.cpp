@@ -7,6 +7,7 @@
 
 #include "EventActionRegister.h"
 
+#include <assert.h>
 #include <iostream>
 #include <stdio.h>
 #include <stddef.h>
@@ -16,20 +17,26 @@
 
 namespace WebCore {
 
-struct EventActionProvider {
-	void* object;
-    EventActionProviderFunction function;
+struct EventActionHandler {
+    void* object; // some event handler specific payload
+    EventActionHandlerFunction function;
+
+    EventActionHandler(EventActionHandlerFunction function, void* object)
+        : object(object)
+        , function(function)
+    {}
 };
 
 
 class EventActionRegisterMaps {
 public:
-    typedef std::vector<EventActionProvider> ProviderList;
-    typedef std::map<std::string, ProviderList> NameToProvider;
-    NameToProvider m_nameToProvider;
+    typedef std::vector<EventActionHandler> HandlerList;
 
-    typedef std::map<void*, std::string> ProviderToName;
-    ProviderToName m_providerToName;
+    typedef std::map<std::string, HandlerList> TypeToProvider; // the key is the descriptors getType()
+    TypeToProvider m_typeToProvider;
+
+    typedef std::map<std::string, HandlerList> DescriptorToHandler; // the key is the descriptors toString()
+    TypeToProvider m_descriptorToHandler;
 };
 
 EventActionRegister::EventActionRegister()
@@ -45,109 +52,96 @@ EventActionRegister::~EventActionRegister() {
     delete m_dispatchHistory;
 }
 
-void EventActionRegister::registerEventActionProvider(void* object, const char* name, EventActionProviderFunction f) {
-    unregisterActionProvider(object);
-
-    EventActionProvider target;
-	target.object = object;
-	target.function = f;
-    m_maps->m_nameToProvider[name].push_back(target);
-    m_maps->m_providerToName[object] = name;
+void EventActionRegister::registerEventActionProvider(const std::string& type, EventActionHandlerFunction f, void* object)
+{
+    EventActionHandler target(f, object);
+    m_maps->m_typeToProvider[type].push_back(target);
 }
 
-void EventActionRegister::updateActionProviderName(void* object, const char* name) {
-    EventActionRegisterMaps::ProviderToName::iterator it =
-            m_maps->m_providerToName.find(object);
-    if (it == m_maps->m_providerToName.end() ||  // Name not found.
-			it->second == name) return;  // Or nothing to update.
-
-    EventActionRegisterMaps::NameToProvider::iterator it2 =
-            m_maps->m_nameToProvider.find(it->second);  // Map from name to TargetList
-    EventActionRegisterMaps::ProviderList& l = it2->second;
-
-	// Get the function registered for this target.
-    EventActionProviderFunction f = NULL;
-	for (int i = l.size(); i > 0;) {
-		--i;
-		if (l[i].object == object) {
-			f = l[i].function;
-			l.erase(l.begin() + i);
-		}
-	}
-
-	// Reregister under the new name.
-	if (f != NULL) {
-        registerEventActionProvider(object, name, f);
-	}
-}
-
-void EventActionRegister::unregisterActionProvider(void* object) {
-    EventActionRegisterMaps::ProviderToName::iterator it =
-            m_maps->m_providerToName.find(object);
-    if (it == m_maps->m_providerToName.end()) return;  // Nothing to remove.
-    EventActionRegisterMaps::NameToProvider::iterator it2 =
-            m_maps->m_nameToProvider.find(it->second);  // Map from name to TargetList
-    EventActionRegisterMaps::ProviderList& l = it2->second;
-	for (int i = l.size(); i > 0;) {
-		--i;
-		if (l[i].object == object) l.erase(l.begin() + i);
-	}
-    if (l.empty()) m_maps->m_nameToProvider.erase(it2);
-    m_maps->m_providerToName.erase(it);
+void EventActionRegister::registerEventActionHandler(const EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object)
+{
+    EventActionHandler target(f, object);
+    m_maps->m_descriptorToHandler[descriptor.toString()].push_back(target);
 }
 
 bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor) {
-	const char* name = descriptor.getName();
-	const char* params = descriptor.getParams();
 
-    EventActionRegisterMaps::NameToProvider::iterator it =
-            m_maps->m_nameToProvider.find(name);
+    std::string descriptorString = descriptor.toString();
 
-    if (it == m_maps->m_nameToProvider.end()) {
+    // match providers
+
+    EventActionRegisterMaps::TypeToProvider::iterator it = m_maps->m_typeToProvider.find(descriptor.getType());
+
+    for (; it != m_maps->m_typeToProvider.end(); it++) {
+
+        const EventActionRegisterMaps::HandlerList& l = it->second;
+
+        EventActionRegisterMaps::HandlerList::const_iterator it2 = l.begin();
+
+        for (; it2 != l.end(); it2++) {
+
+            eventActionDispatchStart(descriptor);
+            bool result = (it2->function)(it2->object, descriptor);
+            eventActionDispatchEnd(result);
+
+            if (result) {
+                return true; // event handled
+            }
+        }
+    }
+
+    // match handlers, if we find a match then remove the handler
+
+    EventActionRegisterMaps::DescriptorToHandler::iterator iter = m_maps->m_descriptorToHandler.find(descriptorString);
+
+    if (iter == m_maps->m_descriptorToHandler.end()) {
         return false;  // Target with the given name not found.
     }
 
-    const EventActionRegisterMaps::ProviderList& l = it->second;
-
-    if (l.empty()) {
-        return false; // No provider for target
-    }
+    EventActionRegisterMaps::HandlerList& l = iter->second;
+    assert(!l.empty()); // empty HandlerLists should be removed
 
     eventActionDispatchStart(descriptor);
 
 	// Execute the function.
     if (l.size() > 1) {
-        std::cerr << "Warning: multiple targets may fire with name " << name << ", params " << params << std::endl;
+        std::cerr << "Warning: multiple targets may fire with signature " << descriptorString << std::endl;
     }
 
-    std::cout << "Running " << name << "(" << params << ")" << std::endl; // TODO(WebERA): DEBUG
-    bool result = (l[0].function)(l[0].object, params);
+    std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
+    bool result = (l[0].function)(l[0].object, descriptor); // don't use the descriptor from this point on, it could be deleted
 
-    // WebERA: DEBUG lets try to remove this from the list now
-    this->unregisterActionProvider(l[0].object);
+    if (result) {
+        l.erase(l.begin());
+        if (l.empty()) {
+            m_maps->m_descriptorToHandler.erase(descriptorString);
+        }
+    }
 
-    eventActionDispatchEnd();
+    eventActionDispatchEnd(result);
 
     return result;
 }
 
-EventActionDescriptor EventActionRegister::allocateEventDescriptor(const std::string& name, const std::string& params)
+EventActionDescriptor EventActionRegister::allocateEventDescriptor(const std::string& type, const std::string& params)
 {
-    return EventActionDescriptor(m_nextEventActionDescriptorId++, name, params);
+    return EventActionDescriptor(m_nextEventActionDescriptorId++, type, params);
 }
 
 void EventActionRegister::debugPrintNames() const
 {
-    EventActionRegisterMaps::NameToProvider::const_iterator it = m_maps->m_nameToProvider.begin();
-    for (; it != m_maps->m_nameToProvider.end(); it++) {
+    EventActionRegisterMaps::DescriptorToHandler::const_iterator it = m_maps->m_descriptorToHandler.begin();
+    for (; it != m_maps->m_descriptorToHandler.end(); it++) {
         std::cout << (*it).first << std::endl;
     }
 }
 
 std::vector<std::string> EventActionRegister::getWaitingNames()
 {
+    // TODO(WebERA): This has very poor performance, we should maintain a list of keys
+
     std::vector<std::string> v;
-    for(EventActionRegisterMaps::NameToProvider::iterator it = m_maps->m_nameToProvider.begin(); it != m_maps->m_nameToProvider.end(); ++it) {
+    for(EventActionRegisterMaps::DescriptorToHandler::iterator it = m_maps->m_descriptorToHandler.begin(); it != m_maps->m_descriptorToHandler.end(); ++it) {
       v.push_back(it->first);
     }
 

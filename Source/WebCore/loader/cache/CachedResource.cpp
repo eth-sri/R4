@@ -772,9 +772,10 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
     , m_callbackTimer(this, &CachedResourceCallback::timerFired)
 {
     // WebERA: This callback is used when loading cached resources
-    std::string name = std::string("CachedResourceCallback(") + resource->url().string().ascii().data() + ")";
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(name);
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                "CachedResourceCallback",
+                resource->url().string().ascii().data());
 
     m_callbackTimer.setEventActionDescriptor(descriptor);
     m_callbackTimer.startOneShot(0);
