@@ -282,6 +282,40 @@ inline bool EventHandler::eventLoopHandleMouseDragged(const MouseEventWithHitTes
 
 #endif
 
+
+DeferredPlatformEvent::DeferredPlatformEvent(EventType type, const PlatformMouseEvent& event)
+    : m_type(type)
+    , m_mouseEvent(event)
+{
+
+}
+
+DeferredPlatformEvent::DeferredPlatformEvent(EventType type, const PlatformKeyboardEvent& event)
+    : m_type(type)
+    , m_keyboardEvent(event)
+{
+
+}
+
+DeferredPlatformEvent::DeferredPlatformEvent(EventType type, const PlatformWheelEvent& event)
+    : m_type(type)
+    , m_wheelEvent(event)
+{
+
+}
+
+std::string DeferredPlatformEvent::serialize() const
+{
+    return "INPUTEVENT";
+}
+
+DeferredPlatformEvent DeferredPlatformEvent::deserialize(const std::string& raw)
+{
+    PlatformMouseEvent event;
+    return DeferredPlatformEvent(MouseMoveEvent, event);
+}
+
+
 EventHandler::EventHandler(Frame* frame)
     : m_frame(frame)
     , m_mousePressed(false)
@@ -1487,12 +1521,7 @@ Node* EventHandler::targetNode(const HitTestResult& hitTestResult)
 
 bool EventHandler::handleMousePressEvent(const PlatformMouseEvent& mouseEvent)
 {
-    DeferredPlatformEvent event;
-    event.type = MousePressEvent;
-    event.mouseEvent = mouseEvent;
-    event.name = "EventHandler(MousePressEvent)";
-
-    scheduleEvent(event);
+    scheduleEvent(DeferredPlatformEvent(MousePressEvent, mouseEvent));
 
     return false;
 }
@@ -1691,13 +1720,7 @@ static RenderLayer* layerForNode(Node* node)
 
 bool EventHandler::mouseMoved(const PlatformMouseEvent& mouseEvent)
 {
-    DeferredPlatformEvent event;
-    event.type = MouseMoveEvent;
-    event.mouseEvent = mouseEvent;
-    event.name = "EventHandler(MouseMoveEvent)";
-
-    scheduleEvent(event);
-
+    scheduleEvent(DeferredPlatformEvent(MouseMoveEvent, mouseEvent));
     return false;
 }
 
@@ -1859,13 +1882,7 @@ void EventHandler::invalidateClick()
 
 bool EventHandler::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent)
 {
-    DeferredPlatformEvent event;
-    event.type = MouseReleaseEvent;
-    event.mouseEvent = mouseEvent;
-    event.name = "EventHandler(MouseReleaseEvent)";
-
-    scheduleEvent(event);
-
+    scheduleEvent(DeferredPlatformEvent(MouseReleaseEvent, mouseEvent));
     return false;
 }
 
@@ -2330,14 +2347,7 @@ bool EventHandler::shouldTurnVerticalTicksIntoHorizontal(const HitTestResult&) c
 bool EventHandler::handleWheelEvent(const PlatformWheelEvent& e)
 {
     // WebERA: deferred event
-
-    DeferredPlatformEvent event;
-    event.type = MouseWheelEvent;
-    event.wheelEvent = e;
-    event.name = "EventHandler(WheelEvent)";
-
-    scheduleEvent(event);
-
+    scheduleEvent(DeferredPlatformEvent(MouseWheelEvent, e));
     return false;
 }
 
@@ -2794,13 +2804,7 @@ bool EventHandler::isKeyEventAllowedInFullScreen(const PlatformKeyboardEvent& ke
 
 bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
 {
-    DeferredPlatformEvent event;
-    event.type = KeystrokeEvent;
-    event.keyboardEvent = initialKeyEvent;
-    event.name = "EventHandler(KeyEvent)";
-
-    scheduleEvent(event);
-
+    scheduleEvent(DeferredPlatformEvent(KeystrokeEvent, initialKeyEvent));
     return false;
 }
 
@@ -3693,49 +3697,43 @@ void EventHandler::deferredEventTimerFired(Timer<EventHandler>* timer)
 
     // handling
 
-    switch (currentEvent.type) {
+    switch (currentEvent.getType()) {
     case MousePressEvent:
-        handleMousePressEventDeferred(currentEvent.mouseEvent);
+        handleMousePressEventDeferred(currentEvent.getMouseEvent());
         break;
     case MouseReleaseEvent:
-        handleMouseReleaseEventDeferred(currentEvent.mouseEvent);
+        handleMouseReleaseEventDeferred(currentEvent.getMouseEvent());
         break;
     case MouseMoveEvent:
-        mouseMovedDeferred(currentEvent.mouseEvent);
+        mouseMovedDeferred(currentEvent.getMouseEvent());
         break;
     case KeystrokeEvent:
-        keyEventDeferred(currentEvent.keyboardEvent);
+        keyEventDeferred(currentEvent.getKeyboardEvent());
         break;
     case MouseWheelEvent:
-        handleWheelEventDeferred(currentEvent.wheelEvent);
+        handleWheelEventDeferred(currentEvent.getWheelEvent());
         break;
     }
 
-    // reschedule
-    if (!m_deferredEventQueue.isEmpty()) {
-        DeferredPlatformEvent nextEvent = m_deferredEventQueue.first();
-
-        EventActionDescriptor descriptor =
-                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    nextEvent.name,
-                    ""
-        );
-
-        m_deferredEventTimer.setEventActionDescriptor(descriptor);
-        m_deferredEventTimer.startOneShot(0);
-    }
+    rescheduleTimer();
 }
 
 void EventHandler::scheduleEvent(DeferredPlatformEvent event)
 {
     m_deferredEventQueue.append(event);
+    rescheduleTimer();
+}
 
+void EventHandler::rescheduleTimer()
+{
     // reschedule
-    if (!m_deferredEventTimer.isActive()) {
+    if (!m_deferredEventTimer.isActive() && m_deferredEventQueue.size() > 0) {
+        DeferredPlatformEvent event = m_deferredEventQueue.first();
+
         EventActionDescriptor descriptor =
                 threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    event.name,
-                    ""
+                    "UserEvent",
+                    event.serialize()
                 );
 
         m_deferredEventTimer.setEventActionDescriptor(descriptor);

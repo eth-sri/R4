@@ -97,16 +97,29 @@ enum HitTestScrollbars { ShouldHitTestScrollbars, DontHitTestScrollbars };
 // WebERA: Deferred event queue
 enum EventType { MousePressEvent, MouseReleaseEvent, MouseMoveEvent, KeystrokeEvent, MouseWheelEvent };
 
-typedef struct DeferredPlatformEvent_t {
+class DeferredPlatformEvent {
 
-    EventType type;
-    std::string name;
+public:
+    DeferredPlatformEvent(EventType, const PlatformMouseEvent&);
+    DeferredPlatformEvent(EventType, const PlatformKeyboardEvent&);
+    DeferredPlatformEvent(EventType, const PlatformWheelEvent&);
 
-    PlatformMouseEvent mouseEvent;
-    PlatformKeyboardEvent keyboardEvent;
-    PlatformWheelEvent wheelEvent;
+    EventType getType() const { return m_type; }
+    const PlatformMouseEvent& getMouseEvent() const { return m_mouseEvent; }
+    const PlatformKeyboardEvent& getKeyboardEvent() const { return m_keyboardEvent; }
+    const PlatformWheelEvent& getWheelEvent() const { return m_wheelEvent; }
 
-} DeferredPlatformEvent;
+    std::string serialize() const;
+    DeferredPlatformEvent deserialize(const std::string& raw);
+
+private:
+    EventType m_type;
+
+    PlatformMouseEvent m_mouseEvent;
+    PlatformKeyboardEvent m_keyboardEvent;
+    PlatformWheelEvent m_wheelEvent;
+
+};
 
 /**
  * WebERA:
@@ -491,6 +504,7 @@ private:
 
     void deferredEventTimerFired(Timer<EventHandler>*);
     void scheduleEvent(DeferredPlatformEvent event);
+    void rescheduleTimer();
 };
 
 } // namespace WebCore
