@@ -627,6 +627,10 @@ QWebFrame::~QWebFrame()
     delete d;
 }
 
+void QWebFrame::enableReplayUserEventMode() {
+    d->frame->eventHandler()->enableReplayUserEventMode();
+}
+
 /*!
     Make \a object available under \a name from within the frame's JavaScript
     context. The \a object will be inserted as a child of the frame's window

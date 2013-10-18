@@ -33,7 +33,11 @@
 #include <iostream>
 
 #include <QObject>
+
+#include <config.h>
+
 #include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/platform/ThreadGlobalData.h>
 
 #include "clientapplication.h"
 #include "replayscheduler.h"
@@ -68,6 +72,8 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
 
     WebCore::ThreadTimers::setScheduler(scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(new QNetworkReplyControllableFactoryReplay());
+
+    m_window->page()->currentFrame()->enableReplayUserEventMode();
 
     loadWebsite(m_url);
 }

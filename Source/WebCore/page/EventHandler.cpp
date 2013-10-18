@@ -24,6 +24,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#include <iostream>
+#include <sstream>
+#include <cstdlib>
+
 #include "config.h"
 #include "EventHandler.h"
 
@@ -85,6 +89,8 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TemporaryChange.h>
+#include <wtf/text/WTFString.h>
+#include <platform/graphics/IntPoint.h>
 
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
@@ -306,13 +312,237 @@ DeferredPlatformEvent::DeferredPlatformEvent(EventType type, const PlatformWheel
 
 std::string DeferredPlatformEvent::serialize() const
 {
-    return "INPUTEVENT";
+    std::stringstream out;
+    out << (int)m_type << ",";
+
+    switch (m_type) {
+    case MousePressEvent:
+    case MouseReleaseEvent:
+    case MouseMoveEvent:
+
+        out << m_mouseEvent.position().x() << ","
+            << m_mouseEvent.position().y() << ","
+            << m_mouseEvent.globalPosition().x() << ","
+            << m_mouseEvent.globalPosition().y() << ","
+            << (int)m_mouseEvent.button() << ","
+            << (int)m_mouseEvent.type() << ","
+            << m_mouseEvent.clickCount() << ","
+            << (int)m_mouseEvent.shiftKey() << ","
+            << (int)m_mouseEvent.ctrlKey() << ","
+            << (int)m_mouseEvent.altKey() << ","
+            << (int)m_mouseEvent.metaKey() << ","
+            << (int)m_mouseEvent.timestamp();
+
+        break;
+
+    case KeystrokeEvent:
+
+        // TODO(WebERA) we should escape the "," character in the keyboard data
+
+        out << (int)m_keyboardEvent.type() << ","
+            << m_keyboardEvent.text().ascii().data() << ","
+            << m_keyboardEvent.unmodifiedText().ascii().data() << ","
+            << m_keyboardEvent.keyIdentifier().ascii().data() << ","
+            << m_keyboardEvent.windowsVirtualKeyCode() << ","
+            << m_keyboardEvent.nativeVirtualKeyCode() << ","
+            << m_keyboardEvent.macCharCode() << ","
+            << (int)m_keyboardEvent.isAutoRepeat() << ","
+            << (int)m_keyboardEvent.isKeypad() << ","
+            << (int)m_keyboardEvent.isSystemKey() << ","
+            << (int)m_keyboardEvent.modifiers() << ","
+            << m_keyboardEvent.timestamp();
+
+    case MouseWheelEvent:
+
+        out << m_wheelEvent.position().x() << ","
+            << m_wheelEvent.position().y() << ","
+            << m_wheelEvent.globalPosition().x() << ","
+            << m_wheelEvent.globalPosition().y() << ","
+            << m_wheelEvent.deltaX() << ","
+            << m_wheelEvent.deltaY() << ","
+            << m_wheelEvent.wheelTicksX() << ","
+            << m_wheelEvent.wheelTicksY() << ","
+            << (int)m_wheelEvent.granularity() << ","
+            << (int)m_wheelEvent.shiftKey() << ","
+            << (int)m_wheelEvent.ctrlKey() << ","
+            << (int)m_wheelEvent.altKey() << ","
+            << (int)m_wheelEvent.metaKey();
+
+        break;
+
+    default:
+        CRASH();
+    }
+
+    return out.str();
 }
 
 DeferredPlatformEvent DeferredPlatformEvent::deserialize(const std::string& raw)
 {
-    PlatformMouseEvent event;
-    return DeferredPlatformEvent(MouseMoveEvent, event);
+    std::istringstream in(raw);
+
+    // deserialize event type
+
+    std::string eventTypeRaw;
+    getline(in, eventTypeRaw, ',');
+
+    EventType eventType = (EventType)atoi(eventTypeRaw.data());
+
+    // deserialize event
+
+    if (eventType == MousePressEvent || eventType == MouseReleaseEvent || eventType == MouseMoveEvent) {
+
+        std::string positionX;
+        getline(in, positionX, ',');
+
+        std::string positionY;
+        getline(in, positionY, ',');
+
+        std::string gPositionX;
+        getline(in, gPositionX, ',');
+
+        std::string gPositionY;
+        getline(in, gPositionY, ',');
+
+        std::string button;
+        getline(in, button, ',');
+
+        std::string type;
+        getline(in, type, ',');
+
+        std::string clickCount;
+        getline(in, clickCount, ',');
+
+        std::string shiftKey;
+        getline(in, shiftKey, ',');
+
+        std::string ctrlKey;
+        getline(in, ctrlKey, ',');
+
+        std::string altKey;
+        getline(in, altKey, ',');
+
+        std::string metaKey;
+        getline(in, metaKey, ',');
+
+        std::string timestamp;
+        getline(in, timestamp);
+
+        PlatformMouseEvent event(IntPoint(atoi(positionX.c_str()), atoi(positionY.c_str())),
+                                 IntPoint(atoi(gPositionX.c_str()), atoi(gPositionY.c_str())),
+                                 (MouseButton)atoi(button.c_str()),
+                                 (PlatformEvent::Type)atoi(type.c_str()),
+                                 atoi(clickCount.c_str()),
+                                 (bool)atoi(shiftKey.c_str()), (bool)atoi(ctrlKey.c_str()), (bool)atoi(altKey.c_str()), (bool)atoi(metaKey.c_str()),
+                                 strtod(timestamp.c_str(), NULL));
+
+        return DeferredPlatformEvent(eventType, event);
+
+    } else if (eventType == KeystrokeEvent) {
+
+        std::string type;
+        getline(in, type, ',');
+
+        std::string text;
+        getline(in, text, ',');
+
+        std::string unmodifiedText;
+        getline(in, unmodifiedText, ',');
+
+        std::string keyIdentifier;
+        getline(in, keyIdentifier, ',');
+
+        std::string windowsVirtualKeyCode;
+        getline(in, windowsVirtualKeyCode, ',');
+
+        std::string nativeVirtualKeyCode;
+        getline(in, nativeVirtualKeyCode, ',');
+
+        std::string macCharCode;
+        getline(in, macCharCode, ',');
+
+        std::string isAutoRepeat;
+        getline(in, isAutoRepeat, ',');
+
+        std::string isKeypad;
+        getline(in, isKeypad, ',');
+
+        std::string isSystemKey;
+        getline(in, isSystemKey, ',');
+
+        std::string modifiers;
+        getline(in, modifiers, ',');
+
+        std::string timestamp;
+        getline(in, timestamp);
+
+        PlatformKeyboardEvent event((PlatformEvent::Type)atoi(type.c_str()),
+                                    WTF::String(text.c_str()),
+                                    WTF::String(unmodifiedText.c_str()),
+                                    WTF::String(keyIdentifier.c_str()),
+                                    atoi(windowsVirtualKeyCode.c_str()),
+                                    atoi(nativeVirtualKeyCode.c_str()),
+                                    atoi(macCharCode.c_str()),
+                                    (bool)atoi(isAutoRepeat.c_str()), (bool)atoi(isKeypad.c_str()), (bool)atoi(isSystemKey.c_str()),
+                                    (PlatformEvent::Modifiers)atoi(modifiers.c_str()),
+                                    strtod(timestamp.c_str(), NULL));
+
+        return DeferredPlatformEvent(eventType, event);
+
+    } else if (eventType == MouseWheelEvent) {
+
+        std::string positionX;
+        getline(in, positionX, ',');
+
+        std::string positionY;
+        getline(in, positionY, ',');
+
+        std::string gPositionX;
+        getline(in, gPositionX, ',');
+
+        std::string gPositionY;
+        getline(in, gPositionY, ',');
+
+        std::string deltaX;
+        getline(in, deltaX, ',');
+
+        std::string deltaY;
+        getline(in, deltaY, ',');
+
+        std::string wheelTicksX;
+        getline(in, wheelTicksX, ',');
+
+        std::string wheelTicksY;
+        getline(in, wheelTicksY, ',');
+
+        std::string granularity;
+        getline(in, granularity, ',');
+
+        std::string shiftKey;
+        getline(in, shiftKey, ',');
+
+        std::string ctrlKey;
+        getline(in, ctrlKey, ',');
+
+        std::string altKey;
+        getline(in, altKey, ',');
+
+        std::string metaKey;
+        getline(in, metaKey);
+
+        PlatformWheelEvent event(IntPoint(atoi(positionX.c_str()), atoi(positionY.c_str())),
+                                 IntPoint(atoi(gPositionX.c_str()), atoi(gPositionY.c_str())),
+                                 strtof(deltaX.c_str(), NULL), strtof(deltaY.c_str(), NULL),
+                                 strtof(wheelTicksX.c_str(), NULL), strtof(wheelTicksY.c_str(), NULL),
+                                 (PlatformWheelEventGranularity)atoi(granularity.c_str()),
+                                 (bool)atoi(shiftKey.c_str()), (bool)atoi(ctrlKey.c_str()), (bool)atoi(altKey.c_str()), (bool)atoi(metaKey.c_str()));
+
+        return DeferredPlatformEvent(eventType, event);
+
+    }
+
+    CRASH();
+    throw "Unknown user event type";
 }
 
 
@@ -3690,30 +3920,53 @@ bool EventHandler::dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent
 
 #endif
 
+// WebERA START
+
+void EventHandler::enableReplayUserEventMode()
+{
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->registerEventActionProvider(
+                "UserEvent",
+                &userEventProvider,
+                this);
+}
+
+bool EventHandler::userEventProvider(void* object, const EventActionDescriptor& descriptor)
+{
+    EventHandler* eventHandler = (EventHandler*)object;
+    DeferredPlatformEvent event = DeferredPlatformEvent::deserialize(descriptor.getParams());
+
+    eventHandler->handleUserEvent(event);
+
+    return true;
+}
+
+void EventHandler::handleUserEvent(const DeferredPlatformEvent& event)
+{
+    switch (event.getType()) {
+    case MousePressEvent:
+        handleMousePressEventDeferred(event.getMouseEvent());
+        break;
+    case MouseReleaseEvent:
+        handleMouseReleaseEventDeferred(event.getMouseEvent());
+        break;
+    case MouseMoveEvent:
+        mouseMovedDeferred(event.getMouseEvent());
+        break;
+    case KeystrokeEvent:
+        keyEventDeferred(event.getKeyboardEvent());
+        break;
+    case MouseWheelEvent:
+        handleWheelEventDeferred(event.getWheelEvent());
+        break;
+    }
+}
+
 void EventHandler::deferredEventTimerFired(Timer<EventHandler>* timer)
 {
     DeferredPlatformEvent currentEvent = m_deferredEventQueue.first();
     m_deferredEventQueue.remove(0);
 
-    // handling
-
-    switch (currentEvent.getType()) {
-    case MousePressEvent:
-        handleMousePressEventDeferred(currentEvent.getMouseEvent());
-        break;
-    case MouseReleaseEvent:
-        handleMouseReleaseEventDeferred(currentEvent.getMouseEvent());
-        break;
-    case MouseMoveEvent:
-        mouseMovedDeferred(currentEvent.getMouseEvent());
-        break;
-    case KeystrokeEvent:
-        keyEventDeferred(currentEvent.getKeyboardEvent());
-        break;
-    case MouseWheelEvent:
-        handleWheelEventDeferred(currentEvent.getWheelEvent());
-        break;
-    }
+    handleUserEvent(currentEvent);
 
     rescheduleTimer();
 }
@@ -3740,5 +3993,6 @@ void EventHandler::rescheduleTimer()
         m_deferredEventTimer.startOneShot(0);
     }
 }
+// WebERA STOP
 
 }

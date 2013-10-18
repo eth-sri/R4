@@ -29,10 +29,10 @@
 #include "DragActions.h"
 #include "DragState.h"
 #include "FocusDirection.h"
-#include "HitTestRequest.h"
-#include "PlatformMouseEvent.h"
-#include "PlatformWheelEvent.h"
-#include "PlatformKeyboardEvent.h"
+#include "rendering/HitTestRequest.h"
+#include "platform/PlatformMouseEvent.h"
+#include "platform/PlatformWheelEvent.h"
+#include "platform/PlatformKeyboardEvent.h"
 #include "ScrollTypes.h"
 #include "TextEventInputType.h"
 #include "TextGranularity.h"
@@ -110,7 +110,7 @@ public:
     const PlatformWheelEvent& getWheelEvent() const { return m_wheelEvent; }
 
     std::string serialize() const;
-    DeferredPlatformEvent deserialize(const std::string& raw);
+    static DeferredPlatformEvent deserialize(const std::string& raw);
 
 private:
     EventType m_type;
@@ -143,6 +143,10 @@ class EventHandler {
 public:
     EventHandler(Frame*);
     ~EventHandler();
+
+    // WebERA:
+    void enableReplayUserEventMode();
+    static bool userEventProvider(void* object, const EventActionDescriptor& descriptor);
 
     void clear();
     void nodeWillBeRemoved(Node*);
@@ -204,6 +208,9 @@ public:
 
     void lostMouseCapture();
 
+    // WebERA START
+    void handleUserEvent(const DeferredPlatformEvent& event);
+
     bool handleMousePressEvent(const PlatformMouseEvent&);
     bool handleMousePressEventDeferred(const PlatformMouseEvent&);
     bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* hoveredNode = 0, bool onlyUpdateScrollbars = false);
@@ -212,6 +219,7 @@ public:
     bool handleWheelEvent(const PlatformWheelEvent&);
     bool handleWheelEventDeferred(const PlatformWheelEvent&);
     void defaultWheelEventHandler(Node*, WheelEvent*);
+    // WebERA STOP
 
 #if ENABLE(GESTURE_EVENTS)
     bool handleGestureEvent(const PlatformGestureEvent&);

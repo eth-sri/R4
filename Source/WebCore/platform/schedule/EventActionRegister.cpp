@@ -81,6 +81,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
         for (; it2 != l.end(); it2++) {
 
             eventActionDispatchStart(descriptor);
+            std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
             bool result = (it2->function)(it2->object, descriptor);
             eventActionDispatchEnd(result);
 

@@ -127,6 +127,9 @@ private:
 public:
     QWebPage *page() const;
 
+    // WebERA:
+    void enableReplayUserEventMode();
+
     void load(const QUrl &url);
     void load(const QNetworkRequest &request, QNetworkAccessManager::Operation operation = QNetworkAccessManager::GetOperation, const QByteArray &body = QByteArray());
     void setHtml(const QString &html, const QUrl &baseUrl = QUrl());
