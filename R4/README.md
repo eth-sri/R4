@@ -1,6 +1,5 @@
-
-R4: Record -> Reorder -> Replay -> Report
-=========================================
+R5: Record -> Reorder -> Replay -> Report -> Reduce
+===================================================
 
 R4 is a tool for race guided testing of JavaScript web applications.
 
