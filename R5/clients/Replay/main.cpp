@@ -33,6 +33,8 @@
 #include <iostream>
 
 #include <QObject>
+#include <QHash>
+#include <QList>
 
 #include <config.h>
 
@@ -94,7 +96,21 @@ void ReplayClientApplication::handleUserOptions()
 void ReplayClientApplication::slSchedulerDone()
 {
     if (m_isStopping == false) {
+
+        uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
+
+        QList<QWebFrame*> queue;
+        queue.append(m_window->page()->mainFrame());
+
+        while (!queue.empty()) {
+            QWebFrame* current = queue.takeFirst();
+            htmlHash += qHash(current->toHtml());
+            queue.append(current->childFrames());
+        }
+
         std::cout << "Schedule executed successfully" << std::endl;
+        std::cout << "HTML-hash: " << htmlHash << std::endl; // TODO the hash should be constructed for each frame
+
         m_window->close();
         m_isStopping = true;
     }
