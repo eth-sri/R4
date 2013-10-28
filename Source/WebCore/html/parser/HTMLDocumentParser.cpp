@@ -43,6 +43,10 @@
 
 #include <iostream>
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -353,6 +357,13 @@ void HTMLDocumentParser::insert(const SegmentedString& source)
 
 void HTMLDocumentParser::append(const SegmentedString& source)
 {
+    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
+    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+
+    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+        m_lastNetworkEventAction = descriptor;
+    }
+
     if (isStopped())
         return;
 
@@ -431,6 +442,13 @@ void HTMLDocumentParser::endIfDelayed()
 
 void HTMLDocumentParser::finish()
 {
+    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
+    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+
+    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+        m_lastNetworkEventAction = descriptor;
+    }
+
     // FIXME: We should ASSERT(!m_parserStopped) here, since it does not
     // makes sense to call any methods on DocumentParser once it's been stopped.
     // However, FrameLoader::stop calls DocumentParser::finish unconditionally.

@@ -40,6 +40,8 @@
 
 #include <string>
 
+#include <WebCore/eventaction/EventActionDescriptor.h>
+
 namespace WebCore {
 
 class Document;
@@ -110,6 +112,8 @@ public:
     // WebERA
     std::string getDocumentUrl() const;
     unsigned long getTokensSeen() const { return m_tokensSeen; }
+    const EventActionDescriptor& getLastNetworkAction() const { return m_lastNetworkEventAction; }
+    void resetLastNetworkAction() { m_lastNetworkEventAction = EventActionDescriptor::null; }
 
 protected:
     virtual void insert(const SegmentedString&);
@@ -186,6 +190,7 @@ private:
 
     // WebERA: We could also use textPosition, however this has a bit lower overhead
     unsigned long m_tokensSeen;
+    EventActionDescriptor m_lastNetworkEventAction; // points to the last network event action affecting this parser
 };
 
 }
