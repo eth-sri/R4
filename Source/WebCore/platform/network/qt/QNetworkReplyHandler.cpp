@@ -19,6 +19,7 @@
     Boston, MA 02110-1301, USA.
 */
 
+#include <limits>
 #include <sstream>
 
 #include "config.h"
@@ -396,10 +397,13 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
 
     m_nextSnapshotUpdateTimerRunning = true;
 
+    QNetworkReplyInitialSnapshot::NetworkSignal signal = m_snapshotQueue.first().first;
+
     std::stringstream params;
     params << EventActionDescriptor::escapeParam(m_reply->url().toString().toStdString())
            << "," << m_initialSnapshot->getSameUrlSequenceNumber()
-           << "," << m_sequenceNumber++;
+           << "," << (signal == QNetworkReplyInitialSnapshot::FINISHED ? ULONG_MAX : m_sequenceNumber++);
+    // use ULONG_MAX to indicate the last network event in this sequence
 
     EventActionDescriptor descriptor =
             threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
