@@ -331,6 +331,13 @@ bool HTMLDocumentParser::hasInsertionPoint()
 
 void HTMLDocumentParser::insert(const SegmentedString& source)
 {
+    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
+    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+
+    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+        m_lastNetworkEventAction = descriptor;
+    }
+
     if (isStopped())
         return;
 
@@ -531,6 +538,13 @@ void HTMLDocumentParser::appendCurrentInputStreamToPreloadScannerAndScan()
 
 void HTMLDocumentParser::notifyFinished(CachedResource* cachedResource)
 {
+    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
+    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+
+    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+        m_lastNetworkEventAction = descriptor;
+    }
+
     // pumpTokenizer can cause this parser to be detached from the Document,
     // but we need to ensure it isn't deleted yet.
     RefPtr<HTMLDocumentParser> protect(this);
