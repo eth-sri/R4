@@ -8,8 +8,10 @@ include(../BaseClient/baseclient.pri)
 
 SOURCES += \
     main.cpp \
-    network.cpp
+    network.cpp \
+    specificationscheduler.cpp
 
 HEADERS += \
-    network.h
+    network.h \
+    specificationscheduler.h
 

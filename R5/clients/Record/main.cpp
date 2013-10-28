@@ -41,6 +41,7 @@
 #include "utils.h"
 #include "clientapplication.h"
 #include "network.h"
+#include "specificationscheduler.h"
 
 class RecordClientApplication : public ClientApplication {
     Q_OBJECT
@@ -70,6 +71,7 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
 
+    WebCore::ThreadTimers::setScheduler(new SpecificationScheduler());
     WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
 
     loadWebsite(m_url);

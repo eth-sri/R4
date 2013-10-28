@@ -1,4 +1,6 @@
 /*
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -19,31 +21,38 @@
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#include "DefaultScheduler.h"
-#include "EventActionRegister.h"
+#include <QObject>
 
-namespace WebCore {
+#include <queue>
 
-DefaultScheduler::DefaultScheduler()
+#include <wtf/ExportMacros.h>
+#include <WebCore/platform/Timer.h>
+#include <WebCore/platform/schedule/Scheduler.h>
+
+#include "eventaction/EventActionSchedule.h"
+#include "eventaction/EventActionDescriptor.h"
+
+#ifndef SPECIFICATION_SCHEDULER_H
+#define SPECIFICATION_SCHEDULER_H
+
+class SpecificationScheduler : public QObject, public WebCore::Scheduler
 {
-}
+    Q_OBJECT
 
-DefaultScheduler::~DefaultScheduler()
-{
-}
+public:
+    SpecificationScheduler();
+    ~SpecificationScheduler();
 
-void DefaultScheduler::eventActionScheduled(const EventActionDescriptor& descriptor,
-                                            EventActionRegister* eventActionRegister)
-{
-    eventActionRegister->runEventAction(descriptor);
-}
+    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
-void DefaultScheduler::executeDelayedEventActions(EventActionRegister*)
-{
-	// Do nothing.
-}
+private:
+    std::queue<WebCore::EventActionDescriptor> m_parsingQueue;
+    std::queue<WebCore::EventActionDescriptor> m_networkQueue;
+    std::queue<WebCore::EventActionDescriptor> m_otherQueue;
 
-}
+};
+
+#endif // SPECIFICATION_SCHEDULER_H
