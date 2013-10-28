@@ -187,8 +187,9 @@ void HTMLParserScheduler::updateTimerName()
 
     // If the current descriptor is a network event, then it should be the same as the "lastNetworkAction" registered by the parser (if any)
     if (strcmp(currentDescriptor.getType(), "NETWORK") == 0) {
-        ASSERT(!m_parser->getLastNetworkAction().isNull());
-        ASSERT(m_parser->getLastNetworkAction() == currentDescriptor);
+        if (!m_parser->getLastNetworkAction().isNull()) {
+            ASSERT(m_parser->getLastNetworkAction() == currentDescriptor);
+        }
 
         m_parser->resetLastNetworkAction(); // remove the last network event and prevent it from being added twice
     }

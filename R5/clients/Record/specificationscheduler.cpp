@@ -23,6 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <limits>
+#include <cstdlib>
+
 #include "platform/schedule/EventActionRegister.h"
 
 #include "specificationscheduler.h"
@@ -43,7 +46,15 @@ void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDesc
     if (strcmp(descriptor.getType(), "HTMLDocumentParser") == 0) {
         m_parsingQueue.push(descriptor);
     } else if (strcmp(descriptor.getType(), "NETWORK") == 0) {
-        m_networkQueue.push(descriptor);
+
+        std::string networkSeqId = getNetworkSequenceId(descriptor);
+
+        if (m_activeNetworkEvents.find(networkSeqId) == m_activeNetworkEvents.end()) {
+            m_networkQueue.push(descriptor);
+        } else {
+            m_activeNetworkQueue.push(descriptor);
+        }
+
     } else {
         m_otherQueue.push(descriptor);
     }
@@ -51,27 +62,69 @@ void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDesc
 
 void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
 {
-    // TODO(WebERA)
-    //
-    // This is very close to the desired specification trace.
-    //
-    // However, we should prioritize network events dependent on by page parsing
-    // higher than network events related to e.g. AJAX requests.
-    //
-    // E.g., if a page is split into two network packets. We handle the first network event
-    // and begin to parse the page. On the page, we have a script that will initiate an Ajax request.
-    // When we run out of fragments to parse, we will either trigger the ajax network event or the
-    // network event with the rest of the page to be parsed, depending on the timing of these network
-    // events.
+
+    // Force ongoing network events to finish before anything else
+    if (!m_activeNetworkEvents.empty()) {
+
+        if (!m_activeNetworkQueue.empty()) {
+
+            WebCore::EventActionDescriptor descriptor = m_activeNetworkQueue.front();
+
+            if (eventActionRegister->runEventAction(descriptor)) {
+                m_activeNetworkQueue.pop();
+
+                if (std::stoul(descriptor.getParameter(2)) == ULONG_MAX) {
+                    // this was the last element in the sequence, remove it from the active events
+
+                    std::string id = getNetworkSequenceId(descriptor);
+                    m_activeNetworkEvents.erase(id);
+                }
+            }
+
+        }
+
+        return;
+    }
 
     if (!m_parsingQueue.empty()) {
+
         if (eventActionRegister->runEventAction(m_parsingQueue.front())) {
             m_parsingQueue.pop();
         }
 
     } else if (!m_networkQueue.empty()) {
-        if (eventActionRegister->runEventAction(m_networkQueue.front())) {
+
+        WebCore::EventActionDescriptor descriptor = m_networkQueue.front();
+
+        if (eventActionRegister->runEventAction(descriptor)) {
+
             m_networkQueue.pop();
+
+            if (std::stoul(descriptor.getParameter(2)) != ULONG_MAX) {
+                // this is not last element in the sequence
+
+                std::string id = getNetworkSequenceId(descriptor);
+
+                // add to active event actions
+                m_activeNetworkEvents.insert(id);
+
+                // split the exiting network event queue into active and non-active events
+                std::queue<WebCore::EventActionDescriptor> currentQueue;
+                currentQueue.swap(m_networkQueue);
+
+                while (!currentQueue.empty()) {
+                    WebCore::EventActionDescriptor existingEvent = currentQueue.front();
+                    currentQueue.pop();
+
+                    std::string existingEventId = getNetworkSequenceId(existingEvent); // url,url-sequence-number
+
+                    if (id == existingEventId) {
+                        m_activeNetworkQueue.push(existingEvent);
+                    } else {
+                        m_networkQueue.push(existingEvent);
+                    }
+                }
+            }
         }
 
     } else if (!m_otherQueue.empty()) {

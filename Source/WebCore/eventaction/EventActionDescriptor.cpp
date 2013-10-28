@@ -95,12 +95,16 @@ EventActionDescriptor EventActionDescriptor::deserialize(unsigned long id, const
 std::string EventActionDescriptor::getParameter(unsigned int number) const
 {
     size_t start = 0; // start index of param
-    size_t end = 0; // index just after the param
+    size_t end = m_params.find(','); // index just after the param
 
-    for (int i = 0; i <= number; i++) {
+    if (end == std::string::npos) {
+       end = m_params.size(); // special case if there is only one argument
+    }
+
+    for (int i = 0; i < number; i++) {
         assert(end != m_params.size()); // indexing into non-existing param
 
-        start = end;
+        start = end + 1; // end points at the "," just before the start position
         end = m_params.find(',', start);
 
         if (end == std::string::npos) {

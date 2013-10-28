@@ -26,6 +26,7 @@
 #include <QObject>
 
 #include <queue>
+#include <set>
 
 #include <wtf/ExportMacros.h>
 #include <WebCore/platform/Timer.h>
@@ -49,6 +50,13 @@ public:
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
 private:
+    std::string getNetworkSequenceId(const WebCore::EventActionDescriptor& descriptor) const {
+        return descriptor.getParameter(0) + "," + descriptor.getParameter(1);
+    }
+
+    std::set<std::string> m_activeNetworkEvents;
+
+    std::queue<WebCore::EventActionDescriptor> m_activeNetworkQueue;
     std::queue<WebCore::EventActionDescriptor> m_parsingQueue;
     std::queue<WebCore::EventActionDescriptor> m_networkQueue;
     std::queue<WebCore::EventActionDescriptor> m_otherQueue;
