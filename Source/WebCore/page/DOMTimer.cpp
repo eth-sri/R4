@@ -96,9 +96,13 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
 {
 
     // WebERA: We need to access action before it is given to the DOMTimer, afterwards it will be NULL
+
+    std::string url = action->getCalledUrl().empty() ? std::string("-") : EventActionDescriptor::escapeParam(action->getCalledUrl());
+
     std::stringstream params;
-    params << (action->getCalledUrl().empty() ? std::string("-") : EventActionDescriptor::escapeParam(action->getCalledUrl())) << ","
+    params << url << ","
            << action->getCalledLine() << ","
+           << DOMTimer::getNextSameUrlSequenceNumber(url) << ","
            << timeout << ","
            << (singleShot ? "true" : "false");
 
@@ -210,6 +214,26 @@ void DOMTimer::adjustMinimumTimerInterval(double oldMinimumTimerInterval)
 
     double previousClampedInterval = intervalClampedToMinimum(m_originalInterval, oldMinimumTimerInterval);
     augmentFireInterval(newClampedInterval - previousClampedInterval);
+}
+
+std::map<std::string, unsigned int> DOMTimer::m_nextSameUrlSequenceNumber;
+
+unsigned int DOMTimer::getNextSameUrlSequenceNumber(const std::string& url)
+{
+    std::map<std::string, unsigned int>::iterator iter = DOMTimer::m_nextSameUrlSequenceNumber.find(url);
+
+    unsigned int id = 0;
+
+    if (iter != DOMTimer::m_nextSameUrlSequenceNumber.end()) {
+        id = (*iter).second;
+
+        (*iter).second++;
+
+    } else {
+        DOMTimer::m_nextSameUrlSequenceNumber.insert(std::pair<std::string, unsigned int>(url, 1));
+    }
+
+    return id;
 }
 
 double DOMTimer::intervalClampedToMinimum(int timeout, double minimumTimerInterval) const

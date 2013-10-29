@@ -27,6 +27,9 @@
 #ifndef DOMTimer_h
 #define DOMTimer_h
 
+#include <map>
+#include <string>
+
 #include "SuspendableTimer.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
@@ -68,6 +71,8 @@ namespace WebCore {
         // to events like moving a tab to the background.
         void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
 
+        static unsigned int getNextSameUrlSequenceNumber(const std::string& url);
+
     private:
         DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
         virtual void fired();
@@ -85,6 +90,8 @@ namespace WebCore {
         int m_originalInterval;
         bool m_shouldForwardUserGesture;
         static double s_minDefaultTimerInterval;
+
+        static std::map<std::string, unsigned int> m_nextSameUrlSequenceNumber;
     };
 
 } // namespace WebCore
