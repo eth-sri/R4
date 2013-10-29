@@ -66,6 +66,12 @@ public:
     void setEventActionDescriptor(const EventActionDescriptor& descriptor) { m_eventActionDescriptor = descriptor; }
     const EventActionDescriptor& eventActionDescriptor() const { return m_eventActionDescriptor; }
 
+    // WebERA: This is used to overwrite the active bit even though the timer has been pulled out of the timer
+    // heap. This is used as part of the event action registry
+    void overwriteActive(bool active) {
+        m_overwriteActive = active;
+    }
+
 private:
     virtual void fired() = 0;
 
@@ -90,6 +96,7 @@ private:
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
 
     EventActionDescriptor m_eventActionDescriptor;
+    bool m_overwriteActive;
 
 #ifndef NDEBUG
     ThreadIdentifier m_thread;
@@ -117,7 +124,7 @@ private:
 inline bool TimerBase::isActive() const
 {
     ASSERT(m_thread == currentThread());
-    return m_nextFireTime;
+    return m_nextFireTime || m_overwriteActive;
 }
 
 }

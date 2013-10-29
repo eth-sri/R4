@@ -115,6 +115,7 @@ void ThreadTimers::sharedTimerFired()
 
 bool ThreadTimers::fireTimerCallback(void* object, const EventActionDescriptor&) {
 	TimerBase* timer = (TimerBase*)object;
+    timer->overwriteActive(false);
 
     double interval = timer->repeatInterval();
     timer->setNextFireTime(interval ? monotonicallyIncreasingTime() + interval : 0);
@@ -146,6 +147,7 @@ void ThreadTimers::sharedTimerFiredInternal()
             fireTimerCallback(timer, timer->eventActionDescriptor());
         } else {
         	// Run the timer through the scheduler.
+            timer->overwriteActive(true);
             eventActionRegister()->registerEventActionHandler(
                         timer->eventActionDescriptor(),
                         &fireTimerCallback,

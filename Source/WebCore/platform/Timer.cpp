@@ -196,6 +196,7 @@ TimerBase::TimerBase()
     : m_nextFireTime(0)
     , m_repeatInterval(0)
     , m_heapIndex(-1)
+    , m_overwriteActive(false)
 #ifndef NDEBUG
     , m_thread(currentThread())
 #endif

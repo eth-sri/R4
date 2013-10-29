@@ -131,10 +131,19 @@ EventActionDescriptor EventActionRegister::allocateEventDescriptor(const std::st
 
 void EventActionRegister::debugPrintNames() const
 {
+    std::cout << "Handlers ::" << std::endl;
     EventActionRegisterMaps::DescriptorToHandler::const_iterator it = m_maps->m_descriptorToHandler.begin();
     for (; it != m_maps->m_descriptorToHandler.end(); it++) {
         std::cout << (*it).first << std::endl;
     }
+
+    std::cout << "Providers ::" << std::endl;
+    EventActionRegisterMaps::TypeToProvider::const_iterator it2 = m_maps->m_typeToProvider.begin();
+    for (; it2 != m_maps->m_typeToProvider.end(); it2++) {
+        std::cout << (*it2).first << std::endl;
+    }
+
+    std::cout << "--" << std::endl;
 }
 
 std::vector<std::string> EventActionRegister::getWaitingNames()
