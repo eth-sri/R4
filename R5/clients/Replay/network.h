@@ -51,7 +51,8 @@ public:
     WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
 
 private:
-    typedef QMultiHash<QString, WebCore::QNetworkReplyInitialSnapshot*> SnapshotMap;
+    typedef QList<WebCore::QNetworkReplyInitialSnapshot*> SnapshotList;
+    typedef QHash<QString, SnapshotList*> SnapshotMap;
     SnapshotMap m_snapshots;
 };
 
