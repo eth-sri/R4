@@ -507,6 +507,13 @@ bool HTMLDocumentParser::isWaitingForScripts() const
 
 void HTMLDocumentParser::resumeParsingAfterScriptExecution()
 {
+    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
+    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+
+    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+        m_lastNetworkEventAction = descriptor;
+    }
+
     ASSERT(!isExecutingScript());
     ASSERT(!m_treeBuilder->isPaused());
 
