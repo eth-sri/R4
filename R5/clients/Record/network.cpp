@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <iostream>
+
 #include <QDataStream>
 
 #include "network.h"
@@ -42,6 +44,7 @@ QNetworkReplyControllableRecord::~QNetworkReplyControllableRecord()
 QNetworkReplyControllableFactoryRecord::QNetworkReplyControllableFactoryRecord()
     : QNetworkReplyControllableFactory()
     , m_fp(new QFile(QString::fromAscii("/tmp/network.data")))
+    , m_doneCounter(0)
 {
     m_fp->open(QIODevice::WriteOnly);
     ASSERT(m_fp->isOpen());
@@ -64,4 +67,6 @@ void QNetworkReplyControllableFactoryRecord::controllableDone(QNetworkReplyContr
     if (m_fp->isOpen()) {
         controllable->getSnapshot()->serialize(m_fp);
     }
+
+    m_doneCounter++;
 }

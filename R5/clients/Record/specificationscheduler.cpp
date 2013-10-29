@@ -25,14 +25,16 @@
 
 #include <limits>
 #include <cstdlib>
+#include <iostream>
 
 #include "platform/schedule/EventActionRegister.h"
 
 #include "specificationscheduler.h"
 
-SpecificationScheduler::SpecificationScheduler()
+SpecificationScheduler::SpecificationScheduler(QNetworkReplyControllableFactoryRecord* network)
     : QObject(NULL)
     , Scheduler()
+    , m_network(network)
 {
 }
 
@@ -69,11 +71,13 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
         if (!m_activeNetworkQueue.empty()) {
 
             WebCore::EventActionDescriptor descriptor = m_activeNetworkQueue.front();
+            unsigned int currentFinishedNetworkJobs = m_network->doneCounter();
 
             if (eventActionRegister->runEventAction(descriptor)) {
                 m_activeNetworkQueue.pop();
 
-                if (std::stoul(descriptor.getParameter(2)) == ULONG_MAX) {
+                if (std::stoul(descriptor.getParameter(2)) == ULONG_MAX ||
+                        m_network->doneCounter() > currentFinishedNetworkJobs) {
                     // this was the last element in the sequence, remove it from the active events
 
                     std::string id = getNetworkSequenceId(descriptor);
@@ -95,13 +99,15 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
     } else if (!m_networkQueue.empty()) {
 
         WebCore::EventActionDescriptor descriptor = m_networkQueue.front();
+        unsigned int currentFinishedNetworkJobs = m_network->doneCounter();
 
         if (eventActionRegister->runEventAction(descriptor)) {
 
             m_networkQueue.pop();
 
-            if (std::stoul(descriptor.getParameter(2)) != ULONG_MAX) {
-                // this is not last element in the sequence
+            if (std::stoul(descriptor.getParameter(2)) != ULONG_MAX &&
+                    currentFinishedNetworkJobs == m_network->doneCounter()) {
+                // this is not the last element in the sequence
 
                 std::string id = getNetworkSequenceId(descriptor);
 

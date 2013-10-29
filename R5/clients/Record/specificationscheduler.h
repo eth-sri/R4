@@ -35,6 +35,8 @@
 #include "eventaction/EventActionSchedule.h"
 #include "eventaction/EventActionDescriptor.h"
 
+#include "network.h"
+
 #ifndef SPECIFICATION_SCHEDULER_H
 #define SPECIFICATION_SCHEDULER_H
 
@@ -43,7 +45,7 @@ class SpecificationScheduler : public QObject, public WebCore::Scheduler
     Q_OBJECT
 
 public:
-    SpecificationScheduler();
+    SpecificationScheduler(QNetworkReplyControllableFactoryRecord* network);
     ~SpecificationScheduler();
 
     void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
@@ -60,6 +62,8 @@ private:
     std::queue<WebCore::EventActionDescriptor> m_parsingQueue;
     std::queue<WebCore::EventActionDescriptor> m_networkQueue;
     std::queue<WebCore::EventActionDescriptor> m_otherQueue;
+
+    QNetworkReplyControllableFactoryRecord* m_network;
 
 };
 

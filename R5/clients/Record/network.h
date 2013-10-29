@@ -62,8 +62,13 @@ public:
         return new QNetworkReplyControllableRecord(reply, this, parent);
     }
 
+    unsigned int doneCounter() const {
+        return m_doneCounter;
+    }
+
 private:
     QFile* m_fp;
+    unsigned int m_doneCounter;
 };
 
 #endif // NETWORK_H
