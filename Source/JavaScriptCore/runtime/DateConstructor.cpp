@@ -35,6 +35,8 @@
 #include <time.h>
 #include <wtf/MathExtras.h>
 
+#include "timeprovider.h"
+
 #if OS(WINCE) && !PLATFORM(QT)
 extern "C" time_t time(time_t* timer); // Provided by libce.
 #endif
@@ -103,9 +105,9 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
 
     double value;
 
-    if (numArgs == 0) // new Date() ECMA 15.9.3.3
-        value = jsCurrentTime();
-    else if (numArgs == 1) {
+    if (numArgs == 0) { // new Date() ECMA 15.9.3.3
+        value = TimeProvider::getInstance()->currentTime();
+    } else if (numArgs == 1) {
         if (args.at(0).inherits(&DateInstance::s_info))
             value = asDateInstance(args.at(0))->internalNumber();
         else {
@@ -188,7 +190,7 @@ static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
 
 static EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)
 {
-    return JSValue::encode(jsNumber(jsCurrentTime()));
+    return JSValue::encode(jsNumber(TimeProvider::getInstance()->currentTime()));
 }
 
 static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec) 

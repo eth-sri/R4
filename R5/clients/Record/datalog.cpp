@@ -1,4 +1,5 @@
 /*
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,49 +24,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef REPLAYSCHEDULER_H
-#define REPLAYSCHEDULER_H
+#include <iostream>
 
-#include <string>
+#include <QFile>
+#include <QDataStream>
 
-#include <QObject>
-
-#include <wtf/ExportMacros.h>
-#include <wtf/Vector.h>
-
-#include <WebCore/platform/Timer.h>
-#include <WebCore/platform/schedule/Scheduler.h>
-
-#include "eventaction/EventActionSchedule.h"
-#include "eventaction/EventActionDescriptor.h"
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/platform/ThreadGlobalData.h>
 
 #include "datalog.h"
 
-class ReplayScheduler : public QObject, public WebCore::Scheduler
+double TimeProviderRecord::currentTime()
 {
-    Q_OBJECT
+    double time = JSC::TimeProviderDefault::currentTime();
 
-public:
-    ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider);
-    ~ReplayScheduler();
+    const WebCore::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    if (descriptor.isNull()) {
+        return time;
+    }
 
-    void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
+    QString ident = QString::fromStdString(descriptor.toString());
 
-    bool isFinished();
+    Log::iterator iter = m_log.find(ident);
 
-private:
+    if (iter == m_log.end()) {
+        LogEntries logEntries;
+        logEntries.append(time);
+        m_log.insert(ident, logEntries);
 
-    void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
+    } else {
+        iter->append(time);
+    }
 
-    WebCore::EventActionSchedule* m_schedule;
-    TimeProviderReplay* m_timeProvider;
+    return time;
+}
 
-    unsigned int m_scheduleWaits;
+void TimeProviderRecord::attach()
+{
+    JSC::TimeProvider::setInstance(this);
+}
 
-signals:
-    void sigDone();
-};
+void TimeProviderRecord::writeLogFile(QString path)
+{
+    QFile fp(path);
+    fp.open(QIODevice::WriteOnly);
 
-#endif // REPLAYSCHEDULER_H
+    ASSERT(fp.isOpen());
+
+    QDataStream out(&fp);
+    out << m_log;
+
+    fp.close();
+
+    std::cout << "WROTE LOG SIZE: " << m_log.size() << std::endl;
+}

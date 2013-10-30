@@ -35,6 +35,7 @@ SpecificationScheduler::SpecificationScheduler(QNetworkReplyControllableFactoryR
     : QObject(NULL)
     , Scheduler()
     , m_network(network)
+    , m_stopped(false)
 {
 }
 
@@ -64,6 +65,9 @@ void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDesc
 
 void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
 {
+    if (m_stopped) {
+        return;
+    }
 
     // Force ongoing network events to finish before anything else
     if (!m_activeNetworkEvents.empty()) {

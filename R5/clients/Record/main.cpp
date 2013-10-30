@@ -42,6 +42,7 @@
 #include "clientapplication.h"
 #include "network.h"
 #include "specificationscheduler.h"
+#include "datalog.h"
 
 class RecordClientApplication : public ClientApplication {
     Q_OBJECT
@@ -55,8 +56,11 @@ private:
 private:
     QString m_schedulePath;
     QString m_hbPath;
+    QString m_logPath;
     QString m_url;
     QNetworkReplyControllableFactoryRecord* m_controllableFactory;
+    TimeProviderRecord* m_timeProvider;
+    SpecificationScheduler* m_scheduler;
 
 public slots:
     void slOnCloseEvent();
@@ -66,12 +70,17 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_schedulePath("/tmp/schedule.data")
     , m_hbPath("/tmp/happensbefore.data")
+    , m_logPath("/tmp/log.data")
     , m_controllableFactory(new QNetworkReplyControllableFactoryRecord())
+    , m_timeProvider(new TimeProviderRecord())
+    , m_scheduler(new SpecificationScheduler(m_controllableFactory))
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
 
-    WebCore::ThreadTimers::setScheduler(new SpecificationScheduler(m_controllableFactory));
+    m_timeProvider->attach();
+
+    WebCore::ThreadTimers::setScheduler(m_scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
 
     loadWebsite(m_url);
@@ -120,12 +129,16 @@ void RecordClientApplication::handleUserOptions()
 
 void RecordClientApplication::slOnCloseEvent()
 {
+    // happens before
+
     std::ofstream hbfile;
     hbfile.open(m_hbPath.toStdString());
 
     WebCore::threadGlobalData().threadTimers().eventActionsHB()->serialize(hbfile);
 
     hbfile.close();
+
+    // schedule
 
     std::ofstream schedulefile;
     schedulefile.open(m_schedulePath.toStdString());
@@ -134,8 +147,15 @@ void RecordClientApplication::slOnCloseEvent()
 
     schedulefile.close();
 
+    // network
+
     m_controllableFactory->writeNetworkFile();
 
+    // log
+
+    m_timeProvider->writeLogFile(m_logPath);
+
+    m_scheduler->stop();
     m_window->close();
 }
 

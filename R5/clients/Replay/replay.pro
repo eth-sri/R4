@@ -10,10 +10,12 @@ SOURCES += \
     main.cpp \
     replayscheduler.cpp \
     network.cpp \
-    fuzzyurl.cpp
+    fuzzyurl.cpp \
+    datalog.cpp
 
 HEADERS += \
     replayscheduler.h \
     network.h \
-    fuzzyurl.h
+    fuzzyurl.h \
+    datalog.h
 

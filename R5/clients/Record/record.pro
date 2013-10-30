@@ -9,9 +9,11 @@ include(../BaseClient/baseclient.pri)
 SOURCES += \
     main.cpp \
     network.cpp \
-    specificationscheduler.cpp
+    specificationscheduler.cpp \
+    datalog.cpp
 
 HEADERS += \
     network.h \
-    specificationscheduler.h
+    specificationscheduler.h \
+    datalog.h
 

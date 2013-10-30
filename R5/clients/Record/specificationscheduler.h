@@ -51,6 +51,10 @@ public:
     void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
+    void stop() {
+        m_stopped = true;
+    }
+
 private:
     std::string getNetworkSequenceId(const WebCore::EventActionDescriptor& descriptor) const {
         return descriptor.getParameter(0) + "," + descriptor.getParameter(1);
@@ -64,6 +68,8 @@ private:
     std::queue<WebCore::EventActionDescriptor> m_otherQueue;
 
     QNetworkReplyControllableFactoryRecord* m_network;
+
+    bool m_stopped;
 
 };
 

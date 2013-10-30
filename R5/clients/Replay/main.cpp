@@ -44,6 +44,7 @@
 #include "clientapplication.h"
 #include "replayscheduler.h"
 #include "network.h"
+#include "datalog.h"
 
 class ReplayClientApplication : public ClientApplication {
     Q_OBJECT
@@ -56,6 +57,7 @@ private:
 
     QString m_url;
     QString m_schedulePath;
+    TimeProviderReplay* m_timeProvider;
 
     bool m_isStopping;
 
@@ -65,11 +67,14 @@ public slots:
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
+    , m_timeProvider(new TimeProviderReplay("/tmp/log.data"))
     , m_isStopping(false)
 {
     handleUserOptions();
 
-    ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString());
+    m_timeProvider->attach();
+
+    ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_timeProvider);
     QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
 
     WebCore::ThreadTimers::setScheduler(scheduler);

@@ -1,4 +1,5 @@
 /*
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,49 +24,54 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef REPLAYSCHEDULER_H
-#define REPLAYSCHEDULER_H
+#include <iostream>
 
-#include <string>
+#include <QFile>
+#include <QDataStream>
 
-#include <QObject>
-
-#include <wtf/ExportMacros.h>
-#include <wtf/Vector.h>
-
-#include <WebCore/platform/Timer.h>
-#include <WebCore/platform/schedule/Scheduler.h>
-
-#include "eventaction/EventActionSchedule.h"
-#include "eventaction/EventActionDescriptor.h"
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/platform/ThreadGlobalData.h>
 
 #include "datalog.h"
 
-class ReplayScheduler : public QObject, public WebCore::Scheduler
+TimeProviderReplay::TimeProviderReplay(QString logPath)
+    : JSC::TimeProviderDefault()
 {
-    Q_OBJECT
+    deserialize(logPath);
+}
 
-public:
-    ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider);
-    ~ReplayScheduler();
+double TimeProviderReplay::currentTime()
+{
 
-    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    double time = JSC::TimeProviderDefault::currentTime();
 
-    void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
+    if (m_currentDescriptorString.isNull()) {
+        // show the correct time for all non-schedulable timers
+        return time;
+    }
 
-    bool isFinished();
+    Log::iterator iter = m_log.find(m_currentDescriptorString);
 
-private:
+    ASSERT(iter != m_log.end());
+    ASSERT(!iter->isEmpty());
 
-    void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
+    return iter->takeFirst();
+}
 
-    WebCore::EventActionSchedule* m_schedule;
-    TimeProviderReplay* m_timeProvider;
+void TimeProviderReplay::attach()
+{
+    JSC::TimeProvider::setInstance(this);
+}
 
-    unsigned int m_scheduleWaits;
+void TimeProviderReplay::deserialize(QString path)
+{
+    QFile fp(path);
+    fp.open(QIODevice::ReadOnly);
 
-signals:
-    void sigDone();
-};
+    ASSERT(fp.isOpen());
 
-#endif // REPLAYSCHEDULER_H
+    QDataStream in(&fp);
+    in >> m_log;
+
+    fp.close();
+}

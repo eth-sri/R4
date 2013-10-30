@@ -33,9 +33,10 @@
 
 #include "replayscheduler.h"
 
-ReplayScheduler::ReplayScheduler(const std::string& schedulePath)
+ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider)
     : QObject(NULL)
     , Scheduler()
+    , m_timeProvider(timeProvider)
     , m_scheduleWaits(0)
 {
     std::ifstream fp;
@@ -66,7 +67,9 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     std::string eventActionType = nextToSchedule.getType();
 
     // try to execute this directly
+    m_timeProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
     bool found = eventActionRegister->runEventAction(nextToSchedule);
+    m_timeProvider->unsetCurrentDescriptorString();
 
     if (!found)
 

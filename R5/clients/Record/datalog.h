@@ -1,4 +1,5 @@
 /*
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,49 +24,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef REPLAYSCHEDULER_H
-#define REPLAYSCHEDULER_H
+#ifndef DATALOG_H
+#define DATALOG_H
 
-#include <string>
+#include <QHash>
+#include <QList>
 
-#include <QObject>
+#include "JavaScriptCore/runtime/timeprovider.h"
 
-#include <wtf/ExportMacros.h>
-#include <wtf/Vector.h>
-
-#include <WebCore/platform/Timer.h>
-#include <WebCore/platform/schedule/Scheduler.h>
-
-#include "eventaction/EventActionSchedule.h"
-#include "eventaction/EventActionDescriptor.h"
-
-#include "datalog.h"
-
-class ReplayScheduler : public QObject, public WebCore::Scheduler
-{
-    Q_OBJECT
+class TimeProviderRecord : public JSC::TimeProviderDefault {
 
 public:
-    ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider);
-    ~ReplayScheduler();
+    TimeProviderRecord()
+        : JSC::TimeProviderDefault()
+    {
+    }
 
-    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    void attach();
+    double currentTime();
 
-    void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
-
-    bool isFinished();
+    void writeLogFile(QString path);
 
 private:
-
-    void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
-
-    WebCore::EventActionSchedule* m_schedule;
-    TimeProviderReplay* m_timeProvider;
-
-    unsigned int m_scheduleWaits;
-
-signals:
-    void sigDone();
+    typedef QList<double> LogEntries;
+    typedef QHash<QString, LogEntries> Log;
+    Log m_log;
 };
 
-#endif // REPLAYSCHEDULER_H
+#endif // DATALOG_H

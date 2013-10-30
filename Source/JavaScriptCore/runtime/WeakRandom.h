@@ -50,6 +50,7 @@
 #ifndef WeakRandom_h
 #define WeakRandom_h
 
+#include <iostream>
 #include <limits.h>
 #include <wtf/StdLibExtras.h>
 
@@ -58,18 +59,20 @@ namespace JSC {
 class WeakRandom {
 public:
     WeakRandom(unsigned seed)
-        : m_low(seed ^ 0x49616E42)
-        , m_high(seed)
+        : m_low(0 ^ 0x49616E42) // WebERA: Enforce a non-random seed, to reduce non-determinism in replay
+        , m_high(0)
     {
     }
 
     double get()
     {
+        std::cout << "WEAKRANDOM::GET" << std::endl;
         return advance() / (UINT_MAX + 1.0);
     }
 
     unsigned getUint32()
     {
+        std::cout << "WEAKRANDOM::GETUINT32" << std::endl;
         return advance();
     }
 
