@@ -19,6 +19,8 @@
     Boston, MA 02110-1301, USA.
 */
 
+#include <sstream>
+
 #include "config.h"
 #include "qwebpage.h"
 
@@ -150,6 +152,10 @@
 #if USE(QT_MOBILITY_SYSTEMINFO)
 #include <qsysteminfo.h>
 #endif
+
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
 
 using namespace WebCore;
 
@@ -314,6 +320,7 @@ QWebPagePrivate::QWebPagePrivate(QWebPage *qq)
     , inspector(0)
     , inspectorIsInternalOnly(false)
     , m_lastDropAction(Qt::IgnoreAction)
+    , m_changeFocusTimer(this, &QWebPagePrivate::changeFocusTimerFired)
 {
 #if ENABLE(GEOLOCATION) || ENABLE(DEVICE_ORIENTATION)
     bool useMock = QWebPagePrivate::drtRun;
@@ -971,22 +978,64 @@ void QWebPagePrivate::keyReleaseEvent(QKeyEvent *ev)
 
 void QWebPagePrivate::focusInEvent(QFocusEvent*)
 {
-    FocusController *focusController = page->focusController();
-    focusController->setActive(true);
-    focusController->setFocused(true);
-    if (!focusController->focusedFrame())
-        focusController->setFocusedFrame(QWebFramePrivate::core(mainFrame.data()));
+    m_queuedFocuses.append(FOCUS_IN);
+    updateChangeFocusTimer();
 }
 
 void QWebPagePrivate::focusOutEvent(QFocusEvent*)
 {
-    // only set the focused frame inactive so that we stop painting the caret
-    // and the focus frame. But don't tell the focus controller so that upon
-    // focusInEvent() we can re-activate the frame.
-    FocusController *focusController = page->focusController();
-    // Call setFocused first so that window.onblur doesn't get called twice
-    focusController->setFocused(false);
-    focusController->setActive(false);
+    m_queuedFocuses.append(FOCUS_OUT);
+    updateChangeFocusTimer();
+}
+
+void QWebPagePrivate::changeFocusTimerFired(WebCore::Timer<QWebPagePrivate>*)
+{
+    FOCUS focus = m_queuedFocuses.takeFirst();
+
+    if (focus == FOCUS_IN) {
+        FocusController *focusController = page->focusController();
+        focusController->setActive(true);
+        focusController->setFocused(true);
+        if (!focusController->focusedFrame())
+            focusController->setFocusedFrame(QWebFramePrivate::core(mainFrame.data()));
+
+    } else {
+        // only set the focused frame inactive so that we stop painting the caret
+        // and the focus frame. But don't tell the focus controller so that upon
+        // focusInEvent() we can re-activate the frame.
+        FocusController *focusController = page->focusController();
+        // Call setFocused first so that window.onblur doesn't get called twice
+        focusController->setFocused(false);
+        focusController->setActive(false);
+    }
+
+    updateChangeFocusTimer();
+}
+
+unsigned int QWebPagePrivate::m_seqNumber = 0;
+
+void QWebPagePrivate::updateChangeFocusTimer()
+{
+    if (m_queuedFocuses.empty()) {
+        return;
+    }
+
+    if (!m_changeFocusTimer.isActive()) {
+
+        FOCUS focus = m_queuedFocuses.first();
+
+        std::stringstream params;
+        params << QWebPagePrivate::getSeqNumber();
+
+        EventActionDescriptor descriptor =
+                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    focus == FOCUS_IN ? "FocusInEvent" : "FocusOutEvent",
+                    params.str()
+                );
+
+        m_changeFocusTimer.setEventActionDescriptor(descriptor);
+        m_changeFocusTimer.startOneShot(0);
+    }
 }
 
 template<class T>

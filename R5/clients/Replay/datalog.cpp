@@ -49,6 +49,7 @@ double TimeProviderReplay::currentTime()
     if (m_currentDescriptorString.isNull() || m_stopped) {
         // show the correct time for all non-schedulable timers
         std::cout << "UNCONTROLLED DATA" << std::endl;
+        ASSERT(false);
         return time;
     }
 
@@ -93,6 +94,7 @@ double RandomProviderReplay::get()
 
     if (m_currentDescriptorString.isNull() || m_stopped) {
         std::cout << "UNCONTROLLED DATA" << std::endl;
+        ASSERT(false);
         return random;
     }
 
@@ -111,6 +113,7 @@ unsigned RandomProviderReplay::getUint32()
 
     if (m_currentDescriptorString.isNull() || m_stopped) {
         std::cout << "UNCONTROLLED DATA" << std::endl;
+        ASSERT(false);
         return random;
     }
 

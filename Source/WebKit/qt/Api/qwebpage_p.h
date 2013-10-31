@@ -22,6 +22,7 @@
 #define QWEBPAGE_P_H
 
 #include <QWeakPointer>
+#include <QList>
 
 #include <qbasictimer.h>
 #include <qnetworkproxy.h>
@@ -38,6 +39,8 @@
 
 #include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
+
+#include <WebCore/platform/Timer.h>
 
 #include "ViewportArguments.h"
 
@@ -212,6 +215,27 @@ public:
     Qt::DropAction m_lastDropAction;
 
     static bool drtRun;
+
+    // WebERA
+private:
+
+    enum FOCUS {
+        FOCUS_IN, FOCUS_OUT
+    };
+
+    QList<FOCUS> m_queuedFocuses;
+
+    void changeFocusTimerFired(WebCore::Timer<QWebPagePrivate>*);
+    void updateChangeFocusTimer();
+
+    WebCore::Timer<QWebPagePrivate> m_changeFocusTimer;
+
+    static unsigned int getSeqNumber() {
+        return m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
+
 };
 
 #endif
