@@ -50,10 +50,15 @@ public:
 
     WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
 
+    void stop() {
+        m_stopped = true;
+    }
+
 private:
     typedef QList<WebCore::QNetworkReplyInitialSnapshot*> SnapshotList;
     typedef QHash<QString, SnapshotList*> SnapshotMap;
     SnapshotMap m_snapshots;
+    bool m_stopped;
 };
 
 #endif // NETWORK_H

@@ -36,6 +36,7 @@
 
 TimeProviderReplay::TimeProviderReplay(QString logPath)
     : JSC::TimeProviderDefault()
+    , m_stopped(false)
 {
     deserialize(logPath);
 }
@@ -45,8 +46,9 @@ double TimeProviderReplay::currentTime()
 
     double time = JSC::TimeProviderDefault::currentTime();
 
-    if (m_currentDescriptorString.isNull()) {
+    if (m_currentDescriptorString.isNull() || m_stopped) {
         // show the correct time for all non-schedulable timers
+        std::cout << "UNCONTROLLED DATA" << std::endl;
         return time;
     }
 
@@ -72,6 +74,69 @@ void TimeProviderReplay::deserialize(QString path)
 
     QDataStream in(&fp);
     in >> m_log;
+
+    fp.close();
+}
+
+
+RandomProviderReplay::RandomProviderReplay(QString logPath)
+    : JSC::RandomProviderDefault()
+    , m_stopped(false)
+{
+    deserialize(logPath);
+}
+
+double RandomProviderReplay::get()
+{
+
+    double random = JSC::RandomProviderDefault::get();
+
+    if (m_currentDescriptorString.isNull() || m_stopped) {
+        std::cout << "UNCONTROLLED DATA" << std::endl;
+        return random;
+    }
+
+    DLog::iterator iter = m_double_log.find(m_currentDescriptorString);
+
+    ASSERT(iter != m_double_log.end());
+    ASSERT(!iter->isEmpty());
+
+    return iter->takeFirst();
+}
+
+unsigned RandomProviderReplay::getUint32()
+{
+
+    unsigned random = JSC::RandomProviderDefault::getUint32();
+
+    if (m_currentDescriptorString.isNull() || m_stopped) {
+        std::cout << "UNCONTROLLED DATA" << std::endl;
+        return random;
+    }
+
+    ULog::iterator iter = m_unsigned_log.find(m_currentDescriptorString);
+
+    ASSERT(iter != m_unsigned_log.end());
+    ASSERT(!iter->isEmpty());
+
+    return iter->takeFirst();
+}
+
+void RandomProviderReplay::attach()
+{
+    JSC::RandomProvider::setInstance(this);
+}
+
+void RandomProviderReplay::deserialize(QString path)
+{
+    QFile fp(path);
+    fp.open(QIODevice::ReadOnly);
+
+    ASSERT(fp.isOpen());
+
+    QDataStream in(&fp);
+    in >> m_double_log;
+    in >> m_unsigned_log;
 
     fp.close();
 }

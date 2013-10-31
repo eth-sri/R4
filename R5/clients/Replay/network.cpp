@@ -54,6 +54,7 @@ QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(QNetworkReply* 
 
 QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay()
     : QNetworkReplyControllableFactory()
+    , m_stopped(false)
 {
     QFile fp(QString::fromAscii("/tmp/network.data"));
     fp.open(QIODevice::ReadOnly);
@@ -82,6 +83,10 @@ QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay()
 
 WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::construct(QNetworkReply* reply, QObject* parent)
 {
+    if (m_stopped) {
+        return new WebCore::QNetworkReplyControllableLive(reply, parent);
+    }
+
     SnapshotMap::const_iterator iter = m_snapshots.find(reply->url().toString());
 
     if (iter != m_snapshots.end()) {

@@ -58,6 +58,8 @@ private:
     QString m_url;
     QString m_schedulePath;
     TimeProviderReplay* m_timeProvider;
+    RandomProviderReplay* m_randomProvider;
+    QNetworkReplyControllableFactoryReplay* m_network;
 
     bool m_isStopping;
 
@@ -67,18 +69,21 @@ public slots:
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
-    , m_timeProvider(new TimeProviderReplay("/tmp/log.data"))
+    , m_timeProvider(new TimeProviderReplay("/tmp/log.time.data"))
+    , m_randomProvider(new RandomProviderReplay("/tmp/log.random.data"))
     , m_isStopping(false)
+    , m_network(new QNetworkReplyControllableFactoryReplay())
 {
     handleUserOptions();
 
     m_timeProvider->attach();
+    m_randomProvider->attach();
 
-    ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_timeProvider);
+    ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_timeProvider, m_randomProvider);
     QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
 
     WebCore::ThreadTimers::setScheduler(scheduler);
-    WebCore::QNetworkReplyControllableFactory::setFactory(new QNetworkReplyControllableFactoryReplay());
+    WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
 
     m_window->page()->currentFrame()->enableReplayUserEventMode();
 
@@ -101,6 +106,10 @@ void ReplayClientApplication::handleUserOptions()
 void ReplayClientApplication::slSchedulerDone()
 {
     if (m_isStopping == false) {
+
+        m_network->stop();
+        m_timeProvider->stop();
+        m_randomProvider->stop();
 
         uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
 

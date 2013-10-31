@@ -33,6 +33,7 @@
 #include <QList>
 
 #include "JavaScriptCore/runtime/timeprovider.h"
+#include "JavaScriptCore/runtime/randomprovider.h"
 
 class TimeProviderReplay : public JSC::TimeProviderDefault {
 
@@ -50,10 +51,54 @@ public:
         m_currentDescriptorString = QString();
     }
 
+    void stop() {
+        m_stopped = true;
+    }
+
 private:
+    bool m_stopped;
+
     typedef QList<double> LogEntries;
     typedef QHash<QString, LogEntries> Log;
     Log m_log;
+
+    QString m_currentDescriptorString;
+
+    void deserialize(QString logPath);
+};
+
+class RandomProviderReplay : public JSC::RandomProviderDefault {
+
+public:
+    RandomProviderReplay(QString logPath);
+
+    void attach();
+
+    double get();
+    unsigned getUint32();
+
+    void setCurrentDescriptorString(QString ident) {
+        m_currentDescriptorString = ident;
+    }
+
+    void unsetCurrentDescriptorString() {
+        m_currentDescriptorString = QString();
+    }
+
+    void stop() {
+        m_stopped = true;
+    }
+
+private:
+    bool m_stopped;
+
+    typedef QList<double> DLogEntries;
+    typedef QHash<QString, DLogEntries> DLog;
+    DLog m_double_log;
+
+    typedef QList<unsigned> ULogEntries;
+    typedef QHash<QString, ULogEntries> ULog;
+    ULog m_unsigned_log;
 
     QString m_currentDescriptorString;
 

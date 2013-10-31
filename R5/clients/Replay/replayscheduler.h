@@ -46,7 +46,7 @@ class ReplayScheduler : public QObject, public WebCore::Scheduler
     Q_OBJECT
 
 public:
-    ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider);
+    ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider);
     ~ReplayScheduler();
 
     void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
@@ -61,6 +61,7 @@ private:
 
     WebCore::EventActionSchedule* m_schedule;
     TimeProviderReplay* m_timeProvider;
+    RandomProviderReplay* m_randomProvider;
 
     unsigned int m_scheduleWaits;
 

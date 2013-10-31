@@ -230,7 +230,8 @@ SOURCES += \
     tools/CodeProfile.cpp \
     tools/CodeProfiling.cpp \
     yarr/YarrJIT.cpp \
-    runtime/timeprovider.cpp
+    runtime/timeprovider.cpp \
+    runtime/randomprovider.cpp
 
 *sh4* {
     QMAKE_CXXFLAGS += -mieee -w
@@ -257,4 +258,5 @@ lessThan(QT_GCC_MAJOR_VERSION, 5) {
 }
 
 HEADERS += \
-    runtime/timeprovider.h
+    runtime/timeprovider.h \
+    runtime/randomprovider.h

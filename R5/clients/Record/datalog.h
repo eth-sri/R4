@@ -31,6 +31,7 @@
 #include <QList>
 
 #include "JavaScriptCore/runtime/timeprovider.h"
+#include "JavaScriptCore/runtime/randomprovider.h"
 
 class TimeProviderRecord : public JSC::TimeProviderDefault {
 
@@ -49,6 +50,31 @@ private:
     typedef QList<double> LogEntries;
     typedef QHash<QString, LogEntries> Log;
     Log m_log;
+};
+
+class RandomProviderRecord : public JSC::RandomProviderDefault {
+
+public:
+    RandomProviderRecord()
+        : JSC::RandomProviderDefault()
+    {
+    }
+
+    void attach();
+
+    double get();
+    unsigned getUint32();
+
+    void writeLogFile(QString path);
+
+private:
+    typedef QList<double> DLogEntries;
+    typedef QHash<QString, DLogEntries> DLog;
+    DLog m_double_log;
+
+    typedef QList<unsigned> ULogEntries;
+    typedef QHash<QString, ULogEntries> ULog;
+    ULog m_unsigned_log;
 };
 
 #endif // DATALOG_H

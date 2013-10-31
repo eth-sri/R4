@@ -144,6 +144,7 @@ void ThreadTimers::sharedTimerFiredInternal()
 
         if (timer->eventActionDescriptor().isNull()) {
         	// Run the timer immediately.
+            std::cout << "FIRE DIRECT " << std::endl;
             fireTimerCallback(timer, timer->eventActionDescriptor());
         } else {
         	// Run the timer through the scheduler.

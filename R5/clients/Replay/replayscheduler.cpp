@@ -33,10 +33,11 @@
 
 #include "replayscheduler.h"
 
-ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider)
+ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider)
     : QObject(NULL)
     , Scheduler()
     , m_timeProvider(timeProvider)
+    , m_randomProvider(randomProvider)
     , m_scheduleWaits(0)
 {
     std::ifstream fp;
@@ -68,8 +69,10 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
     // try to execute this directly
     m_timeProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
+    m_randomProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
     bool found = eventActionRegister->runEventAction(nextToSchedule);
     m_timeProvider->unsetCurrentDescriptorString();
+    m_randomProvider->unsetCurrentDescriptorString();
 
     if (!found)
 
@@ -150,6 +153,11 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     if (found) {
         m_schedule->remove(0);
         m_scheduleWaits = 0;
+
+        if (m_schedule->isEmpty()) {
+            emit sigDone(); // send early warning that we are done, such that we can tell other replay subsystems that we are on unknown grounds
+        }
+
         return;
     }
 

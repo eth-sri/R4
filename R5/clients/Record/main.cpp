@@ -56,10 +56,12 @@ private:
 private:
     QString m_schedulePath;
     QString m_hbPath;
-    QString m_logPath;
+    QString m_logTimePath;
+    QString m_logRandomPath;
     QString m_url;
     QNetworkReplyControllableFactoryRecord* m_controllableFactory;
     TimeProviderRecord* m_timeProvider;
+    RandomProviderRecord* m_randomProvider;
     SpecificationScheduler* m_scheduler;
 
 public slots:
@@ -70,15 +72,18 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_schedulePath("/tmp/schedule.data")
     , m_hbPath("/tmp/happensbefore.data")
-    , m_logPath("/tmp/log.data")
+    , m_logTimePath("/tmp/log.time.data")
+    , m_logRandomPath("/tmp/log.random.data")
     , m_controllableFactory(new QNetworkReplyControllableFactoryRecord())
     , m_timeProvider(new TimeProviderRecord())
+    , m_randomProvider(new RandomProviderRecord())
     , m_scheduler(new SpecificationScheduler(m_controllableFactory))
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
 
     m_timeProvider->attach();
+    m_randomProvider->attach();
 
     WebCore::ThreadTimers::setScheduler(m_scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
@@ -153,7 +158,8 @@ void RecordClientApplication::slOnCloseEvent()
 
     // log
 
-    m_timeProvider->writeLogFile(m_logPath);
+    m_timeProvider->writeLogFile(m_logTimePath);
+    m_randomProvider->writeLogFile(m_logRandomPath);
 
     m_scheduler->stop();
     m_window->close();

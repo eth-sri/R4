@@ -54,37 +54,25 @@
 #include <limits.h>
 #include <wtf/StdLibExtras.h>
 
+#include "randomprovider.h"
+
 namespace JSC {
 
 class WeakRandom {
 public:
-    WeakRandom(unsigned seed)
-        : m_low(0 ^ 0x49616E42) // WebERA: Enforce a non-random seed, to reduce non-determinism in replay
-        , m_high(0)
+    WeakRandom(unsigned)
     {
     }
 
     double get()
     {
-        return advance() / (UINT_MAX + 1.0);
+        return RandomProvider::getInstance()->get();
     }
 
     unsigned getUint32()
     {
-        return advance();
+        return RandomProvider::getInstance()->getUint32();
     }
-
-private:
-    unsigned advance()
-    {
-        m_high = (m_high << 16) + (m_high >> 16);
-        m_high += m_low;
-        m_low += m_high;
-        return m_high;
-    }
-
-    unsigned m_low;
-    unsigned m_high;
 };
 
 } // namespace JSC
