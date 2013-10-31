@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#include <sstream>
+
 #include "config.h"
 #include "DOMWindow.h"
 
@@ -100,6 +102,10 @@
 #include <wtf/MathExtras.h>
 #include <wtf/text/WTFString.h>
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 #if ENABLE(REQUEST_ANIMATION_FRAME)
 #include "RequestAnimationFrameCallback.h"
 #endif
@@ -120,6 +126,14 @@ public:
         , m_targetOrigin(targetOrigin)
         , m_stackTrace(stackTrace)
     {
+        std::stringstream params;
+        params << PostMessageTimer::getSeqNumber();
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    "PostMessage",
+                    params.str());
+
+        setEventActionDescriptor(descriptor);
     }
 
     PassRefPtr<MessageEvent> event(ScriptExecutionContext* context)
@@ -144,7 +158,16 @@ private:
     OwnPtr<MessagePortChannelArray> m_channels;
     RefPtr<SecurityOrigin> m_targetOrigin;
     RefPtr<ScriptCallStack> m_stackTrace;
+
+    // WebERA:
+    static unsigned int getSeqNumber() {
+        return PostMessageTimer::m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
 };
+
+unsigned int PostMessageTimer::m_seqNumber = 0;
 
 typedef HashCountedSet<DOMWindow*> DOMWindowSet;
 
