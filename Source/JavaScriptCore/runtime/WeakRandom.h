@@ -66,13 +66,11 @@ public:
 
     double get()
     {
-        std::cout << "WEAKRANDOM::GET" << std::endl;
         return advance() / (UINT_MAX + 1.0);
     }
 
     unsigned getUint32()
     {
-        std::cout << "WEAKRANDOM::GETUINT32" << std::endl;
         return advance();
     }
 
