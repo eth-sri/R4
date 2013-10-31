@@ -23,6 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#include <iostream>
+#include <sstream>
 #include "config.h"
 #include "ScriptRunner.h"
 
@@ -32,7 +34,13 @@
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 namespace WebCore {
+
+unsigned int ScriptRunner::m_seqNumber = 0;
 
 ScriptRunner::ScriptRunner(Document* document)
     : m_document(document)
@@ -96,7 +104,20 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
         break;
     }
-    m_timer.startOneShot(0);
+
+    // WebERA:
+    if (!m_timer.isActive()) {
+
+        std::stringstream params;
+        params << ScriptRunner::getSeqNumber();
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    "ScriptRunner",
+                    params.str());
+
+        m_timer.setEventActionDescriptor(descriptor);
+        m_timer.startOneShot(0);
+    }
 }
 
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
@@ -109,8 +130,9 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
     scripts.swap(m_scriptsToExecuteSoon);
 
     size_t numInOrderScriptsToExecute = 0;
-    for (; numInOrderScriptsToExecute < m_scriptsToExecuteInOrder.size() && m_scriptsToExecuteInOrder[numInOrderScriptsToExecute].cachedScript()->isLoaded(); ++numInOrderScriptsToExecute)
+    for (; numInOrderScriptsToExecute < m_scriptsToExecuteInOrder.size() && m_scriptsToExecuteInOrder[numInOrderScriptsToExecute].cachedScript()->isLoaded(); ++numInOrderScriptsToExecute) {
         scripts.append(m_scriptsToExecuteInOrder[numInOrderScriptsToExecute]);
+    }
     if (numInOrderScriptsToExecute)
         m_scriptsToExecuteInOrder.remove(0, numInOrderScriptsToExecute);
 
@@ -121,6 +143,8 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
         toScriptElement(element.get())->execute(cachedScript);
         m_document->decrementLoadEventDelayCount();
     }
+
+    std::cout << "Executed " << size << " scripts " << std::endl;
 }
 
 }

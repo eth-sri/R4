@@ -64,6 +64,12 @@ private:
     Vector<PendingScript> m_scriptsToExecuteSoon; // http://www.whatwg.org/specs/web-apps/current-work/#set-of-scripts-that-will-execute-as-soon-as-possible
     HashMap<ScriptElement*, PendingScript> m_pendingAsyncScripts;
     Timer<ScriptRunner> m_timer;
+
+    static unsigned int getSeqNumber() {
+        return ScriptRunner::m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
 };
 
 }
