@@ -74,7 +74,8 @@ SOURCES += \
     bindings/generic/ActiveDOMCallback.cpp \
     bindings/generic/RuntimeEnabledFeatures.cpp \
     platform/schedule/Scheduler.cpp \
-    platform/schedule/EventActionRegister.cpp
+    platform/schedule/EventActionRegister.cpp \
+    dom/EventSender.cpp
 
 v8 {
     include($$PWD/../JavaScriptCore/yarr/yarr.pri)

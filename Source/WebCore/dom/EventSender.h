@@ -26,10 +26,29 @@
 #ifndef EventSender_h
 #define EventSender_h
 
+#include <wtf/ExportMacros.h>
+#include <wtf/text/WTFString.h>
+#include <wtf/text/CString.h>
+
+#include <sstream>
+
 #include "Timer.h"
 #include <wtf/Vector.h>
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
+
 namespace WebCore {
+
+class EventSenderSeqNumber {
+public:
+    static unsigned int getSeqNumber() {
+        return EventSenderSeqNumber::m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
+};
 
 template<typename T> class EventSender {
     WTF_MAKE_NONCOPYABLE(EventSender); WTF_MAKE_FAST_ALLOCATED;
@@ -66,8 +85,21 @@ template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
 template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
 {
     m_dispatchSoonList.append(sender);
-    if (!m_timer.isActive())
+    if (!m_timer.isActive()) {
+
+        // WebERA:
+
+        std::stringstream params;
+        params << m_eventType.string().ascii().data() << ",";
+        params << EventSenderSeqNumber::getSeqNumber();
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    "EventSender",
+                    params.str());
+
+        m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);
+    }
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)
