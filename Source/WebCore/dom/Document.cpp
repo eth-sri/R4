@@ -25,6 +25,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <sstream>
+
 #include "config.h"
 #include "Document.h"
 
@@ -165,6 +167,10 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
+
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
 
 #if ENABLE(SHARED_WORKERS)
 #include "SharedWorkerRepository.h"
@@ -5760,13 +5766,27 @@ void Document::addDocumentToFullScreenChangeEventQueue(Document* doc)
 }
 #endif
 
+unsigned int Document::m_seqNumber = 0;
+
 void Document::decrementLoadEventDelayCount()
 {
     ASSERT(m_loadEventDelayCount);
     --m_loadEventDelayCount;
 
-    if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive())
+    if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive()) {
+        // WebERA:
+
+        std::stringstream params;
+        params << url().string().ascii().data() << ",";
+        params << Document::getSeqNumber();
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    "LoadDocumentEvent",
+                    params.str());
+
+        m_loadEventDelayTimer.setEventActionDescriptor(descriptor);
         m_loadEventDelayTimer.startOneShot(0);
+    }
 }
 
 void Document::loadEventDelayTimerFired(Timer<Document>*)

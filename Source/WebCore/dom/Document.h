@@ -265,6 +265,16 @@ public:
     Element* getElementByAccessKey(const String& key);
     void invalidateAccessKeyMap();
 
+private:
+    // WebERA:
+    static unsigned int getSeqNumber() {
+        return Document::m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
+
+public:
+
     // DOM methods & attributes for Document
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);

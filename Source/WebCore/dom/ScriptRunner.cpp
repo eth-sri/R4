@@ -143,8 +143,6 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
         toScriptElement(element.get())->execute(cachedScript);
         m_document->decrementLoadEventDelayCount();
     }
-
-    std::cout << "Executed " << size << " scripts " << std::endl;
 }
 
 }
