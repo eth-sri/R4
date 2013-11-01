@@ -123,7 +123,7 @@ void ReplayClientApplication::slSchedulerDone()
         }
 
         std::cout << "Schedule executed successfully" << std::endl;
-        std::cout << "HTML-hash: " << htmlHash << std::endl; // TODO the hash should be constructed for each frame
+        std::cout << "HTML-hash: " << htmlHash << std::endl;
 
         m_window->close();
         m_isStopping = true;
