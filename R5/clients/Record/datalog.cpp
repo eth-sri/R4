@@ -76,8 +76,6 @@ void TimeProviderRecord::writeLogFile(QString path)
     out << m_log;
 
     fp.close();
-
-    std::cout << "WROTE LOG SIZE: " << m_log.size() << std::endl;
 }
 
 double RandomProviderRecord::get()

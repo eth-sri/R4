@@ -47,9 +47,7 @@ double TimeProviderReplay::currentTime()
     double time = JSC::TimeProviderDefault::currentTime();
 
     if (m_currentDescriptorString.isNull() || m_stopped) {
-        // show the correct time for all non-schedulable timers
-        std::cout << "UNCONTROLLED DATA" << std::endl;
-        ASSERT(false);
+        ASSERT(false); // dont allow non-deterministic input to uncontrolled event actions
         return time;
     }
 
@@ -93,8 +91,7 @@ double RandomProviderReplay::get()
     double random = JSC::RandomProviderDefault::get();
 
     if (m_currentDescriptorString.isNull() || m_stopped) {
-        std::cout << "UNCONTROLLED DATA" << std::endl;
-        ASSERT(false);
+        ASSERT(false); // dont allow non-deterministic input to uncontrolled event actions
         return random;
     }
 
@@ -112,8 +109,7 @@ unsigned RandomProviderReplay::getUint32()
     unsigned random = JSC::RandomProviderDefault::getUint32();
 
     if (m_currentDescriptorString.isNull() || m_stopped) {
-        std::cout << "UNCONTROLLED DATA" << std::endl;
-        ASSERT(false);
+        ASSERT(false); // dont allow non-deterministic input to uncontrolled event actions
         return random;
     }
 
