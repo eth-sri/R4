@@ -82,6 +82,13 @@ private:
     RefPtr<Event> m_deferredProgressEvent;
     Vector<RefPtr<Event> > m_deferredEvents;
     Timer<XMLHttpRequestProgressEventThrottle> m_dispatchDeferredEventsTimer;
+
+    // WebERA:
+    static unsigned int getSeqNumber() {
+        return XMLHttpRequestProgressEventThrottle::m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
 };
 
 } // namespace WebCore

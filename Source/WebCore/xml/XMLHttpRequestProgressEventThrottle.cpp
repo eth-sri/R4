@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sstream>
+
 #include "config.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
 
@@ -53,6 +55,8 @@ XMLHttpRequestProgressEventThrottle::~XMLHttpRequestProgressEventThrottle()
 {
 }
 
+unsigned int XMLHttpRequestProgressEventThrottle::m_seqNumber = 0;
+
 void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total)
 {
     if (m_deferEvents) {
@@ -71,11 +75,16 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
 
         dispatchEvent(XMLHttpRequestProgressEvent::create(eventNames().progressEvent, lengthComputable, loaded, total));
 
-        // TODO(WebERA) Select a better name for this timer
+        // WebERA:
+
+        std::stringstream params;
+        params << "BSE" << ",";
+        params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
+
         EventActionDescriptor descriptor =
                 threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
                     "XMLHttpRequestProgressEventThrottle",
-                    "BSE"
+                    params.str()
                 );
 
         setEventActionDescriptor(descriptor);
@@ -86,6 +95,13 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
                     descriptor);
 
         return;
+
+    } else {
+        // WebERA:
+
+        threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                    eventActionDescriptor());
     }
 
     // The timer is already active so minimumProgressEventDispatchingIntervalInSeconds is the least frequent event.
@@ -222,14 +238,20 @@ void XMLHttpRequestProgressEventThrottle::resume()
     // could insert new active DOM objects to the list.
     // m_deferEvents is kept true until all deferred events have been dispatched.
 
+    std::stringstream params;
+    params << "DEFERRED" << ",";
+    params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
+
     EventActionDescriptor descriptor =
             threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
                 "XMLHttpRequestProgressEventThrottle",
-                "DEFERRED"
+                params.str()
             );
 
     m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
     m_dispatchDeferredEventsTimer.startOneShot(0);
+
+    // TODO(WebERA): Should there be a happens before relation between the event suspending the request also?
 
     threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
                 threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
