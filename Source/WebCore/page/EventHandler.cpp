@@ -588,6 +588,7 @@ EventHandler::EventHandler(Frame* frame)
     , m_baseEventType(PlatformEvent::NoType)
     , m_deferredEventTimer(this, &EventHandler::deferredEventTimerFired)
 {
+    updateFakeMouseMoveEventTimerDescriptor();
 }
 
 EventHandler::~EventHandler()
@@ -2920,6 +2921,13 @@ void EventHandler::dispatchFakeMouseMoveEventSoon()
         if (!m_fakeMouseMoveEventTimer.isActive())
             m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveShortInterval);
     }
+
+    // WebERA:
+    // Add happens before relation to all events activating a fake mouse event
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                m_fakeMouseMoveEventTimer.eventActionDescriptor()
+    );
 }
 
 void EventHandler::dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad& quad)
@@ -2956,6 +2964,22 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
     IntPoint globalPoint = view->contentsToScreen(IntRect(view->windowToContents(m_currentMousePosition), IntSize())).location();
     PlatformMouseEvent fakeMouseMoveEvent(m_currentMousePosition, globalPoint, NoButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey, metaKey, currentTime());
     mouseMoved(fakeMouseMoveEvent);
+
+    updateFakeMouseMoveEventTimerDescriptor();
+}
+
+unsigned int EventHandler::m_seqNumber = 0;
+
+void EventHandler::updateFakeMouseMoveEventTimerDescriptor()
+{
+    std::stringstream params;
+    params << EventHandler::getSeqNumber();
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                "FakeMouseMoveEvent",
+                params.str());
+
+    m_fakeMouseMoveEventTimer.setEventActionDescriptor(descriptor);
 }
 
 void EventHandler::setResizingFrameSet(HTMLFrameSetElement* frameSet)

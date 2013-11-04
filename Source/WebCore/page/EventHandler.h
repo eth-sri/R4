@@ -285,6 +285,16 @@ public:
 #endif
 
 private:
+
+    // WebERA:
+
+    void updateFakeMouseMoveEventTimerDescriptor();
+
+    static unsigned int getSeqNumber() {
+        return m_seqNumber++;
+    }
+    static unsigned int m_seqNumber;
+
 #if ENABLE(DRAG_SUPPORT)
     static DragState& dragState();
     static const double TextDragDelay;
