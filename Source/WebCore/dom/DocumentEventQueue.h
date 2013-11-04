@@ -70,6 +70,13 @@ private:
     bool m_isClosed;
 
     friend class DocumentEventQueueTimer;    
+
+    // WebERA:
+    static unsigned int getSeqNumber() {
+        return DocumentEventQueue::m_seqNumber++;
+    }
+
+    static unsigned int m_seqNumber;
 };
 
 }

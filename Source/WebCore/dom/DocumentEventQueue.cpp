@@ -24,6 +24,7 @@
  *
  */
 
+#include <sstream>
 #include "config.h"
 #include "DocumentEventQueue.h"
 
@@ -34,6 +35,10 @@
 #include "RuntimeApplicationChecks.h"
 #include "ScriptExecutionContext.h"
 #include "SuspendableTimer.h"
+
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+#include <WebCore/eventaction/EventActionSchedule.h>
 
 namespace WebCore {
     
@@ -71,6 +76,8 @@ DocumentEventQueue::~DocumentEventQueue()
 {
 }
 
+unsigned int DocumentEventQueue::m_seqNumber = 0;
+
 bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
 {
     if (m_isClosed)
@@ -80,8 +87,26 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
     bool wasAdded = m_queuedEvents.add(event).isNewEntry;
     ASSERT_UNUSED(wasAdded, wasAdded); // It should not have already been in the list.
     
-    if (!m_pendingEventTimer->isActive())
+    if (!m_pendingEventTimer->isActive()) {
+
+        // WebERA:
+        // TODO(WebERA): Each event should be executed by its own timer and not as part of this group timer
+
+        std::stringstream params;
+        params << DocumentEventQueue::getSeqNumber();
+
+        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                    "DocumentEventQueue",
+                    params.str());
+
+        m_pendingEventTimer->setEventActionDescriptor(descriptor);
         m_pendingEventTimer->startOneShot(0);
+    }
+
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                m_pendingEventTimer->eventActionDescriptor()
+    );
 
     return true;
 }
