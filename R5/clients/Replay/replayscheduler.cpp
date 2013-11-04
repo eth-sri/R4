@@ -146,7 +146,11 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
             if (bestScore > 0) {
                 std::cout << "Fuzzy match of scheduler name, renaming " << nextToSchedule.toString() << " to " << bestDescriptor.toString() << std::endl;
+                m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
+                m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
                 found = eventActionRegister->runEventAction(bestDescriptor);
+                m_timeProvider->unsetCurrentDescriptorString();
+                m_randomProvider->unsetCurrentDescriptorString();
             }
     }
 
