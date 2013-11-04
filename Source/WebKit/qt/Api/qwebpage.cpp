@@ -1033,6 +1033,11 @@ void QWebPagePrivate::updateChangeFocusTimer()
                     params.str()
                 );
 
+        threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                    threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                    descriptor
+        );
+
         m_changeFocusTimer.setEventActionDescriptor(descriptor);
         m_changeFocusTimer.startOneShot(0);
     }

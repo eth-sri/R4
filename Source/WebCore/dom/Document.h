@@ -267,6 +267,8 @@ public:
 
 private:
     // WebERA:
+    void updateEventDelayTimerDescriptor();
+
     static unsigned int getSeqNumber() {
         return Document::m_seqNumber++;
     }

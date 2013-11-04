@@ -558,6 +558,9 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     m_docID = docID++;
     
     InspectorCounters::incrementCounter(InspectorCounters::DocumentCounter);
+
+    // WebERA:
+    updateEventDelayTimerDescriptor(); // make sure that the timer is initialized with a descriptor
 }
 
 static void histogramMutationEventUsage(const unsigned short& listenerTypes)
@@ -5773,18 +5776,14 @@ void Document::decrementLoadEventDelayCount()
     ASSERT(m_loadEventDelayCount);
     --m_loadEventDelayCount;
 
+    // WebERA:
+    // Create happens before relations for all events modifying the counter for the next load event
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                m_loadEventDelayTimer.eventActionDescriptor()
+    );
+
     if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive()) {
-        // WebERA:
-
-        std::stringstream params;
-        params << url().string().ascii().data() << ",";
-        params << Document::getSeqNumber();
-
-        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "LoadDocumentEvent",
-                    params.str());
-
-        m_loadEventDelayTimer.setEventActionDescriptor(descriptor);
         m_loadEventDelayTimer.startOneShot(0);
     }
 }
@@ -5793,6 +5792,23 @@ void Document::loadEventDelayTimerFired(Timer<Document>*)
 {
     if (frame())
         frame()->loader()->checkCompleted();
+
+    updateEventDelayTimerDescriptor();
+}
+
+void Document::updateEventDelayTimerDescriptor()
+{
+    // WebERA:
+
+    std::stringstream params;
+    params << url().string().ascii().data() << ",";
+    params << Document::getSeqNumber();
+
+    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
+                "LoadDocumentEvent",
+                params.str());
+
+    m_loadEventDelayTimer.setEventActionDescriptor(descriptor);
 }
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)

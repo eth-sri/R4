@@ -100,6 +100,13 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
         m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);
     }
+
+    // WebERA:
+    // Always set a happens before relation with the current timer, since the timers execution now depends on this event
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                m_timer.eventActionDescriptor()
+    );
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)

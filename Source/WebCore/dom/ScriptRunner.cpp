@@ -118,6 +118,13 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);
     }
+
+    // WebERA:
+    // Add happens before relation to all events adding scripts to the next script runner event
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                m_timer.eventActionDescriptor()
+    );
 }
 
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
