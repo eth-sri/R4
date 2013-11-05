@@ -34,7 +34,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
 #include <string>

@@ -109,7 +109,7 @@
 
 #include <WebCore/platform/ThreadTimers.h>
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
 #include <iostream>

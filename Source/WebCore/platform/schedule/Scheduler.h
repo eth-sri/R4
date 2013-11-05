@@ -29,7 +29,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
 
-#include "eventaction/EventActionDescriptor.h"
+#include "wtf/EventActionDescriptor.h"
 
 namespace WebCore {
 

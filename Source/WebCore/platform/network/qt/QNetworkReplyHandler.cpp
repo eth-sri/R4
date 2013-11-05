@@ -39,7 +39,7 @@
 #include <QNetworkReply>
 #include <QNetworkCookie>
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
 #include <wtf/text/CString.h>

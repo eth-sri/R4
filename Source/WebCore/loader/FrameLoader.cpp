@@ -106,7 +106,7 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
 #if ENABLE(SHARED_WORKERS)

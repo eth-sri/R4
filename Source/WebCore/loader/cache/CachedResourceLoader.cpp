@@ -54,7 +54,7 @@
 
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <wtf/EventActionSchedule.h>
 
 #if ENABLE(VIDEO_TRACK)
 #include "CachedTextTrack.h"

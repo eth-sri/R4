@@ -40,7 +40,7 @@
 
 #include <string>
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WebCore {
 

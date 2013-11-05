@@ -28,8 +28,7 @@
 
 #include <wtf/Noncopyable.h>
 #include <wtf/Threading.h>
-
-#include <eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WebCore {
 

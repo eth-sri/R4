@@ -42,9 +42,9 @@
 #include <QFontDatabase>
 #include <QString>
 
-#include <WebCore/eventaction/EventActionSchedule.h>
-#include <WebCore/eventaction/EventActionHB.h>
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionSchedule.h>
+#include <wtf/EventActionHB.h>
+#include <wtf/EventActionDescriptor.h>
 
 WebCore::EventActionsHB* readHappensBeforeData(const std::string& filepath)
 {

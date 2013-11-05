@@ -168,7 +168,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
 #if ENABLE(SHARED_WORKERS)

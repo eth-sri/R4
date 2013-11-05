@@ -1216,8 +1216,6 @@ SOURCES += \
     platform/UUID.cpp \
     platform/Widget.cpp \
     platform/PlatformStrategies.cpp \
-    eventaction/EventActionSchedule.cpp \
-    eventaction/EventActionDescriptor.cpp \
     plugins/IFrameShimSupport.cpp \
     plugins/PluginDatabase.cpp \
     plugins/PluginDebug.cpp \
@@ -2393,8 +2391,6 @@ HEADERS += \
     platform/Widget.h \
     platform/PlatformStrategies.h \
     platform/LocalizedStrings.h \
-    eventaction/EventActionSchedule.h \
-    eventaction/EventActionDescriptor.h \
     plugins/DOMMimeTypeArray.h \
     plugins/DOMMimeType.h \
     plugins/DOMPluginArray.h \

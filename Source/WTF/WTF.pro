@@ -161,7 +161,9 @@ HEADERS += \
     VMTags.h \
     WTFThreadData.h \
     wtf/ActionLog.h \
-    wtf/ActionLogReport.h
+    wtf/ActionLogReport.h \
+    wtf/EventActionSchedule.h \
+    wtf/EventActionDescriptor.h
 
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
@@ -218,7 +220,9 @@ SOURCES += \
     unicode/icu/CollatorICU.cpp \
     unicode/UTF8.cpp \
     wtf/ActionLog.cpp \
-    wtf/ActionLogReport.cpp
+    wtf/ActionLogReport.cpp \
+    wtf/EventActionSchedule.cpp \
+    wtf/EventActionDescriptor.cpp
 
 unix: SOURCES += \
     OSAllocatorPosix.cpp \

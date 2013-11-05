@@ -45,7 +45,7 @@
 
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <wtf/EventActionSchedule.h>
 
 #include <wtf/ActionLogReport.h>
 

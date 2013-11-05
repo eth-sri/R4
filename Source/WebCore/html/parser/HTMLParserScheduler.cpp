@@ -31,12 +31,12 @@
 #include "HTMLDocumentParser.h"
 #include "Page.h"
 
-#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <wtf/EventActionSchedule.h>
 
 #include <iostream>
 #include <string>

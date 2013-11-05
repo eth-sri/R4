@@ -32,8 +32,8 @@
 #include <WebCore/platform/Timer.h>
 #include <WebCore/platform/schedule/Scheduler.h>
 
-#include "eventaction/EventActionSchedule.h"
-#include "eventaction/EventActionDescriptor.h"
+#include "wtf/EventActionSchedule.h"
+#include "wtf/EventActionDescriptor.h"
 
 #include "network.h"
 

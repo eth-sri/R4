@@ -36,7 +36,7 @@
 #include <platform/schedule/Scheduler.h>
 
 #include "schedule/EventActionRegister.h"
-#include "eventaction/EventActionSchedule.h"
+#include "wtf/EventActionSchedule.h"
 
 namespace WebCore {
 

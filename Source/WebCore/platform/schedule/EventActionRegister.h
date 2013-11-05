@@ -10,8 +10,8 @@
 
 #include <vector>
 
-#include "eventaction/EventActionDescriptor.h"
-#include "eventaction/EventActionSchedule.h"
+#include "wtf/EventActionDescriptor.h"
+#include "wtf/EventActionSchedule.h"
 
 #include "wtf/ActionLogReport.h"
 
