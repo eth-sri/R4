@@ -31,9 +31,11 @@
 
 #include "SourceProviderCache.h"
 #include "UString.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/UnusedParam.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/TextPosition.h>
 
 namespace JSC {
@@ -46,6 +48,7 @@ namespace JSC {
             , m_validated(false)
             , m_cache(cache ? cache : new SourceProviderCache)
             , m_cacheOwned(!cache)
+            , m_actionLogJsId(-1)
         {
             turnOffVerifier();
         }
@@ -69,6 +72,13 @@ namespace JSC {
         SourceProviderCache* cache() const { return m_cache; }
         void notifyCacheSizeChanged(int delta) { if (!m_cacheOwned) cacheSizeChanged(delta); }
         
+        // SRL: Utility to log the JavaScript source.
+        int actionLogJsId() {
+        	if (m_actionLogJsId != -1) return m_actionLogJsId;
+        	if (data() == NULL) return -1;
+        	m_actionLogJsId = ActionLogRegisterSource(String(data()->characters(), data()->length()).utf8().data());
+        	return m_actionLogJsId;
+        }
     private:
         virtual void cacheSizeChanged(int delta) { UNUSED_PARAM(delta); }
 
@@ -77,6 +87,7 @@ namespace JSC {
         bool m_validated;
         SourceProviderCache* m_cache;
         bool m_cacheOwned;
+        int m_actionLogJsId;
     };
 
     class UStringSourceProvider : public SourceProvider {

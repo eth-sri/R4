@@ -411,7 +411,9 @@ namespace JSC {
     inline JSCell::JSCell(JSGlobalData& globalData, Structure* structure)
         : m_classInfo(structure->classInfo())
         , m_structure(globalData, this, structure)
+        , m_cellIndex(++m_numCells)
     {
+
     }
 
     inline void JSCell::finishCreation(JSGlobalData& globalData, Structure* structure, CreatingEarlyCellTag)

@@ -166,7 +166,15 @@ namespace JSC {
     public:
         Interpreter();
         ~Interpreter();
-        
+
+        static void MemoryValue(ExecState* exec, const JSValue& val);
+        static void DeclareJSCellMemoryWrite(JSCell* cell, const char* field);
+
+        // SRL: Pointers to functions for getting DOM object pointers from JS wrappers.
+        typedef void* (*JSPointerHandler)(void*);
+        static JSPointerHandler m_jsDomNodeUnwrapper;
+        static JSPointerHandler m_jsWindowUnwrapper;
+
         void initialize(LLInt::Data*, bool canUseJIT);
 
         RegisterFile& registerFile() { return m_registerFile; }

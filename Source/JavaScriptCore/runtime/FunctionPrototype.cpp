@@ -149,6 +149,13 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncApply(ExecState* exec)
             for (unsigned i = 0; i < length; ++i)
                 applyArgs.append(asObject(array)->get(exec, i));
         }
+
+        // SRL: Report array reads.
+        ActionLogScope scope("function:apply");
+        ActionLogReportArrayReadLen(asObject(array)->getCellIndex());
+        for (size_t k = 0; k < applyArgs.size(); k++) {
+        	ActionLogReportArrayReadScan(asObject(array)->getCellIndex(), k);
+    	}
     }
     
     return JSValue::encode(call(exec, thisValue, callType, callData, exec->argument(0), applyArgs));

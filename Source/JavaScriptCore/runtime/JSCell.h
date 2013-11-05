@@ -139,6 +139,10 @@ namespace JSC {
             return &m_structure;
         }
 
+        size_t getCellIndex() const {
+        	return m_cellIndex;
+        }
+
 #if ENABLE(GC_VALIDATION)
         Structure* unvalidatedStructure() { return m_structure.unvalidatedGet(); }
 #endif
@@ -168,9 +172,12 @@ namespace JSC {
         
         const ClassInfo* m_classInfo;
         WriteBarrier<Structure> m_structure;
+        size_t m_cellIndex;
+
+        static size_t m_numCells;  // Total number of cells allocated so far.
     };
 
-    inline JSCell::JSCell(CreatingEarlyCellTag)
+    inline JSCell::JSCell(CreatingEarlyCellTag) : m_cellIndex(++m_numCells)
     {
     }
 

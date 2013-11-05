@@ -427,6 +427,8 @@ void JSGlobalObject::addStaticGlobals(GlobalPropertyInfo* globals, int count)
         int index = symbolTable().size();
         SymbolTableEntry newEntry(index, global.attributes);
         symbolTable().add(global.identifier.impl(), newEntry);
+        // SRL: Keep the field name as string for the log.
+        symbolTable().addReverseEntry(index, global.identifier.ascii());
         registerAt(index).set(globalData(), this, global.value);
     }
 }

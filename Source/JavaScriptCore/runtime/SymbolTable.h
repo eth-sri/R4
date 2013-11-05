@@ -33,6 +33,9 @@
 #include "UString.h"
 #include <wtf/AlwaysInline.h>
 #include <wtf/HashTraits.h>
+#include <wtf/text/CString.h>
+
+#include <vector>
 
 namespace JSC {
 
@@ -118,7 +121,31 @@ namespace JSC {
         static const bool needsDestruction = false;
     };
 
-    typedef HashMap<RefPtr<StringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<StringImpl> >, SymbolTableIndexHashTraits> SymbolTable;
+    // SRL: To keep the field name as string for the log, we replace the defintion of SymbolTable.
+    // We WebKit interpreter replaces string identifier names with integer values and the SymbolTable keeps
+    // this mapping. Normally, no reverse lookup is needed, however our log includes the actual field names.
+    // That's why we also keep a reverse index in SymbolTable in addition to the HashMap.
+    //
+    // For this to work, any users inserting in the map need to call addReverseEntry() too.
+    class SymbolTable : public HashMap<RefPtr<StringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<StringImpl> >, SymbolTableIndexHashTraits> {
+    	WTF_MAKE_FAST_ALLOCATED;
+    public:
+    	void addReverseEntry(int index, const CString& entry) {
+    		while (index >= static_cast<int>(m_reverseData.size())) {
+    			m_reverseData.push_back(CString("?"));
+    		}
+    		m_reverseData[index] = entry;
+    	}
+
+    	const char* resolveReverseSymbolName(int index) {
+    		if (index < 0 || index >= static_cast<int>(m_reverseData.size())) return "?";
+    		return m_reverseData[index].data();
+    	}
+    private:
+    	std::vector<CString> m_reverseData;
+    };
+
+    //typedef HashMap<RefPtr<StringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<StringImpl> >, SymbolTableIndexHashTraits> SymbolTable;
 
     class SharedSymbolTable : public SymbolTable, public RefCounted<SharedSymbolTable> {
         WTF_MAKE_FAST_ALLOCATED;
@@ -127,7 +154,7 @@ namespace JSC {
     private:
         SharedSymbolTable() { turnOffVerifier(); }
     };
-    
+
 } // namespace JSC
 
 #endif // SymbolTable_h

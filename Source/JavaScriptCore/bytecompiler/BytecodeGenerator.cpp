@@ -39,6 +39,7 @@
 #include "ScopeChain.h"
 #include "StrongInlines.h"
 #include "UString.h"
+#include <wtf/ActionLogReport.h>
 
 using namespace std;
 
@@ -201,6 +202,8 @@ bool BytecodeGenerator::addVar(const Identifier& ident, bool isConstant, Registe
     int index = m_calleeRegisters.size();
     SymbolTableEntry newEntry(index, isConstant ? ReadOnly : 0);
     SymbolTable::AddResult result = symbolTable().add(ident.impl(), newEntry);
+    // SRL: Keep the field name as string for the log.
+    symbolTable().addReverseEntry(index, ident.ascii());
 
     if (!result.isNewEntry) {
         r0 = &registerFor(result.iterator->second.getIndex());
@@ -218,6 +221,8 @@ int BytecodeGenerator::addGlobalVar(const Identifier& ident, bool isConstant)
     SymbolTable::AddResult result = symbolTable().add(ident.impl(), newEntry);
     if (!result.isNewEntry)
         index = result.iterator->second.getIndex();
+    // SRL: Keep the field name as string for the log.
+    symbolTable().addReverseEntry(index, ident.ascii());
     return index;
 }
 
@@ -228,7 +233,7 @@ void BytecodeGenerator::preserveLastVar()
 }
 
 BytecodeGenerator::BytecodeGenerator(ProgramNode* programNode, ScopeChainNode* scopeChain, SymbolTable* symbolTable, ProgramCodeBlock* codeBlock, CompilationKind compilationKind)
-    : m_shouldEmitDebugHooks(scopeChain->globalObject->debugger())
+    : m_shouldEmitDebugHooks(true)  // SRL: Always emit debug hooks for the action log. scopeChain->globalObject->debugger())
     , m_shouldEmitProfileHooks(scopeChain->globalObject->globalObjectMethodTable()->supportsProfiling(scopeChain->globalObject.get()))
     , m_shouldEmitRichSourceInfo(scopeChain->globalObject->globalObjectMethodTable()->supportsRichSourceInfo(scopeChain->globalObject.get()))
     , m_scopeChain(*scopeChain->globalData, scopeChain)
@@ -286,7 +291,11 @@ BytecodeGenerator::BytecodeGenerator(ProgramNode* programNode, ScopeChainNode* s
         FunctionBodyNode* function = functionStack[i];
         globalObject->removeDirect(*m_globalData, function->ident()); // Newly declared functions overwrite existing properties.
 
+        // SRL: Creating a function is a memory write.
+        ActionLogScope scope("declare_jsfunction");
+        Interpreter::DeclareJSCellMemoryWrite(globalObject, function->ident().ascii().data());
         JSValue value = JSFunction::create(exec, makeFunction(exec, function), scopeChain);
+        Interpreter::MemoryValue(exec, value);
         int index = addGlobalVar(function->ident(), false);
         globalObject->registerAt(index).set(*m_globalData, globalObject, value);
     }
@@ -299,7 +308,7 @@ BytecodeGenerator::BytecodeGenerator(ProgramNode* programNode, ScopeChainNode* s
 }
 
 BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, ScopeChainNode* scopeChain, SymbolTable* symbolTable, CodeBlock* codeBlock, CompilationKind)
-    : m_shouldEmitDebugHooks(scopeChain->globalObject->debugger())
+    : m_shouldEmitDebugHooks(true)  // SRL: Always emit debug hooks for the action log. scopeChain->globalObject->debugger())
     , m_shouldEmitProfileHooks(scopeChain->globalObject->globalObjectMethodTable()->supportsProfiling(scopeChain->globalObject.get()))
     , m_shouldEmitRichSourceInfo(scopeChain->globalObject->globalObjectMethodTable()->supportsRichSourceInfo(scopeChain->globalObject.get()))
     , m_scopeChain(*scopeChain->globalData, scopeChain)
@@ -460,7 +469,7 @@ BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, ScopeChainN
 }
 
 BytecodeGenerator::BytecodeGenerator(EvalNode* evalNode, ScopeChainNode* scopeChain, SymbolTable* symbolTable, EvalCodeBlock* codeBlock, CompilationKind)
-    : m_shouldEmitDebugHooks(scopeChain->globalObject->debugger())
+    : m_shouldEmitDebugHooks(true)  // SRL: Always emit debug hooks for the action log. scopeChain->globalObject->debugger())
     , m_shouldEmitProfileHooks(scopeChain->globalObject->globalObjectMethodTable()->supportsProfiling(scopeChain->globalObject.get()))
     , m_shouldEmitRichSourceInfo(scopeChain->globalObject->globalObjectMethodTable()->supportsRichSourceInfo(scopeChain->globalObject.get()))
     , m_scopeChain(*scopeChain->globalData, scopeChain)

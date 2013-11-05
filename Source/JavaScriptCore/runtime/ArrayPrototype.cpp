@@ -260,6 +260,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
     
+    // SRL: Report array scan
+    ActionLogScope scope("array:toString");
+    ActionLogReportArrayReadLen(thisObject->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
     // 2. Let func be the result of calling the [[Get]] internal method of array with argument "join".
     JSValue function = JSValue(thisObject).get(exec, exec->propertyNames().join);
 
@@ -358,6 +363,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToLocaleString(ExecState* exec)
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
+    // SRL: Report array scan
+    ActionLogScope scope("array:toLocaleString");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
     StringRecursionChecker checker(exec, thisObj);
     if (JSValue earlyReturnValue = checker.earlyReturnValue())
         return JSValue::encode(earlyReturnValue);
@@ -443,12 +453,20 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncConcat(ExecState* exec)
     JSValue curArg = thisValue.toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:concat");
+
     size_t i = 0;
     size_t argCount = exec->argumentCount();
     while (1) {
         if (curArg.inherits(&JSArray::s_info)) {
             unsigned length = curArg.get(exec, exec->propertyNames().length).toUInt32(exec);
             JSObject* curObject = curArg.toObject(exec);
+
+            ActionLogReportArrayReadLen(curObject->getCellIndex());
+            // SRL: Note. This may not report all conflicts in some cases.
+
             for (unsigned k = 0; k < length; ++k) {
                 JSValue v = getProperty(exec, curObject, k);
                 if (exec->hadException())
@@ -473,6 +491,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncConcat(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncPop(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
+
+    // SRL: Report array modification
+    if (thisValue.isCell()) {
+    	ActionLogScope scope("array:pop");
+    	ActionLogReportArrayModify(thisValue.asCell()->getCellIndex());
+    }
 
     if (isJSArray(thisValue))
         return JSValue::encode(asArray(thisValue)->pop(exec));
@@ -502,6 +526,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncPop(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncPush(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
+
+    // SRL: Report array modification
+    if (thisValue.isCell()) {
+    	ActionLogScope scope("array:push");
+    	ActionLogReportArrayModify(thisValue.asCell()->getCellIndex());
+    }
 
     if (isJSArray(thisValue) && exec->argumentCount() == 1) {
         JSArray* array = asArray(thisValue);
@@ -534,6 +564,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncPush(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncReverse(ExecState* exec)
 {
     JSObject* thisObj = exec->hostThisValue().toObject(exec);
+
+    // SRL: Report array modification
+    ActionLogScope scope("array:reverse");
+    ActionLogReportArrayModify(thisObj->getCellIndex());
+
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -572,6 +607,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncReverse(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncShift(ExecState* exec)
 {
     JSObject* thisObj = exec->hostThisValue().toObject(exec);
+
+    // SRL: Report array modification
+    ActionLogScope scope("array:shift");
+    ActionLogReportArrayModify(thisObj->getCellIndex());
+
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -605,6 +645,13 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncSlice(ExecState* exec)
     unsigned begin = argumentClampedIndexFromStartOrEnd(exec, 0, length);
     unsigned end = argumentClampedIndexFromStartOrEnd(exec, 1, length, length);
 
+    // SRL: Report array reads.
+    ActionLogScope scope("array:slice");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    for (unsigned k = begin; k < end; k++) {
+    	ActionLogReportArrayReadScan(thisObj->getCellIndex(), k);
+	}
+
     unsigned n = 0;
     for (unsigned k = begin; k < end; k++, n++) {
         JSValue v = getProperty(exec, thisObj, k);
@@ -620,6 +667,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncSlice(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncSort(ExecState* exec)
 {
     JSObject* thisObj = exec->hostThisValue().toObject(exec);
+
+    // SRL: Report array modification
+    ActionLogScope scope("array:sort");
+    ActionLogReportArrayModify(thisObj->getCellIndex());
+
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (!length || exec->hadException())
         return JSValue::encode(thisObj);
@@ -686,6 +738,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncSplice(ExecState* exec)
     // 15.4.4.12
 
     JSObject* thisObj = exec->hostThisValue().toObject(exec);
+
+    // SRL: Report array modification
+    ActionLogScope scope("array:splice");
+    ActionLogReportArrayModify(thisObj->getCellIndex());
+
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -745,6 +802,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncUnShift(ExecState* exec)
     // 15.4.4.13
 
     JSObject* thisObj = exec->hostThisValue().toObject(exec);
+
+    // SRL: Report array modification
+    ActionLogScope scope("array:unshift");
+    ActionLogReportArrayModify(thisObj->getCellIndex());
+
+
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -780,6 +843,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncFilter(ExecState* exec)
 
     JSValue applyThis = exec->argument(1);
     JSArray* resultArray = constructEmptyArray(exec);
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:filter");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
 
     unsigned filterIndex = 0;
     unsigned k = 0;
@@ -836,6 +904,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncMap(ExecState* exec)
     CallType callType = getCallData(function, callData);
     if (callType == CallTypeNone)
         return throwVMTypeError(exec);
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:map");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
 
     JSValue applyThis = exec->argument(1);
 
@@ -899,6 +972,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncEvery(ExecState* exec)
     if (callType == CallTypeNone)
         return throwVMTypeError(exec);
 
+    // SRL: Report array scan
+    ActionLogScope scope("array:every");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
+
     JSValue applyThis = exec->argument(1);
 
     JSValue result = jsBoolean(true);
@@ -957,6 +1036,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncForEach(ExecState* exec)
     if (callType == CallTypeNone)
         return throwVMTypeError(exec);
 
+    // SRL: Report array scan
+    ActionLogScope scope("array:foreach");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
+
     JSValue applyThis = exec->argument(1);
 
     unsigned k = 0;
@@ -1006,6 +1091,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncSome(ExecState* exec)
     CallType callType = getCallData(function, callData);
     if (callType == CallTypeNone)
         return throwVMTypeError(exec);
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:some");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
 
     JSValue applyThis = exec->argument(1);
 
@@ -1063,6 +1154,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncReduce(ExecState* exec)
     CallType callType = getCallData(function, callData);
     if (callType == CallTypeNone)
         return throwVMTypeError(exec);
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:reduce");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
 
     unsigned i = 0;
     JSValue rv;
@@ -1134,6 +1231,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncReduceRight(ExecState* exec)
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:reduceRight");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
 
     JSValue function = exec->argument(0);
     CallData callData;
@@ -1212,6 +1315,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncIndexOf(ExecState* exec)
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
+    // SRL: Report array scan
+    ActionLogScope scope("array:indexOf");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
     unsigned index = argumentClampedIndexFromStartOrEnd(exec, 1, length);
     JSValue searchElement = exec->argument(0);
     for (; index < length; ++index) {
@@ -1234,6 +1342,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncLastIndexOf(ExecState* exec)
     unsigned length = thisObj->get(exec, exec->propertyNames().length).toUInt32(exec);
     if (!length)
         return JSValue::encode(jsNumber(-1));
+
+    // SRL: Report array scan
+    ActionLogScope scope("array:lastIndexOf");
+    ActionLogReportArrayReadLen(thisObj->getCellIndex());
+    // SRL: Note. This may not report all conflicts in some cases.
+
 
     unsigned index = length - 1;
     if (exec->argumentCount() >= 2) {

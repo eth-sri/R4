@@ -65,6 +65,7 @@
 #include <stdio.h>
 #include <wtf/Threading.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/ActionLogReport.h>
 
 #if ENABLE(JIT)
 #include "JIT.h"
@@ -83,6 +84,87 @@ static int depth(CodeBlock* codeBlock, ScopeChainNode* sc)
         return 0;
     return sc->localDepth();
 }
+
+
+// SRL: Utility field for getting the corrrect pointer to a DOM object. The JS wrapper
+// is not the correct object when the object is part of the DOM.
+Interpreter::JSPointerHandler Interpreter::m_jsDomNodeUnwrapper = NULL;
+// SRL: Unwrapper for the Window object.
+Interpreter::JSPointerHandler Interpreter::m_jsWindowUnwrapper = NULL;
+
+namespace {
+
+// SRL: A utility function to log an access to a field of a JavaScript object.
+void JSCellFieldAccess(ActionLog::CommandType command, JSCell* cell, const char* field) {
+	if (Interpreter::m_jsWindowUnwrapper != NULL) {
+		cell = static_cast<JSCell*>(Interpreter::m_jsWindowUnwrapper(cell));
+	}
+	void* ptr = cell;
+	if (Interpreter::m_jsDomNodeUnwrapper != NULL) {
+		void* ptr1 = Interpreter::m_jsDomNodeUnwrapper(ptr);
+		if (ptr1 != ptr) {
+			ActionLogFormat(command, "DOMNode[%p].%s", ptr, field);
+			return;
+		}
+	}
+	ActionLogFormat(command, "%s[%d].%s",
+			cell->classInfo()->className, static_cast<int>(cell->getCellIndex()), field);
+}
+
+void FieldAccess(ActionLog::CommandType command, const JSValue& val, const char* field) {
+	if (!val.isCell()) return;
+	JSCellFieldAccess(command, val.asCell(), field);
+}
+
+
+}  // namespace
+
+// SRL: A utility function to log the memory value of a javascript value.
+void Interpreter::MemoryValue(ExecState* exec, const JSValue& val) {
+	if (!ActionLogWillAddCommand(ActionLog::MEMORY_VALUE)) {
+		// Do not log anything if the last operation wasn't a read or a write
+		// (for example no read/write was logged, because the memory location is repeated).
+		return;
+	}
+	if (val.isNull()) {
+		ActionLogReportMemoryValue("NULL");
+	} else if (val.isUndefined()) {
+		ActionLogReportMemoryValue("undefined");
+	} else if (val.isBoolean()) {
+		ActionLogReportMemoryValue(val.asBoolean() ? "true" : "false");
+	} else if (val.isInt32()) {
+		ActionLogFormat(ActionLog::MEMORY_VALUE, "%d", static_cast<int>(val.asInt32()));
+	} else if (val.isCell()) {
+		JSCell* cell = val.asCell();
+		if (cell->isString()) {
+			UString s = cell->getString(exec);
+			if (s.isNull()) {
+				ActionLogReportMemoryValue("null");  // For the strange case of null string, report it as "null".
+			} else {
+				ActionLogFormat(ActionLog::MEMORY_VALUE, "\"%s\"", s.utf8().data());
+			}
+		} else {
+			if (Interpreter::m_jsWindowUnwrapper != NULL) {
+				cell = static_cast<JSCell*>(Interpreter::m_jsWindowUnwrapper(cell));
+			}
+			void* ptr = cell;
+			if (Interpreter::m_jsDomNodeUnwrapper != NULL) {
+				void* ptr1 = Interpreter::m_jsDomNodeUnwrapper(ptr);
+				if (ptr1 != ptr) {
+					ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMNode[%p]", ptr);
+					return;
+				}
+			}
+			ActionLogFormat(ActionLog::MEMORY_VALUE, "%s[%d]",
+					cell->classInfo()->className, static_cast<int>(cell->getCellIndex()));
+		}
+	}
+}
+
+void Interpreter::DeclareJSCellMemoryWrite(JSCell* cell, const char* field) {
+	JSCellFieldAccess(ActionLog::WRITE_MEMORY, cell, field);
+}
+
 
 #if ENABLE(CLASSIC_INTERPRETER) 
 static NEVER_INLINE JSValue concatenateStrings(ExecState* exec, Register* strings, unsigned count)
@@ -106,10 +188,13 @@ NEVER_INLINE bool Interpreter::resolve(CallFrame* callFrame, Instruction* vPC, J
         JSObject* o = iter->get();
         PropertySlot slot(o);
         if (o->getPropertySlot(callFrame, ident, slot)) {
+        	JSCellFieldAccess(ActionLog::READ_MEMORY, o, ident.ascii().data());
             JSValue result = slot.getValue(callFrame, ident);
+
             exceptionValue = callFrame->globalData().exception;
             if (exceptionValue)
                 return false;
+            MemoryValue(callFrame, result);
             callFrame->uncheckedR(dst) = JSValue(result);
             return true;
         }
@@ -145,11 +230,13 @@ NEVER_INLINE bool Interpreter::resolveSkip(CallFrame* callFrame, Instruction* vP
         JSObject* o = iter->get();
         PropertySlot slot(o);
         if (o->getPropertySlot(callFrame, ident, slot)) {
+        	JSCellFieldAccess(ActionLog::READ_MEMORY, o, ident.ascii().data());
             JSValue result = slot.getValue(callFrame, ident);
             exceptionValue = callFrame->globalData().exception;
             if (exceptionValue)
                 return false;
             ASSERT(result);
+            MemoryValue(callFrame, result);
             callFrame->uncheckedR(dst) = JSValue(result);
             return true;
         }
@@ -176,10 +263,13 @@ NEVER_INLINE bool Interpreter::resolveGlobal(CallFrame* callFrame, Instruction* 
     Identifier& ident = codeBlock->identifier(property);
     PropertySlot slot(globalObject);
     if (globalObject->getPropertySlot(callFrame, ident, slot)) {
+    	// SRL: Log a read from a global variable.
+    	JSCellFieldAccess(ActionLog::READ_MEMORY, globalObject, ident.ascii().data());
         JSValue result = slot.getValue(callFrame, ident);
         if (slot.isCacheableValue() && !globalObject->structure()->isUncacheableDictionary() && slot.slotBase() == globalObject) {
             vPC[3].u.structure.set(callFrame->globalData(), codeBlock->ownerExecutable(), globalObject->structure());
             vPC[4] = slot.cachedOffset();
+            MemoryValue(callFrame, result);
             callFrame->uncheckedR(dst) = JSValue(result);
             return true;
         }
@@ -187,6 +277,7 @@ NEVER_INLINE bool Interpreter::resolveGlobal(CallFrame* callFrame, Instruction* 
         exceptionValue = callFrame->globalData().exception;
         if (exceptionValue)
             return false;
+        MemoryValue(callFrame, result);
         callFrame->uncheckedR(dst) = JSValue(result);
         return true;
     }
@@ -223,11 +314,13 @@ NEVER_INLINE bool Interpreter::resolveGlobalDynamic(CallFrame* callFrame, Instru
             do {
                 PropertySlot slot(o);
                 if (o->getPropertySlot(callFrame, ident, slot)) {
+                	JSCellFieldAccess(ActionLog::READ_MEMORY, o, ident.ascii().data());
                     JSValue result = slot.getValue(callFrame, ident);
                     exceptionValue = callFrame->globalData().exception;
                     if (exceptionValue)
                         return false;
                     ASSERT(result);
+                    MemoryValue(callFrame, result);
                     callFrame->uncheckedR(dst) = JSValue(result);
                     return true;
                 }
@@ -251,11 +344,14 @@ NEVER_INLINE bool Interpreter::resolveGlobalDynamic(CallFrame* callFrame, Instru
     Identifier& ident = codeBlock->identifier(property);
     PropertySlot slot(globalObject);
     if (globalObject->getPropertySlot(callFrame, ident, slot)) {
+    	// SRL: Log a read from a global variable.
+    	JSCellFieldAccess(ActionLog::READ_MEMORY, globalObject, ident.ascii().data());
         JSValue result = slot.getValue(callFrame, ident);
         if (slot.isCacheableValue() && !globalObject->structure()->isUncacheableDictionary() && slot.slotBase() == globalObject) {
             vPC[3].u.structure.set(callFrame->globalData(), codeBlock->ownerExecutable(), globalObject->structure());
             vPC[4] = slot.cachedOffset();
             ASSERT(result);
+            MemoryValue(callFrame, result);
             callFrame->uncheckedR(dst) = JSValue(result);
             return true;
         }
@@ -264,6 +360,7 @@ NEVER_INLINE bool Interpreter::resolveGlobalDynamic(CallFrame* callFrame, Instru
         if (exceptionValue)
             return false;
         ASSERT(result);
+        MemoryValue(callFrame, result);
         callFrame->uncheckedR(dst) = JSValue(result);
         return true;
     }
@@ -307,10 +404,12 @@ NEVER_INLINE bool Interpreter::resolveBaseAndProperty(CallFrame* callFrame, Inst
         base = iter->get();
         PropertySlot slot(base);
         if (base->getPropertySlot(callFrame, ident, slot)) {
+        	JSCellFieldAccess(ActionLog::READ_MEMORY, base, ident.ascii().data());
             JSValue result = slot.getValue(callFrame, ident);
             exceptionValue = callFrame->globalData().exception;
             if (exceptionValue)
                 return false;
+            MemoryValue(callFrame, result);
             callFrame->uncheckedR(propDst) = JSValue(result);
             callFrame->uncheckedR(baseDst) = JSValue(base);
             return true;
@@ -344,10 +443,12 @@ NEVER_INLINE bool Interpreter::resolveThisAndProperty(CallFrame* callFrame, Inst
         ++iter;
         PropertySlot slot(base);
         if (base->getPropertySlot(callFrame, ident, slot)) {
+        	JSCellFieldAccess(ActionLog::READ_MEMORY, base, ident.ascii().data());
             JSValue result = slot.getValue(callFrame, ident);
             exceptionValue = callFrame->globalData().exception;
             if (exceptionValue)
                 return false;
+            MemoryValue(callFrame, result);
             callFrame->uncheckedR(propDst) = JSValue(result);
             // All entries on the scope chain should be EnvironmentRecords (activations etc),
             // other then 'with' object, which are directly referenced from the scope chain,
@@ -1634,6 +1735,49 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
 
 NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookID debugHookID, int firstLine, int lastLine)
 {
+	// SRL: Put hooks for start/end of functions. Log scopes for these cases.
+	switch (debugHookID) {
+	case WillExecuteProgram: {
+		int lineOffset = callFrame->codeBlock()->source()->startPosition().m_line.zeroBasedInt();
+		const UString& url = callFrame->codeBlock()->source()->url();
+		ActionLogFormat(ActionLog::ENTER_SCOPE,
+				"Exec (fn=%d #%d) line %d-%d %s [[function:%p]]",
+						callFrame->calleeAsValue() ?
+								static_cast<int>(asObject(callFrame->calleeAsValue())->getCellIndex()) : -1,
+						callFrame->codeBlock()->source()->actionLogJsId(),
+						firstLine - lineOffset,
+						lastLine - lineOffset,
+						url.isNull() ? "?" : url.ascii().data(),
+						static_cast<void*>(callFrame->codeBlock()));
+        break;
+	}
+    case DidExecuteProgram: {
+    	ActionLogScopeEnd();
+    	break;
+    }
+    case DidEnterCallFrame: {
+//    	callFrame->codeBlock()->dump(callFrame);
+    	int lineOffset = callFrame->codeBlock()->source()->startPosition().m_line.zeroBasedInt();
+    	const UString& url = callFrame->codeBlock()->source()->url();
+    	ActionLogFormat(ActionLog::ENTER_SCOPE,
+    			"Call (fn=%d #%d) line %d-%d %s [[function:%p]]",
+    					callFrame->calleeAsValue() ?
+    							static_cast<int>(asObject(callFrame->calleeAsValue())->getCellIndex()) : -1,
+    					callFrame->codeBlock()->source()->actionLogJsId(),
+    					firstLine - lineOffset,
+    					lastLine - lineOffset,
+    					url.isNull() ? "?" : url.ascii().data(),
+    					static_cast<void*>(callFrame->codeBlock()));
+    	break;
+    }
+    case WillLeaveCallFrame: {
+    	ActionLogScopeEnd();
+    	break;
+    }
+	}
+	return;
+	// SRL: Remove the remaining support for debugging.
+
     Debugger* debugger = callFrame->dynamicGlobalObject()->debugger();
     if (!debugger)
         return;
@@ -1928,6 +2072,13 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
 #else
 
     ASSERT(callFrame->globalData().topCallFrame == callFrame);
+
+    // SRL: Log beginning of JavaScript execution (from file or inline).
+    ActionLogScope logThisExecution(
+    		String::format("JS[%s]:%s",
+    				callFrame->codeBlock()->ownerExecutable()->sourceURL().isNull() ?
+    						"?" : callFrame->codeBlock()->ownerExecutable()->sourceURL().utf8().data(),
+    				codeTypeToString(callFrame->codeBlock()->codeType())).utf8().data());
 
     JSGlobalData* globalData = &callFrame->globalData();
     JSValue exceptionValue;
@@ -2876,6 +3027,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         ASSERT(scope->isGlobalObject());
         int index = vPC[2].u.operand;
 
+        // SRL: Log a global JS variable read.
+        JSCellFieldAccess(ActionLog::READ_MEMORY, scope, scope->symbolTable().resolveReverseSymbolName(index));
+        MemoryValue(callFrame, scope->registerAt(index).get());
         callFrame->uncheckedR(dst) = scope->registerAt(index).get();
         vPC += OPCODE_LENGTH(op_get_global_var);
         NEXT_INSTRUCTION();
@@ -2889,7 +3043,10 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         ASSERT(scope->isGlobalObject());
         int index = vPC[1].u.operand;
         int value = vPC[2].u.operand;
-        
+
+        // SRL: Log a global JS variable write.
+        JSCellFieldAccess(ActionLog::WRITE_MEMORY, scope, scope->symbolTable().resolveReverseSymbolName(index));
+        MemoryValue(callFrame, callFrame->r(value).jsValue());
         scope->registerAt(index).set(*globalData, scope, callFrame->r(value).jsValue());
         vPC += OPCODE_LENGTH(op_put_global_var);
         NEXT_INSTRUCTION();
@@ -2921,6 +3078,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         }
         ASSERT((*iter)->isVariableObject());
         JSVariableObject* scope = jsCast<JSVariableObject*>(iter->get());
+        // SRL: Log a read.
+        JSCellFieldAccess(ActionLog::READ_MEMORY, scope, scope->symbolTable().resolveReverseSymbolName(index));
+        MemoryValue(callFrame, scope->registerAt(index).get());
         callFrame->uncheckedR(dst) = scope->registerAt(index).get();
         ASSERT(callFrame->r(dst).jsValue());
         vPC += OPCODE_LENGTH(op_get_scoped_var);
@@ -2953,6 +3113,9 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         ASSERT((*iter)->isVariableObject());
         JSVariableObject* scope = jsCast<JSVariableObject*>(iter->get());
         ASSERT(callFrame->r(value).jsValue());
+        // SRL: Log a write.
+        JSCellFieldAccess(ActionLog::WRITE_MEMORY, scope, scope->symbolTable().resolveReverseSymbolName(index));
+        MemoryValue(callFrame, callFrame->r(value).jsValue());
         scope->registerAt(index).set(*globalData, scope, callFrame->r(value).jsValue());
         vPC += OPCODE_LENGTH(op_put_scoped_var);
         NEXT_INSTRUCTION();
@@ -2982,6 +3145,8 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         Identifier& ident = codeBlock->identifier(property);
         
         JSValue baseVal = callFrame->r(base).jsValue();
+        FieldAccess(ActionLog::READ_MEMORY, baseVal, ident.ascii().data());
+
         JSObject* baseObject = asObject(baseVal);
         PropertySlot slot(baseVal);
         if (!baseObject->getPropertySlot(callFrame, ident, slot)) {
@@ -3038,11 +3203,16 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
 
         Identifier& ident = codeBlock->identifier(property);
         JSValue baseValue = callFrame->r(base).jsValue();
+        // SRL: Log a JS object field read.
+        FieldAccess(ActionLog::READ_MEMORY, baseValue, ident.ascii().data());
         PropertySlot slot(baseValue);
         JSValue result = baseValue.get(callFrame, ident, slot);
         CHECK_FOR_EXCEPTION();
+        // SRL: Log the memory value.
+        MemoryValue(callFrame, result);
 
-        tryCacheGetByID(callFrame, codeBlock, vPC, baseValue, ident, slot);
+        // SRL: Do not cache further reads.
+        // tryCacheGetByID(callFrame, codeBlock, vPC, baseValue, ident, slot);
 
         callFrame->uncheckedR(dst) = result;
         vPC += OPCODE_LENGTH(op_get_by_id);
@@ -3344,9 +3514,13 @@ skip_id_custom_self:
 
         Identifier& ident = codeBlock->identifier(property);
         JSValue baseValue = callFrame->r(base).jsValue();
+        // SRL: Log a JS object field read.
+        FieldAccess(ActionLog::READ_MEMORY, baseValue, ident.ascii().data());
         PropertySlot slot(baseValue);
         JSValue result = baseValue.get(callFrame, ident, slot);
         CHECK_FOR_EXCEPTION();
+        // SRL: Log the memory value read.
+        MemoryValue(callFrame, result);
 
         callFrame->uncheckedR(dst) = result;
         vPC += OPCODE_LENGTH(op_get_by_id_generic);
@@ -3528,6 +3702,10 @@ skip_id_custom_self:
 
         JSValue baseValue = callFrame->r(base).jsValue();
         Identifier& ident = codeBlock->identifier(property);
+        // SRL: Log a JS object field write.
+        FieldAccess(ActionLog::WRITE_MEMORY, baseValue, ident.ascii().data());
+        // SRL: Log the written memory value.
+        MemoryValue(callFrame, callFrame->r(value).jsValue());
         PutPropertySlot slot(codeBlock->isStrictMode());
         if (direct) {
             ASSERT(baseValue.isObject());
@@ -3536,7 +3714,8 @@ skip_id_custom_self:
             baseValue.put(callFrame, ident, callFrame->r(value).jsValue(), slot);
         CHECK_FOR_EXCEPTION();
 
-        tryCachePutByID(callFrame, codeBlock, vPC, baseValue, slot);
+        // SRL: Do not cache further writes.
+        // tryCachePutByID(callFrame, codeBlock, vPC, baseValue, slot);
 
         vPC += OPCODE_LENGTH(op_put_by_id);
         NEXT_INSTRUCTION();
@@ -3649,6 +3828,9 @@ skip_id_custom_self:
 
         JSValue baseValue = callFrame->r(base).jsValue();
         Identifier& ident = codeBlock->identifier(property);
+        // SRL: Log a write to the field.
+        FieldAccess(ActionLog::WRITE_MEMORY, baseValue, ident.ascii().data());
+        MemoryValue(callFrame, callFrame->r(value).jsValue());
         PutPropertySlot slot(codeBlock->isStrictMode());
         if (direct) {
             ASSERT(baseValue.isObject());
@@ -3674,6 +3856,11 @@ skip_id_custom_self:
 
         JSObject* baseObj = callFrame->r(base).jsValue().toObject(callFrame);
         Identifier& ident = codeBlock->identifier(property);
+        // SRL: Log a JS object field write for field deletion.
+        FieldAccess(ActionLog::WRITE_MEMORY, callFrame->r(base).jsValue(), ident.ascii().data());
+        if (ActionLogWillAddCommand(ActionLog::MEMORY_VALUE)) {
+        	ActionLogReportMemoryValue("undefined");
+        }
         bool result = baseObj->methodTable()->deleteProperty(baseObj, callFrame, ident);
         if (!result && codeBlock->isStrictMode()) {
             exceptionValue = createTypeError(callFrame, "Unable to delete property.");
@@ -3706,9 +3893,13 @@ skip_id_custom_self:
         }
         {
             Identifier propertyName(callFrame, subscript.toString(callFrame)->value(callFrame));
+            // SRL: Log a JS object field read.
+            FieldAccess(ActionLog::READ_MEMORY, baseValue, propertyName.ascii().data());
             result = baseValue.get(callFrame, propertyName);
         }
         CHECK_FOR_EXCEPTION();
+        // SRL: Log the memory value read.
+        MemoryValue(callFrame, result);
         callFrame->uncheckedR(dst) = result;
         vPC += OPCODE_LENGTH(op_get_by_pname);
         NEXT_INSTRUCTION();
@@ -3777,9 +3968,18 @@ skip_id_custom_self:
                 result = asString(baseValue)->getIndex(callFrame, i);
             else
                 result = baseValue.get(callFrame, i);
+            // SRL: Log a JS array write.
+            if (baseValue.isCell()) {
+            	ActionLogReportArrayRead(baseValue.asCell()->getCellIndex(), i);
+            	MemoryValue(callFrame, result);
+            }
         } else {
             Identifier property(callFrame, subscript.toString(callFrame)->value(callFrame));
+            // SRL: Log a JS object field read.
+            FieldAccess(ActionLog::READ_MEMORY, baseValue, property.ascii().data());
             result = baseValue.get(callFrame, property);
+            // SRL: Log the memory value read.
+            MemoryValue(callFrame, result);
         }
 
         CHECK_FOR_EXCEPTION();
@@ -3815,9 +4015,18 @@ skip_id_custom_self:
                     jsArray->JSArray::putByIndex(jsArray, callFrame, i, callFrame->r(value).jsValue(), codeBlock->isStrictMode());
             } else
                 baseValue.putByIndex(callFrame, i, callFrame->r(value).jsValue(), codeBlock->isStrictMode());
+            // SRL: Log a JS array write.
+            if (baseValue.isCell()) {
+            	ActionLogReportArrayWrite(baseValue.asCell()->getCellIndex(), i);
+            	MemoryValue(callFrame, callFrame->r(value).jsValue());
+            }
         } else {
             Identifier property(callFrame, subscript.toString(callFrame)->value(callFrame));
             if (!globalData->exception) { // Don't put to an object if toString threw an exception.
+            	// SRL: Log a JS object field write.
+            	FieldAccess(ActionLog::WRITE_MEMORY, baseValue, property.ascii().data());
+                // SRL: Log the written memory value.
+                MemoryValue(callFrame, callFrame->r(value).jsValue());
                 PutPropertySlot slot(codeBlock->isStrictMode());
                 baseValue.put(callFrame, property, callFrame->r(value).jsValue(), slot);
             }
@@ -3844,12 +4053,22 @@ skip_id_custom_self:
         JSValue subscript = callFrame->r(property).jsValue();
         bool result;
         uint32_t i;
-        if (subscript.getUInt32(i))
+        if (subscript.getUInt32(i)) {
             result = baseObj->methodTable()->deletePropertyByIndex(baseObj, callFrame, i);
-        else {
+            // SRL: Log a JS array write.
+           	ActionLogReportArrayWrite(baseObj->getCellIndex(), i);
+            if (ActionLogWillAddCommand(ActionLog::MEMORY_VALUE)) {
+            	ActionLogReportMemoryValue("undefined");
+            }
+        } else {
             CHECK_FOR_EXCEPTION();
             Identifier property(callFrame, subscript.toString(callFrame)->value(callFrame));
             CHECK_FOR_EXCEPTION();
+            // SRL: Log a JS object field write.
+            FieldAccess(ActionLog::WRITE_MEMORY, callFrame->r(base).jsValue(), property.ascii().data());
+            if (ActionLogWillAddCommand(ActionLog::MEMORY_VALUE)) {
+            	ActionLogReportMemoryValue("undefined");
+            }
             result = baseObj->methodTable()->deleteProperty(baseObj, callFrame, property);
         }
         if (!result && codeBlock->isStrictMode()) {

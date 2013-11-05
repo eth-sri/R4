@@ -33,6 +33,8 @@ namespace JSC {
 
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(JSCell);
 
+size_t JSCell::m_numCells = 0;
+
 void JSCell::destroy(JSCell* cell)
 {
     cell->JSCell::~JSCell();
