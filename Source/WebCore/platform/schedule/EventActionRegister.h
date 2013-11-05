@@ -13,6 +13,8 @@
 #include "eventaction/EventActionDescriptor.h"
 #include "eventaction/EventActionSchedule.h"
 
+#include "wtf/ActionLogReport.h"
+
 namespace WebCore {
 
 typedef bool (*EventActionHandlerFunction)(void* object, const EventActionDescriptor& descriptor);
@@ -52,14 +54,11 @@ public:
     const EventActionDescriptor& currentEventActionDispatching() const
     {
         if (m_isDispatching) {
-            return m_dispatchHistory->isEmpty() ? EventActionDescriptor::null : m_dispatchHistory->last();
+            return m_dispatchHistory->isEmpty() ? EventActionDescriptor::null : m_dispatchHistory->last().second;
         }
 
         return EventActionDescriptor::null;
     }
-
-    // Allocates event descriptors giving them sequential IDs
-    EventActionDescriptor allocateEventDescriptor(const std::string& type, const std::string& params);
 
     EventActionSchedule* dispatchHistory() { return m_dispatchHistory; }
 
@@ -69,11 +68,11 @@ public:
 
 private:
 
-    void eventActionDispatchStart(const EventActionDescriptor& descriptor)
+    void eventActionDispatchStart(unsigned long id, const EventActionDescriptor& descriptor)
     {
         ASSERT(!m_isDispatching);
 
-        m_dispatchHistory->append(descriptor);
+        m_dispatchHistory->append(EventActionScheduleItem(id, descriptor));
         m_isDispatching = true;
     }
 

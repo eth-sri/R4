@@ -47,6 +47,8 @@
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/eventaction/EventActionSchedule.h>
 
+#include <wtf/ActionLogReport.h>
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -334,8 +336,9 @@ void HTMLDocumentParser::insert(const SegmentedString& source)
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "Network") == 0) {
-        m_lastNetworkEventAction = descriptor;
+
+    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
+        ActionLogTriggerEvent(m_parserScheduler->getTimer());
     }
 
     if (isStopped())
@@ -367,8 +370,9 @@ void HTMLDocumentParser::append(const SegmentedString& source)
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "Network") == 0) {
-        m_lastNetworkEventAction = descriptor;
+
+    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
+        ActionLogTriggerEvent(m_parserScheduler->getTimer());
     }
 
     if (isStopped())
@@ -452,8 +456,8 @@ void HTMLDocumentParser::finish()
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "Network") == 0) {
-        m_lastNetworkEventAction = descriptor;
+    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
+        ActionLogTriggerEvent(m_parserScheduler->getTimer());
     }
 
     // FIXME: We should ASSERT(!m_parserStopped) here, since it does not
@@ -510,8 +514,8 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "Network") == 0) {
-        m_lastNetworkEventAction = descriptor;
+    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
+        ActionLogTriggerEvent(m_parserScheduler->getTimer());
     }
 
     ASSERT(!isExecutingScript());
@@ -548,8 +552,8 @@ void HTMLDocumentParser::notifyFinished(CachedResource* cachedResource)
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "Network") == 0) {
-        m_lastNetworkEventAction = descriptor;
+    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
+        ActionLogTriggerEvent(m_parserScheduler->getTimer());
     }
 
     // pumpTokenizer can cause this parser to be detached from the Document,

@@ -39,9 +39,8 @@
 #include <QNetworkReply>
 #include <QNetworkCookie>
 
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
-#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 #include <wtf/text/CString.h>
 
@@ -318,7 +317,6 @@ QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReply* reply, QObje
     , m_sequenceNumber(0)
     , m_nextSnapshotUpdateTimerRunning(false)
     , m_nextSnapshotUpdateTimer(this, &QNetworkReplyControllable::updateSnapshot)
-    , m_parentDescriptor(threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching())
     , m_reply(reply)
 {
     Q_ASSERT(m_reply);
@@ -366,6 +364,9 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
     m_nextSnapshotUpdateTimerRunning = false;
     scheduleNextSnapshotUpdate();
 
+    // Add happens before between this network fragment and the next (if it exists)
+    ActionLogTriggerEvent(&m_nextSnapshotUpdateTimer);
+
     switch(queuedSnapshot.first) {
     case QNetworkReplyInitialSnapshot::FINISHED:
         emit finished();
@@ -405,19 +406,9 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
            << "," << (signal == QNetworkReplyInitialSnapshot::FINISHED ? ULONG_MAX : m_sequenceNumber++);
     // use ULONG_MAX to indicate the last network event in this sequence
 
-    EventActionDescriptor descriptor =
-            threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "Network",
-                params.str()
-            );
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                m_parentDescriptor,
-                descriptor);
-
+    EventActionDescriptor descriptor("Network", params.str());
     m_nextSnapshotUpdateTimer.setEventActionDescriptor(descriptor);
     m_nextSnapshotUpdateTimer.startOneShot(0);
-
-    m_parentDescriptor = descriptor;
 }
 
 QNetworkReplyControllableLive::QNetworkReplyControllableLive(QNetworkReply* reply, QObject* parent)

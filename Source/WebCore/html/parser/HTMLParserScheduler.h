@@ -88,6 +88,9 @@ public:
     void suspend();
     void resume();
 
+    // WebERA: Expose timer such that the parser can register happens before relations using a pointer to it
+    Timer<HTMLParserScheduler>* getTimer() { return &m_continueNextChunkTimer; }
+
 private:
     HTMLParserScheduler(HTMLDocumentParser*);
 

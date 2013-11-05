@@ -49,9 +49,8 @@
 #include <wtf/Vector.h>
 #include <string>
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 
 using namespace WTF;
@@ -773,16 +772,12 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
 {
     // WebERA: This callback is used when loading cached resources
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "CachedResourceDelay",
-                resource->url().string().ascii().data());
+    EventActionDescriptor descriptor("CachedResourceDelay", resource->url().string().ascii().data());
 
     m_callbackTimer.setEventActionDescriptor(descriptor);
     m_callbackTimer.startOneShot(0);
 
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                descriptor);
+    ActionLogTriggerEvent(&m_callbackTimer);
 }
 
 void CachedResource::CachedResourceCallback::cancel()

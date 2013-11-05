@@ -34,9 +34,8 @@
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
 
@@ -111,9 +110,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         std::stringstream params;
         params << ScriptRunner::getSeqNumber();
 
-        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "ScriptRunner",
-                    params.str());
+        EventActionDescriptor descriptor("ScriptRunner", params.str());
 
         m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);
@@ -121,10 +118,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
 
     // WebERA:
     // Add happens before relation to all events adding scripts to the next script runner event
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                m_timer.eventActionDescriptor()
-    );
+    ActionLogTriggerEvent(&m_timer);
 }
 
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)

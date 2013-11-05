@@ -64,7 +64,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
         return;
     }
 
-    WebCore::EventActionDescriptor nextToSchedule = m_schedule->first();
+    WebCore::EventActionDescriptor nextToSchedule = m_schedule->first().second;
     std::string eventActionType = nextToSchedule.getType();
 
     // try to execute this directly
@@ -122,7 +122,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
             for (iter = names.begin(); iter != names.end(); iter++) {
 
-                WebCore::EventActionDescriptor candidate = WebCore::EventActionDescriptor::deserialize(nextToSchedule.getId(), (*iter));
+                WebCore::EventActionDescriptor candidate = WebCore::EventActionDescriptor::deserialize((*iter));
 
                 if (candidate.getType() != eventActionType) {
                     continue;
@@ -186,7 +186,7 @@ bool ReplayScheduler::isFinished()
 void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister* eventActionRegister)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "NEXT -> " << m_schedule->first().toString() << std::endl;
+    std::cout << "NEXT -> " << m_schedule->first().second.toString() << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 
     eventActionRegister->debugPrintNames();

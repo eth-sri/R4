@@ -76,6 +76,21 @@ class PumpSession;
  *
  * Note that with this naming we don't support handling multiple frames showing the same URL at the same time.
  *
+ *
+ * TODO(WebERA-HB):
+ *
+ * This document contains a number of calls to ActionLog, creating happens before relations between current network
+ * events and the next fragment to be parsed.
+ *
+ * The current setup is a bit too restrictive.
+ *
+ * The happens before relation is associated with a parsing event action too early in the parsing event action chain. E.g. if a network
+ * event occurs that adds a new chunk of the web page, then the first parsing event action using that chunk of the page should have a
+ * happens before relation, and not earlier.
+ *
+ * Furthermore, the "page loaded" network event action should also have a happens before much later in the chain - notice that this event
+ * action has an effect on the number of parse events needed (it can subsume the last parse event action if executed late).
+ *
  */
 
 class HTMLDocumentParser :  public ScriptableDocumentParser, HTMLScriptRunnerHost, CachedResourceClient {
@@ -112,8 +127,6 @@ public:
     // WebERA
     std::string getDocumentUrl() const;
     unsigned long getTokensSeen() const { return m_tokensSeen; }
-    const EventActionDescriptor& getLastNetworkAction() const { return m_lastNetworkEventAction; }
-    void resetLastNetworkAction() { m_lastNetworkEventAction = EventActionDescriptor::null; }
 
 protected:
     virtual void insert(const SegmentedString&);
@@ -190,7 +203,6 @@ private:
 
     // WebERA: We could also use textPosition, however this has a bit lower overhead
     unsigned long m_tokensSeen;
-    EventActionDescriptor m_lastNetworkEventAction; // points to the last network event action affecting this parser
 };
 
 }

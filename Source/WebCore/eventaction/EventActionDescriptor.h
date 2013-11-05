@@ -39,8 +39,6 @@ namespace WebCore {
      * The ID is assigned sequentially in one execution. For this reason it is often not feasible to correlate IDs
      * across executions if reordering is used.
      *
-     * // TODO(WebERA): It would be nice if we could use the Type(params) as a unique identifier and remove the ID
-     *
      * Type: A type identifying the event action
      * Params: Parameters on the format "arg1,arg2,arg3,arg4" describing the event action
      *
@@ -49,7 +47,6 @@ namespace WebCore {
      */
     class EventActionDescriptor {
     public:
-        EventActionDescriptor(unsigned long id, const std::string& type, const std::string& params);
         EventActionDescriptor(const std::string& type, const std::string& params);
         EventActionDescriptor();
 
@@ -58,27 +55,21 @@ namespace WebCore {
         const char* getType() const { return m_type.c_str(); }
         const char* getParams() const { return m_params.c_str(); }
 
-        unsigned long getId() const { return m_id; }
-
         // Inspecting the params
         std::string getParameter(unsigned int number) const; // TODO this is a bit of a hack
 
         bool operator==(const EventActionDescriptor& other) const;
-        bool fuzzyCompare(const EventActionDescriptor& other) const;
 
         std::string toString() const;
 
         std::string serialize() const;
         static EventActionDescriptor deserialize(const std::string&);
-        static EventActionDescriptor deserialize(unsigned long id, const std::string&);
 
         static EventActionDescriptor null;
 
         static std::string escapeParam(const std::string& param);
 
     private:
-        unsigned long m_id;
-
         std::string m_type;
         std::string m_params;
 

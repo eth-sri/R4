@@ -30,18 +30,14 @@
 namespace WebCore {
 
 EventActionSchedule::EventActionSchedule()
-    : WTF::Vector<EventActionDescriptor>()
+    : WTF::Vector<EventActionScheduleItem>()
 {
 }
 
 void EventActionSchedule::serialize(std::ostream& stream) const
 {
     for (EventActionSchedule::const_iterator it = this->begin(); it != this->end(); it++) {
-        if ((*it).isNull()) {
-            stream << "NULL" << std::endl;
-        } else {
-            stream << (*it).getId() << ";" << (*it).serialize() << std::endl;
-        }
+        stream << (*it).first << ";" << (*it).second.serialize() << std::endl;
     }
 }
 
@@ -60,11 +56,6 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
             continue; // ignore blank lines
         }
 
-        if (eventaction.compare("NULL") == 0) {
-            schedule->append(EventActionDescriptor::null);
-            continue;
-        }
-
         std::stringstream eventactionStream(eventaction);
 
         std::string id;
@@ -73,9 +64,9 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
         std::string description;
         std::getline(eventactionStream, description);
 
-        EventActionDescriptor descriptor = EventActionDescriptor::deserialize(strtoul(id.c_str(), NULL, 10), description);
+        EventActionDescriptor descriptor = EventActionDescriptor::deserialize(description);
 
-        schedule->append(descriptor);
+        schedule->append(std::pair<unsigned long, EventActionDescriptor>(strtoul(id.c_str(), NULL, 10), descriptor));
     }
 
     return schedule;

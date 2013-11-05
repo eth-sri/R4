@@ -34,9 +34,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 #include <string>
 #include <sstream>
@@ -112,16 +111,10 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     DOMTimer* timer = new DOMTimer(context, action, timeout, singleShot);
 
     // TODO(WebERA): Select an appropiate timer name
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "DOMTimer",
-                params.str()
-    );
+    EventActionDescriptor descriptor("DOMTimer", params.str());
     timer->setEventActionDescriptor(descriptor);
 
-    threadGlobalData().threadTimers().eventActionsHB()->addTimedArc(
-    			threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                descriptor,
-                timeout);
+    ActionLogTriggerEvent(timer);
 
     timer->suspendIfNeeded();
     InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);

@@ -34,6 +34,8 @@
 #include <wtf/text/StringHash.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
+#include <wtf/StringSet.h>
+#include <wtf/ActionLog.h>
 
 #if USE(JSC)
 // FIXME: This is a temporary layering violation while we move more string code to WTF.
@@ -108,6 +110,29 @@ public:
     {
         return m_stackBounds;
     }
+
+
+    // WebERA:
+
+    StringSet* variableSet() {
+        return m_variableSet;
+    }
+
+    StringSet* scopeSet() {
+        return m_scopeSet;
+    }
+
+    StringSet* jsSet() {
+        return m_jsSet;
+    }
+
+    StringSet* dataSet() {
+        return m_dataSet;
+    }
+
+    ActionLog* actionLog() {
+        return m_actionLog;
+    }
 #endif
 
 private:
@@ -118,6 +143,11 @@ private:
     JSC::IdentifierTable* m_defaultIdentifierTable;
     JSC::IdentifierTable* m_currentIdentifierTable;
     StackBounds m_stackBounds;
+    StringSet* m_variableSet;
+    StringSet* m_scopeSet;
+    StringSet* m_jsSet;
+    StringSet* m_dataSet;
+    ActionLog* m_actionLog;
 #endif
 
     static WTF_EXPORTDATA ThreadSpecific<WTFThreadData>* staticData;

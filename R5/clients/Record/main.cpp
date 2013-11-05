@@ -44,6 +44,8 @@
 #include "specificationscheduler.h"
 #include "datalog.h"
 
+#include "wtf/ActionLogReport.h"
+
 class RecordClientApplication : public ClientApplication {
     Q_OBJECT
 
@@ -136,12 +138,7 @@ void RecordClientApplication::slOnCloseEvent()
 {
     // happens before
 
-    std::ofstream hbfile;
-    hbfile.open(m_hbPath.toStdString());
-
-    WebCore::threadGlobalData().threadTimers().eventActionsHB()->serialize(hbfile);
-
-    hbfile.close();
+    ActionLogSave();
 
     // schedule
 

@@ -153,9 +153,8 @@
 #include <qsysteminfo.h>
 #endif
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 using namespace WebCore;
 
@@ -1027,19 +1026,11 @@ void QWebPagePrivate::updateChangeFocusTimer()
         std::stringstream params;
         params << QWebPagePrivate::getSeqNumber();
 
-        EventActionDescriptor descriptor =
-                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    focus == FOCUS_IN ? "FocusInEvent" : "FocusOutEvent",
-                    params.str()
-                );
-
-        threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                    threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                    descriptor
-        );
-
+        EventActionDescriptor descriptor(focus == FOCUS_IN ? "FocusInEvent" : "FocusOutEvent", params.str());
         m_changeFocusTimer.setEventActionDescriptor(descriptor);
         m_changeFocusTimer.startOneShot(0);
+
+        ActionLogTriggerEvent(&m_changeFocusTimer);
     }
 }
 

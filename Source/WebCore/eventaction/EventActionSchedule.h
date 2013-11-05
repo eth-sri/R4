@@ -27,6 +27,7 @@
 #include <string>
 #include <ostream>
 #include <istream>
+#include <utility>
 
 #include <wtf/Noncopyable.h>
 #include <wtf/ExportMacros.h>
@@ -36,7 +37,9 @@
 
 namespace WebCore {
 
-    class EventActionSchedule : public WTF::Vector<EventActionDescriptor> {
+    typedef std::pair<unsigned long, EventActionDescriptor> EventActionScheduleItem;
+
+    class EventActionSchedule : public WTF::Vector<EventActionScheduleItem> {
 
     public:
         EventActionSchedule();

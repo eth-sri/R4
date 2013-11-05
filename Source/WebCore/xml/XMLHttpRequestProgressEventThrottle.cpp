@@ -29,12 +29,11 @@
 #include "config.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
-
 #include "EventTarget.h"
 #include "XMLHttpRequestProgressEvent.h"
+
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
 
@@ -81,27 +80,18 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         params << "BSE" << ",";
         params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
 
-        EventActionDescriptor descriptor =
-                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "XMLHttpRequestProgressEventThrottle",
-                    params.str()
-                );
-
+        EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
         setEventActionDescriptor(descriptor);
+
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
 
-        threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                    threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                    descriptor);
+        ActionLogTriggerEvent(this);
 
         return;
 
     } else {
         // WebERA:
-
-        threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                    threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                    eventActionDescriptor());
+        ActionLogTriggerEvent(this);
     }
 
     // The timer is already active so minimumProgressEventDispatchingIntervalInSeconds is the least frequent event.
@@ -242,20 +232,14 @@ void XMLHttpRequestProgressEventThrottle::resume()
     params << "DEFERRED" << ",";
     params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
 
-    EventActionDescriptor descriptor =
-            threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "XMLHttpRequestProgressEventThrottle",
-                params.str()
-            );
+    EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
+
+    ActionLogTriggerEvent(&m_dispatchDeferredEventsTimer);
 
     m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
     m_dispatchDeferredEventsTimer.startOneShot(0);
 
     // TODO(WebERA): Should there be a happens before relation between the event suspending the request also?
-
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                descriptor);
 }
 
 } // namespace WebCore

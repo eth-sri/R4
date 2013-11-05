@@ -36,9 +36,8 @@
 #include "ScriptExecutionContext.h"
 #include "SuspendableTimer.h"
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
     
@@ -95,18 +94,13 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
         std::stringstream params;
         params << DocumentEventQueue::getSeqNumber();
 
-        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "DocumentEventQueue",
-                    params.str());
+        EventActionDescriptor descriptor("DocumentEventQueue", params.str());
 
         m_pendingEventTimer->setEventActionDescriptor(descriptor);
         m_pendingEventTimer->startOneShot(0);
     }
 
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                m_pendingEventTimer->eventActionDescriptor()
-    );
+    ActionLogTriggerEvent(&m_pendingEventTimer);
 
     return true;
 }

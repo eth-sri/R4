@@ -255,7 +255,6 @@ protected:
     unsigned long m_sequenceNumber;
     bool m_nextSnapshotUpdateTimerRunning;
     Timer<QNetworkReplyControllable> m_nextSnapshotUpdateTimer;
-    EventActionDescriptor m_parentDescriptor;
 
 protected slots:
     void scheduleNextSnapshotUpdate();

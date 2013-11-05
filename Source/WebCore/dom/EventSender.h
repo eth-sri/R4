@@ -35,9 +35,8 @@
 #include "Timer.h"
 #include <wtf/Vector.h>
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
 
@@ -93,9 +92,7 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
         params << m_eventType.string().ascii().data() << ",";
         params << EventSenderSeqNumber::getSeqNumber();
 
-        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "EventSender",
-                    params.str());
+        EventActionDescriptor descriptor("EventSender", params.str());
 
         m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);
@@ -103,10 +100,7 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
 
     // WebERA:
     // Always set a happens before relation with the current timer, since the timers execution now depends on this event
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                m_timer.eventActionDescriptor()
-    );
+    ActionLogTriggerEvent(&m_timer);
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)

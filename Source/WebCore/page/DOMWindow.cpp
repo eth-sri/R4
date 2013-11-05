@@ -102,9 +102,8 @@
 #include <wtf/MathExtras.h>
 #include <wtf/text/WTFString.h>
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
 #include "RequestAnimationFrameCallback.h"
@@ -129,10 +128,7 @@ public:
         std::stringstream params;
         params << PostMessageTimer::getSeqNumber();
 
-        EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "PostMessage",
-                    params.str());
-
+        EventActionDescriptor descriptor("PostMessage", params.str());
         setEventActionDescriptor(descriptor);
     }
 
@@ -837,10 +833,8 @@ void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const Mes
     // Schedule the message.
     PostMessageTimer* timer = new PostMessageTimer(this, message, sourceOrigin, source, channels.release(), target.get(), stackTrace.release());
 
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                timer->eventActionDescriptor()
-    );
+    // WebERA:
+    ActionLogTriggerEvent(timer);
 
     timer->startOneShot(0);
 }

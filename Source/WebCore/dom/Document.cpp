@@ -168,9 +168,8 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 #if ENABLE(SHARED_WORKERS)
 #include "SharedWorkerRepository.h"
@@ -5778,10 +5777,7 @@ void Document::decrementLoadEventDelayCount()
 
     // WebERA:
     // Create happens before relations for all events modifying the counter for the next load event
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                m_loadEventDelayTimer.eventActionDescriptor()
-    );
+    ActionLogTriggerEvent(&m_loadEventDelayTimer);
 
     if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive()) {
         m_loadEventDelayTimer.startOneShot(0);
@@ -5804,10 +5800,7 @@ void Document::updateEventDelayTimerDescriptor()
     params << url().string().ascii().data() << ",";
     params << Document::getSeqNumber();
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "LoadDocumentDelay",
-                params.str());
-
+    EventActionDescriptor descriptor("LoadDocumentDelay", params.str());
     m_loadEventDelayTimer.setEventActionDescriptor(descriptor);
 }
 

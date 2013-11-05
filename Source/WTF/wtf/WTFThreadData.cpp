@@ -38,6 +38,11 @@ WTFThreadData::WTFThreadData()
     , m_defaultIdentifierTable(new JSC::IdentifierTable())
     , m_currentIdentifierTable(m_defaultIdentifierTable)
     , m_stackBounds(StackBounds::currentThreadStackBounds())
+    , m_variableSet(new StringSet())
+    , m_scopeSet(new StringSet())
+    , m_jsSet(new StringSet())
+    , m_dataSet(new StringSet())
+    , m_actionLog(new ActionLog())
 #endif
 {
 }

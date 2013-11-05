@@ -159,7 +159,9 @@ HEADERS += \
     Vector.h \
     VectorTraits.h \
     VMTags.h \
-    WTFThreadData.h
+    WTFThreadData.h \
+    wtf/ActionLog.h \
+    wtf/ActionLogReport.h
 
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
@@ -214,7 +216,9 @@ SOURCES += \
     text/WTFString.cpp \
     unicode/CollatorDefault.cpp \
     unicode/icu/CollatorICU.cpp \
-    unicode/UTF8.cpp
+    unicode/UTF8.cpp \
+    wtf/ActionLog.cpp \
+    wtf/ActionLogReport.cpp
 
 unix: SOURCES += \
     OSAllocatorPosix.cpp \

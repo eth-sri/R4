@@ -92,6 +92,9 @@
 #include <wtf/text/WTFString.h>
 #include <platform/graphics/IntPoint.h>
 
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
+
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/eventaction/EventActionSchedule.h>
@@ -2924,10 +2927,7 @@ void EventHandler::dispatchFakeMouseMoveEventSoon()
 
     // WebERA:
     // Add happens before relation to all events activating a fake mouse event
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                m_fakeMouseMoveEventTimer.eventActionDescriptor()
-    );
+    ActionLogTriggerEvent(&m_fakeMouseMoveEventTimer);
 }
 
 void EventHandler::dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad& quad)
@@ -2975,10 +2975,7 @@ void EventHandler::updateFakeMouseMoveEventTimerDescriptor()
     std::stringstream params;
     params << EventHandler::getSeqNumber();
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "FakeMouseMoveEvent",
-                params.str());
-
+    EventActionDescriptor descriptor("FakeMouseMoveEvent", params.str());
     m_fakeMouseMoveEventTimer.setEventActionDescriptor(descriptor);
 }
 
@@ -4007,12 +4004,7 @@ void EventHandler::rescheduleTimer()
     if (!m_deferredEventTimer.isActive() && m_deferredEventQueue.size() > 0) {
         DeferredPlatformEvent event = m_deferredEventQueue.first();
 
-        EventActionDescriptor descriptor =
-                threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                    "UserEvent",
-                    event.serialize()
-                );
-
+        EventActionDescriptor descriptor("UserEvent", event.serialize());
         m_deferredEventTimer.setEventActionDescriptor(descriptor);
         m_deferredEventTimer.startOneShot(0);
     }

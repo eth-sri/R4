@@ -68,7 +68,8 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
     std::string descriptorString = descriptor.toString();
 
-    // match providers
+    // Match providers
+    // Notice, the action log is not used for match providers!
 
     EventActionRegisterMaps::TypeToProvider::iterator it = m_maps->m_typeToProvider.find(descriptor.getType());
 
@@ -80,12 +81,14 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
         for (; it2 != l.end(); it2++) {
 
-            eventActionDispatchStart(descriptor);
-            std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
-            bool result = (it2->function)(it2->object, descriptor);
-            eventActionDispatchEnd(result);
+            eventActionDispatchStart(0, descriptor);
 
-            if (result) {
+            std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
+            bool found = (it2->function)(it2->object, descriptor);
+
+            eventActionDispatchEnd(found);
+
+            if (found) {
                 return true; // event handled
             }
         }
@@ -102,31 +105,39 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     EventActionRegisterMaps::HandlerList& l = iter->second;
     assert(!l.empty()); // empty HandlerLists should be removed
 
-    eventActionDispatchStart(descriptor);
+    // Pre-Execution
+
+    unsigned long id = m_nextEventActionDescriptorId++;
+
+    eventActionDispatchStart(id, descriptor);
+
+    ActionLogEnterOperation(id, ActionLog::TIMER);
+    ActionLogEventTriggered(l[0].object);
 
 	// Execute the function.
+
     if (l.size() > 1) {
         std::cerr << "Warning: multiple targets may fire with signature " << descriptorString << std::endl;
     }
 
     std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
-    bool result = (l[0].function)(l[0].object, descriptor); // don't use the descriptor from this point on, it could be deleted
 
-    if (result) {
-        l.erase(l.begin());
-        if (l.empty()) {
-            m_maps->m_descriptorToHandler.erase(descriptorString);
-        }
+    bool done = (l[0].function)(l[0].object, descriptor); // don't use the descriptor from this point on, it could be deleted
+    ASSERT(done);
+
+    // Cleanup lookup tables
+
+    l.erase(l.begin());
+    if (l.empty()) {
+        m_maps->m_descriptorToHandler.erase(descriptorString);
     }
 
-    eventActionDispatchEnd(result);
+    // Post-Execution
 
-    return result;
-}
+    ActionLogExitOperation();
+    eventActionDispatchEnd(true);
 
-EventActionDescriptor EventActionRegister::allocateEventDescriptor(const std::string& type, const std::string& params)
-{
-    return EventActionDescriptor(m_nextEventActionDescriptorId++, type, params);
+    return true;
 }
 
 void EventActionRegister::debugPrintNames() const

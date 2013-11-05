@@ -31,6 +31,9 @@
 #include "HTMLDocumentParser.h"
 #include "Page.h"
 
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
+
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/eventaction/EventActionSchedule.h>
@@ -156,51 +159,17 @@ void HTMLParserScheduler::updateTimerName()
     params << ",";
     params << m_parser->getTokensSeen();
 
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "HTMLDocumentParser",
-                params.str());
-
+    EventActionDescriptor descriptor("HTMLDocumentParser", params.str());
     m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
-
-    // Add a happens before relation if we schedule a new fragment because of another action
-
-    // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
-
-    // TODO(WebERA-HB):
-    //
-    // The "lastNetworkAction" happens before relations are a bit too strict.
-    //
-    // The happens before relation is associated with a
-    // parsing event action too early in the parsing event action chain. E.g. if a network event occurs that adds a new chunk of the web page,
-    // then the first parsing event action using that chunk of the page should have a happens before relation, and not earlier.
-    //
-    // Furthermore, the "page loaded" network event action should also have a happens before much later in the chain - notice that this event
-    // action has an effect on the number of parse events needed (it can subsume the last parse event action if executed late).
-
 
     const EventActionDescriptor currentDescriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                currentDescriptor,
-                descriptor
-    );
+    // Don't add the happens before relation for network events, since we should already have added that relation in the parser.
+    if (strcmp(currentDescriptor.getType(), "Network") != 0) {
 
-    // If the current descriptor is a network event, then it should be the same as the "lastNetworkAction" registered by the parser (if any)
-    if (strcmp(currentDescriptor.getType(), "Network") == 0) {
-        if (!m_parser->getLastNetworkAction().isNull()) {
-            ASSERT(m_parser->getLastNetworkAction() == currentDescriptor);
-        }
+        ActionLogTriggerEvent(&m_continueNextChunkTimer);
 
-        m_parser->resetLastNetworkAction(); // remove the last network event and prevent it from being added twice
-    }
-
-    if (!m_parser->getLastNetworkAction().isNull()) {
-        threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                    m_parser->getLastNetworkAction(),
-                    descriptor
-        );
-
-        m_parser->resetLastNetworkAction();
+        // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
     }
 }
 

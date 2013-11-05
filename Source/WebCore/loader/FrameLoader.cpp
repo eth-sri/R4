@@ -106,9 +106,8 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
-#include <WebCore/eventaction/EventActionSchedule.h>
+#include <WebCore/eventaction/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 #if ENABLE(SHARED_WORKERS)
 #include "SharedWorkerRepository.h"
@@ -199,12 +198,11 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     , m_forcedSandboxFlags(SandboxNone)
 {
 	// TODO(WebERA): Put name that identifies the document loaded.
-    EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "CheckLoadedFrameTimer",
-                ""
-    );
 
+    EventActionDescriptor descriptor("CheckLoadedFrameTimer", "");
     m_checkTimer.setEventActionDescriptor(descriptor);
+    ActionLogTriggerEvent(&m_checkTimer);
+
 }
 
 FrameLoader::~FrameLoader()

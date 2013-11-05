@@ -37,7 +37,6 @@
 
 #include "schedule/EventActionRegister.h"
 #include "eventaction/EventActionSchedule.h"
-#include "eventaction/EventActionHB.h"
 
 namespace WebCore {
 
@@ -82,7 +81,6 @@ namespace WebCore {
         // Making these static is not correct since multiple threads will be merged together, however we do not
         // support multiple threads either way (nor workers) so this should not result in any problems in practice.
         EventActionRegister* eventActionRegister() { return &m_eventActionRegister; }
-        EventActionsHB* eventActionsHB() { return &m_eventActionsHB; }
 
         // Only the scheduler can be static. All the other objects are thread-local.
         static void setScheduler(Scheduler* scheduler);
@@ -106,7 +104,6 @@ namespace WebCore {
 
         // Thread-local.
         EventActionRegister m_eventActionRegister;
-        EventActionsHB m_eventActionsHB;
     };
 
 }

@@ -32,35 +32,19 @@ namespace WebCore {
 
 EventActionDescriptor EventActionDescriptor::null;
 
-
-EventActionDescriptor::EventActionDescriptor(unsigned long id, const std::string& type, const std::string& params)
-    : m_id(id)
-    , m_type(type)
-	, m_params(params)
-	, m_isNull(false)
-{
-}
-
 EventActionDescriptor::EventActionDescriptor(const std::string& type, const std::string& params)
-    : m_id(UINT_MAX)
-    , m_type(type)
+    : m_type(type)
 	, m_params(params)
     , m_isNull(false)
 {
 }
 
 EventActionDescriptor::EventActionDescriptor()
-    : m_id(0)
-    , m_isNull(true)
+    : m_isNull(true)
 {
 }
 
 bool EventActionDescriptor::operator==(const EventActionDescriptor& other) const
-{
-    return m_id == other.m_id && m_type == other.m_type && m_params == other.m_params;
-}
-
-bool EventActionDescriptor::fuzzyCompare(const EventActionDescriptor &other) const
 {
     return m_type == other.m_type && m_params == other.m_params;
 }
@@ -80,16 +64,10 @@ std::string EventActionDescriptor::serialize() const
 
 EventActionDescriptor EventActionDescriptor::deserialize(const std::string& raw)
 {
-    return EventActionDescriptor::deserialize(UINT_MAX, raw);
-}
-
-EventActionDescriptor EventActionDescriptor::deserialize(unsigned long id, const std::string& raw)
-{
     size_t typeEndPos = raw.find('(');
     assert(typeEndPos != std::string::npos);
 
-
-    return EventActionDescriptor(id, raw.substr(0, typeEndPos), raw.substr(typeEndPos+1, raw.size()-typeEndPos-2));
+    return EventActionDescriptor(raw.substr(0, typeEndPos), raw.substr(typeEndPos+1, raw.size()-typeEndPos-2));
 }
 
 std::string EventActionDescriptor::getParameter(unsigned int number) const
