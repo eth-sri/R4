@@ -28,6 +28,7 @@
 #include <string>
 
 #include "platform/schedule/EventActionRegister.h"
+#include "wtf/ActionLogReport.h"
 
 #include "fuzzyurl.h"
 
@@ -44,6 +45,8 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderRe
     fp.open(schedulePath);
     m_schedule = WebCore::EventActionSchedule::deserialize(fp);
     fp.close();
+
+    ActionLogStrictMode(false); // replaying does not play well with the action log
 }
 
 ReplayScheduler::~ReplayScheduler()
