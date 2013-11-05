@@ -16,6 +16,8 @@ public:
     ~ActionLogScope();
 };
 
+void ActionLogStrictMode(bool strict);
+
 void ActionLogScopeStart(const char* name);
 void ActionLogScopeEnd();
 

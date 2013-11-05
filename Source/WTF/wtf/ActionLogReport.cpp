@@ -24,10 +24,17 @@ ActionLogScope::~ActionLogScope() {
     ActionLogScopeEnd();
 }
 
+static bool strict_mode = true;
+
+// Disable some consistency checks when replaying and after saving the log (just before a recording is closed). Some stray events can otherwise cause problems.
+void ActionLogStrictMode(bool strict) {
+    strict_mode = strict;
+}
+
 void ActionLogScopeStart(const char* name) {
 //	printf("Scope %s\n", name);
     int scopeId = wtfThreadData().scopeSet()->addString(name);
-    if (!wtfThreadData().actionLog()->enterScope(scopeId)) {
+    if (!wtfThreadData().actionLog()->enterScope(scopeId) && strict_mode) {
         fprintf(stderr, "Can't log start scope %s\n", name);
         CRASH();
     }
@@ -35,7 +42,7 @@ void ActionLogScopeStart(const char* name) {
 
 void ActionLogScopeEnd() {
 //	printf("Endscope\n");
-    if (!wtfThreadData().actionLog()->exitScope()) {
+    if (!wtfThreadData().actionLog()->exitScope() && strict_mode) {
         fprintf(stderr, "Can't log end scope\n");
         CRASH();
     }
@@ -61,7 +68,7 @@ void ActionLogFormatV(ActionLog::CommandType cmd, const char* format, va_list ap
     } else {
         stringId = wtfThreadData().variableSet()->addString(strspace);
     }
-    if (!wtfThreadData().actionLog()->logCommand(cmd, stringId)) {
+    if (!wtfThreadData().actionLog()->logCommand(cmd, stringId) && strict_mode) {
         fprintf(stderr, "Can't log command %s %s\n", ActionLog::CommandType_AsString(cmd), strspace);
         CRASH();
     }
@@ -102,7 +109,7 @@ void ActionLogReportArrayModify(size_t array) {
 
 void ActionLogReportMemoryValue(const char* value) {
     int stringId = wtfThreadData().dataSet()->addString(value);
-    if (!wtfThreadData().actionLog()->logCommand(ActionLog::MEMORY_VALUE, stringId)) {
+    if (!wtfThreadData().actionLog()->logCommand(ActionLog::MEMORY_VALUE, stringId) && strict_mode) {
         fprintf(stderr, "Can't log value %s\n", value);
         CRASH();
     }
@@ -110,14 +117,14 @@ void ActionLogReportMemoryValue(const char* value) {
 
 void ActionLogEnterOperation(int id, ActionLog::EventActionType type) {
     wtfThreadData().actionLog()->startEventAction(id);
-    if (!wtfThreadData().actionLog()->setEventActionType(type)) {
+    if (!wtfThreadData().actionLog()->setEventActionType(type) && strict_mode) {
         fprintf(stderr, "Can't set optype %s\n", ActionLog::EventActionType_AsString(type));
         CRASH();
     }
 }
 
 void ActionLogExitOperation() {
-    if (!wtfThreadData().actionLog()->endEventAction()) {
+    if (!wtfThreadData().actionLog()->endEventAction() && strict_mode) {
         fprintf(stderr, "Can't log exit op.\n");
         CRASH();
     }
@@ -137,7 +144,7 @@ void ActionLogAddArc(int earlierId, int laterId, int duration) {
 }
 
 void ActionLogAddArcEvent(int nextId) {
-    if (!wtfThreadData().actionLog()->logCommand(ActionLog::TRIGGER_ARC, nextId)) {
+    if (!wtfThreadData().actionLog()->logCommand(ActionLog::TRIGGER_ARC, nextId) && strict_mode) {
         fprintf(stderr, "Can't log add arc to %d\n", nextId);
         CRASH();
     }

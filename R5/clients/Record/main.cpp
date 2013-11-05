@@ -139,6 +139,7 @@ void RecordClientApplication::slOnCloseEvent()
     // happens before
 
     ActionLogSave();
+    ActionLogStrictMode(false);
 
     // schedule
 
