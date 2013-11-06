@@ -46,6 +46,7 @@ public:
     // Registration of event action providers and handlers
     void registerEventActionProvider(const std::string& type, EventActionHandlerFunction f, void* object);
     void registerEventActionHandler(const EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object);
+    void deregisterEventActionHandler(const EventActionDescriptor& descriptor);
 
     // Attempts to execute an event action. Returns true on success.
     bool runEventAction(const EventActionDescriptor& descriptor);

@@ -85,6 +85,8 @@ namespace WebCore {
         // Only the scheduler can be static. All the other objects are thread-local.
         static void setScheduler(Scheduler* scheduler);
 
+        void deregisterEventActionHandler(TimerBase* timer);
+
     private:
         static void sharedTimerFired();
 

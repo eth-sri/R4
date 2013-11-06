@@ -59,6 +59,7 @@ namespace WebCore {
         std::string getParameter(unsigned int number) const; // TODO this is a bit of a hack
 
         bool operator==(const EventActionDescriptor& other) const;
+        bool operator!=(const EventActionDescriptor& other) const;
 
         std::string toString() const;
 

@@ -63,6 +63,45 @@ void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDesc
     }
 }
 
+void dequeueSpecificElement(const WebCore::EventActionDescriptor& descriptor,
+                            std::queue<WebCore::EventActionDescriptor>* queue)
+{
+    std::queue<WebCore::EventActionDescriptor> old;
+    queue->swap(old);
+
+    while (!old.empty()) {
+        if (old.front() != descriptor) {
+            queue->push(old.front());
+        }
+
+        old.pop();
+    }
+}
+
+void SpecificationScheduler::eventActionDescheduled(const WebCore::EventActionDescriptor& descriptor,
+                                                    WebCore::EventActionRegister*)
+{
+
+    if (strcmp(descriptor.getType(), "HTMLDocumentParser") == 0) {
+
+        dequeueSpecificElement(descriptor, &m_parsingQueue);
+
+    } else if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+
+        std::string networkSeqId = getNetworkSequenceId(descriptor);
+
+        if (m_activeNetworkEvents.find(networkSeqId) == m_activeNetworkEvents.end()) {
+            dequeueSpecificElement(descriptor, &m_networkQueue);
+        } else {
+            dequeueSpecificElement(descriptor, &m_activeNetworkQueue);
+        }
+
+    } else {
+        dequeueSpecificElement(descriptor, &m_otherQueue);
+    }
+
+}
+
 void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
 {
     if (m_stopped) {

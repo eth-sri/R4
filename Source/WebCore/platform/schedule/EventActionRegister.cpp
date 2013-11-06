@@ -64,6 +64,12 @@ void EventActionRegister::registerEventActionHandler(const EventActionDescriptor
     m_maps->m_descriptorToHandler[descriptor.toString()].push_back(target);
 }
 
+void EventActionRegister::deregisterEventActionHandler(const EventActionDescriptor& descriptor)
+{
+    ASSERT(!descriptor.isNull());
+    m_maps->m_descriptorToHandler.erase(descriptor.toString());
+}
+
 bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor) {
 
     std::string descriptorString = descriptor.toString();

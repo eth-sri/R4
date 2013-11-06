@@ -49,6 +49,7 @@ public:
     ~SpecificationScheduler();
 
     void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    void eventActionDescheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
     void stop() {

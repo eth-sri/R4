@@ -40,6 +40,7 @@ namespace WebCore {
         ~DefaultScheduler();
 
         void eventActionScheduled(const EventActionDescriptor& descriptor, EventActionRegister* eventActionRegister);
+        void eventActionDescheduled(const EventActionDescriptor& descriptor, EventActionRegister* eventActionRegister);
 
         void executeDelayedEventActions(EventActionRegister* eventActionRegister);
 

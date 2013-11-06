@@ -41,6 +41,10 @@ void DefaultScheduler::eventActionScheduled(const EventActionDescriptor& descrip
     eventActionRegister->runEventAction(descriptor);
 }
 
+void DefaultScheduler::eventActionDescheduled(const EventActionDescriptor&, EventActionRegister*)
+{
+}
+
 void DefaultScheduler::executeDelayedEventActions(EventActionRegister*)
 {
 	// Do nothing.

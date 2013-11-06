@@ -49,6 +49,11 @@ bool EventActionDescriptor::operator==(const EventActionDescriptor& other) const
     return m_type == other.m_type && m_params == other.m_params;
 }
 
+bool EventActionDescriptor::operator!=(const EventActionDescriptor& other) const
+{
+    return !operator==(other);
+}
+
 std::string EventActionDescriptor::toString() const
 {
     std::stringstream result;

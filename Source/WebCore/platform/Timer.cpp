@@ -37,6 +37,9 @@
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+
 #include <stdio.h>
 
 using namespace std;
@@ -196,7 +199,7 @@ TimerBase::TimerBase()
     : m_nextFireTime(0)
     , m_repeatInterval(0)
     , m_heapIndex(-1)
-    , m_overwriteActive(false)
+    , m_inEventActionRegister(false)
 #ifndef NDEBUG
     , m_thread(currentThread())
 #endif
@@ -223,6 +226,10 @@ void TimerBase::stop()
 
     m_repeatInterval = 0;
     setNextFireTime(0);
+
+    if (m_inEventActionRegister) {
+        WebCore::threadGlobalData().threadTimers().deregisterEventActionHandler(this);
+    }
 
     ASSERT(m_nextFireTime == 0);
     ASSERT(m_repeatInterval == 0);
