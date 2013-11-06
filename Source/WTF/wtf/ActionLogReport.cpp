@@ -158,6 +158,14 @@ void ActionLogEventTriggered(void* eventId) {
     wtfThreadData().actionLog()->eventTriggered(eventId);
 }
 
+void ActionLogTriggerEventCommand(void* eventId) {
+    wtfThreadData().actionLog()->triggerEventCommand(eventId);
+}
+
+void ActionLogEventCommandTriggered(void* eventId) {
+    wtfThreadData().actionLog()->eventCommandTriggered(eventId);
+}
+
 int ActionLogRegisterSource(const char* src) {
     return wtfThreadData().jsSet()->addString(src);
 }

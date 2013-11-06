@@ -71,10 +71,17 @@ public:
     bool logCommand(CommandType command, int memoryLocation);
 
     // Logs that an event identified by a pointer eventId is triggered node.
-    void triggerEvent(void* eventId);
+    void triggerEventCommand(void* eventId);
 
     // Logs that the id of the currently entered operation is the one triggered by a
     // previous call of triggerEvent with the same eventId.
+    void eventCommandTriggered(void* eventId);
+
+    // Records a future arc between the current event action and eventId if executed later.
+    void triggerEvent(void* eventId);
+
+    // Add any arcs between the current event action (the eventId must match the current event action)
+    // and any event action that has called "triggerEvent" with this eventId as a target.
     void eventTriggered(void* eventId);
 
     // Saves the log to a file.
@@ -125,6 +132,19 @@ private:
     };
     typedef std::map<long int, PendingTriggerArc> PendingTriggerArcs;
 
+    struct PendingArc {
+        int m_eventActionId;
+        int m_timeout;
+
+        PendingArc(int eventActionId, int timeout)
+            : m_eventActionId(eventActionId)
+            , m_timeout(timeout)
+        {
+        }
+    };
+    typedef std::vector<PendingArc> PendingArcVector;
+    typedef std::map<long int, PendingArcVector> PendingArcs;
+
     typedef std::map<int, EventAction*> EventActionSet;
     EventAction m_emptyEventAction;
     EventActionSet m_eventActions;
@@ -132,6 +152,7 @@ private:
     int m_maxEventActionId;
     std::vector<Arc> m_arcs;
     PendingTriggerArcs m_pendingTriggerArcs;
+    PendingArcs m_pendingArcs;
 
     // Fields to help construction.
     int m_currentEventActionId;

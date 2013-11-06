@@ -329,6 +329,10 @@ void TimerBase::setNextFireTime(double newTime)
     // Keep heap valid while changing the next-fire time.
     double oldTime = m_nextFireTime;
     if (oldTime != newTime) {
+
+        // WebERA:
+        ActionLogTriggerEventCommand(this);
+
         m_nextFireTime = newTime;
         static unsigned currentHeapInsertionOrder;
         m_heapInsertionOrder = currentHeapInsertionOrder++;

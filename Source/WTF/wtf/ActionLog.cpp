@@ -5,6 +5,9 @@
  *      Author: veselin
  */
 
+#include "ExportMacros.h"
+#include "Assertions.h"
+
 #include "ActionLog.h"
 
 const char* ActionLog::CommandType_AsString(CommandType ctype) {
@@ -112,7 +115,7 @@ bool ActionLog::logCommand(CommandType command, int memoryLocation) {
     return true;
 }
 
-void ActionLog::triggerEvent(void* eventId) {
+void ActionLog::triggerEventCommand(void* eventId) {
     if (m_currentEventActionId == -1) return;
     PendingTriggerArc& pending_arc = m_pendingTriggerArcs[reinterpret_cast<long int>(eventId)];
 
@@ -126,12 +129,37 @@ void ActionLog::triggerEvent(void* eventId) {
     current_cmds.push_back(c);
 }
 
-void ActionLog::eventTriggered(void* eventId) {
+void ActionLog::eventCommandTriggered(void* eventId) {
     if (m_currentEventActionId == -1) return;
     PendingTriggerArcs::iterator it = m_pendingTriggerArcs.find(reinterpret_cast<long int>(eventId));
     if (it == m_pendingTriggerArcs.end()) return;
     m_eventActions[it->second.m_operationId]->m_commands[it->second.m_commandId].m_location = m_currentEventActionId;
     m_pendingTriggerArcs.erase(it);
+}
+
+void ActionLog::triggerEvent(void* eventId) {
+    if (m_currentEventActionId == -1) return;
+
+    PendingArcVector& pending_arc_vector = m_pendingArcs[reinterpret_cast<long int>(eventId)];
+    pending_arc_vector.push_back(PendingArc(m_currentEventActionId, 0));
+}
+
+void ActionLog::eventTriggered(void* eventId) {
+    if (m_currentEventActionId == -1) return;
+
+    PendingArcs::iterator it = m_pendingArcs.find(reinterpret_cast<long int>(eventId));
+    if (it == m_pendingArcs.end()) return;
+
+    PendingArcVector& pending_arc_vector = it->second;
+
+    for (PendingArcVector::iterator iter = pending_arc_vector.begin(); iter != pending_arc_vector.end(); iter++) {
+        if (m_currentEventActionId <= iter->m_eventActionId) {
+            CRASH();
+        }
+        addArc(iter->m_eventActionId, m_currentEventActionId, iter->m_timeout);
+    }
+
+    m_pendingArcs.erase(it);
 }
 
 struct ActionLogHeader {

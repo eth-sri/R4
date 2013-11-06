@@ -117,8 +117,9 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
     eventActionDispatchStart(id, descriptor);
 
-    ActionLogEnterOperation(id, ActionLog::TIMER);
+    ActionLogEnterOperation(id, ActionLog::UNKNOWN);
     ActionLogEventTriggered(l[0].object);
+    ActionLogEventCommandTriggered(l[0].object);
 
 	// Execute the function.
 
@@ -126,7 +127,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
         std::cerr << "Warning: multiple targets may fire with signature " << descriptorString << std::endl;
     }
 
-    std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
+    std::cout << "Running " << id << " : " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
 
     bool done = (l[0].function)(l[0].object, descriptor); // don't use the descriptor from this point on, it could be deleted
     ASSERT(done);
