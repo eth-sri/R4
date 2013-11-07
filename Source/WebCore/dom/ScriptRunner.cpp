@@ -129,6 +129,9 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
 
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
+    // TOOD(WebERA): We should split this up such that only one async script is executed for each execution of the timer,
+    // right now async (and in-order) scripts will be grouped together in batches that we cant reorder later.
+
     ASSERT_UNUSED(timer, timer == &m_timer);
 
     RefPtr<Document> protect(m_document);

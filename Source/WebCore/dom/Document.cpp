@@ -5805,7 +5805,7 @@ void Document::updateEventDelayTimerDescriptor()
     params << Document::getSeqNumber();
 
     EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "LoadDocumentEvent",
+                "LoadDocumentDelay",
                 params.str());
 
     m_loadEventDelayTimer.setEventActionDescriptor(descriptor);

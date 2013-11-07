@@ -205,10 +205,6 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     );
 
     m_checkTimer.setEventActionDescriptor(descriptor);
-
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                descriptor);
 }
 
 FrameLoader::~FrameLoader()
@@ -752,6 +748,11 @@ void FrameLoader::startCheckCompleteTimer()
         return;
     if (m_checkTimer.isActive())
         return;
+
+    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
+                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
+                m_checkTimer.eventActionDescriptor());
+
     m_checkTimer.startOneShot(0);
 }
 
