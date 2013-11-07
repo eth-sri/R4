@@ -200,7 +200,7 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
 {
 	// TODO(WebERA): Put name that identifies the document loaded.
     EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "FrameLoader::CheckLoadedTimer",
+                "CheckLoadedFrameTimer",
                 ""
     );
 
