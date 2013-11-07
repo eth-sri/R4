@@ -83,7 +83,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
         /**
           * Fuzzy match the URL part of various event actions
-          * (Currently NETWORK and HTMLDocumentParser)
+          * (Currently Network and HTMLDocumentParser)
           *
           * With event action A, we will match an event action B iff
           *
@@ -104,12 +104,12 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
           *
           */
 
-        if (eventActionType == "NETWORK" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer") {
+        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer") {
 
             QString url = QString::fromStdString(nextToSchedule.getParameter(0));
 
             unsigned int sequenceNumber1 = QString::fromStdString(nextToSchedule.getParameter(1)).toUInt();
-            unsigned int sequenceNumber2 = (eventActionType == "NETWORK" || eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(2)).toUInt() : 0;
+            unsigned int sequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(2)).toUInt() : 0;
             unsigned int sequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(3)).toUInt() : 0;
 
             FuzzyUrlMatcher* matcher = new FuzzyUrlMatcher(QUrl(url));
@@ -129,7 +129,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
                 }
 
                 unsigned int candidateSequenceNumber1 = QString::fromStdString(candidate.getParameter(1)).toUInt();
-                unsigned int candidateSequenceNumber2 = (eventActionType == "NETWORK" || eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(2)).toUInt() : 0;
+                unsigned int candidateSequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(2)).toUInt() : 0;
                 unsigned int candidateSequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(3)).toUInt() : 0;
 
                 if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2 || candidateSequenceNumber3 != sequenceNumber3) {

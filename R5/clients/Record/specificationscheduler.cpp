@@ -48,7 +48,7 @@ void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDesc
 {
     if (strcmp(descriptor.getType(), "HTMLDocumentParser") == 0) {
         m_parsingQueue.push(descriptor);
-    } else if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+    } else if (strcmp(descriptor.getType(), "Network") == 0) {
 
         std::string networkSeqId = getNetworkSequenceId(descriptor);
 

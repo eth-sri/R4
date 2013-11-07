@@ -407,7 +407,7 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
 
     EventActionDescriptor descriptor =
             threadGlobalData().threadTimers().eventActionRegister()->allocateEventDescriptor(
-                "NETWORK",
+                "Network",
                 params.str()
             );
     threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(

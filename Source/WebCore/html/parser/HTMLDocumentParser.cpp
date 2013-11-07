@@ -334,7 +334,7 @@ void HTMLDocumentParser::insert(const SegmentedString& source)
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+    if (strcmp(descriptor.getType(), "Network") == 0) {
         m_lastNetworkEventAction = descriptor;
     }
 
@@ -367,7 +367,7 @@ void HTMLDocumentParser::append(const SegmentedString& source)
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+    if (strcmp(descriptor.getType(), "Network") == 0) {
         m_lastNetworkEventAction = descriptor;
     }
 
@@ -452,7 +452,7 @@ void HTMLDocumentParser::finish()
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+    if (strcmp(descriptor.getType(), "Network") == 0) {
         m_lastNetworkEventAction = descriptor;
     }
 
@@ -510,7 +510,7 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+    if (strcmp(descriptor.getType(), "Network") == 0) {
         m_lastNetworkEventAction = descriptor;
     }
 
@@ -548,7 +548,7 @@ void HTMLDocumentParser::notifyFinished(CachedResource* cachedResource)
     // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
     const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
-    if (strcmp(descriptor.getType(), "NETWORK") == 0) {
+    if (strcmp(descriptor.getType(), "Network") == 0) {
         m_lastNetworkEventAction = descriptor;
     }
 
