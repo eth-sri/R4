@@ -747,10 +747,7 @@ void FrameLoader::startCheckCompleteTimer()
     if (m_checkTimer.isActive())
         return;
 
-    threadGlobalData().threadTimers().eventActionsHB()->addExplicitArc(
-                threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching(),
-                m_checkTimer.eventActionDescriptor());
-
+    ActionLogTriggerEvent(&m_checkTimer);
     m_checkTimer.startOneShot(0);
 }
 

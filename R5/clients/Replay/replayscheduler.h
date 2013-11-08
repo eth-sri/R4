@@ -50,6 +50,7 @@ public:
     ~ReplayScheduler();
 
     void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    void eventActionDescheduled(const WebCore::EventActionDescriptor&, WebCore::EventActionRegister*) {}
 
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
