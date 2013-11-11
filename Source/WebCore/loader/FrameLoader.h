@@ -232,7 +232,7 @@ public:
 
     void loadDone();
     void finishedParsing();
-    void checkCompleted();
+    void checkCompleted(bool async = true);
 
     void checkDidPerformFirstNavigation();
 
@@ -428,6 +428,10 @@ private:
 
     KURL m_previousUrl;
     RefPtr<HistoryItem> m_requestedHistoryItem;
+
+    // WebERA:
+    Timer<FrameLoader> m_documentLoadedTimer;
+    void documentLoadedTimerFired(Timer<FrameLoader>* timer);
 };
 
 // This function is called by createWindow() in JSDOMWindowBase.cpp, for example, for

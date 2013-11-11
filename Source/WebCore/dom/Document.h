@@ -266,16 +266,6 @@ public:
     Element* getElementByAccessKey(const String& key);
     void invalidateAccessKeyMap();
 
-private:
-    // WebERA:
-    void updateEventDelayTimerDescriptor();
-
-    static unsigned int getSeqNumber() {
-        return Document::m_seqNumber++;
-    }
-
-    static unsigned int m_seqNumber;
-
 public:
 
     // DOM methods & attributes for Document
@@ -1488,7 +1478,6 @@ private:
 
     int m_loadEventDelayCount;
     MultiJoinHappensBefore m_loadEventDelayCountJoin;
-    MultiJoinHappensBefore m_loadEventDelayCountLatestJoin;
     Timer<Document> m_loadEventDelayTimer;
 
     ViewportArguments m_viewportArguments;

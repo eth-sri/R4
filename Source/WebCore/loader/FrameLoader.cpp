@@ -197,12 +197,12 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     , m_loadingFromCachedPage(false)
     , m_suppressOpenerInNewFrame(false)
     , m_forcedSandboxFlags(SandboxNone)
+    , m_documentLoadedTimer(this, &FrameLoader::documentLoadedTimerFired)
 {
-	// TODO(WebERA): Put name that identifies the document loaded.
+    // TODO(WebERA): Put name that identifies the document loaded.
 
-    EventActionDescriptor descriptor("CheckLoadedFrameTimer", "");
-    m_checkTimer.setEventActionDescriptor(descriptor);
-    ActionLogTriggerEvent(&m_checkTimer);
+    EventActionDescriptor descriptor("DocumentLoaded", "");
+    m_documentLoadedTimer.setEventActionDescriptor(descriptor);
 
 }
 
@@ -685,7 +685,7 @@ bool FrameLoader::allAncestorsAreComplete() const
     return true;
 }
 
-void FrameLoader::checkCompleted()
+void FrameLoader::checkCompleted(bool async)
 {
     m_shouldCallCheckCompleted = false;
 
@@ -712,6 +712,19 @@ void FrameLoader::checkCompleted()
     if (!allChildrenAreComplete())
         return;
 
+    // WebERA: We allow non-async calls such that the checkCompleted call to the parent frame (of a completed child) is done sync. as is normal behaviour
+    if (async) {
+        m_documentLoadedTimer.startOneShot(0);
+    } else {
+        documentLoadedTimerFired(NULL);
+    }
+}
+
+void FrameLoader::documentLoadedTimerFired(Timer<FrameLoader>*)
+{
+    // WebERA:
+    // Join (Create HB relations) between all event actions triggering the load and this event action itself
+
     // SRL: Include the join happens before relations.
     m_frame->document()->parsingJoin();
     //threadGlobalData().threadTimers().happensBefore().splitCurrentEventActionIfNotInScope(true);
@@ -719,10 +732,11 @@ void FrameLoader::checkCompleted()
     //threadGlobalData().threadTimers().happensBefore().splitCurrentEventActionIfNotInScope(true); <-- TODO(WebERA-HB-REVIEW): Why do we need to do this?
 
     m_frame->document()->delayingLoadEventJoin();
+
     for (Frame* child = m_frame->tree()->firstChild(); child; child = child->tree()->nextSibling()) {
-    	if (child->loader() != this) {
-    		child->loader()->m_isCompleteJoin.joinAction();
-    	}
+        if (child->loader() != this) {
+            child->loader()->m_isCompleteJoin.joinAction();
+        }
     }
 
     // OK, completed.
@@ -733,17 +747,6 @@ void FrameLoader::checkCompleted()
     m_frame->document()->setReadyState(Document::Complete);
 
     RefPtr<Frame> protect(m_frame);
-
-    // TODO(WebERA-HB): In EventRacer, the event action was split into two (in the following call),
-    // in order to split any local event action (such as an image onload) from being connected together with the window onload.
-    //
-    // Right now, the last event to trigger checkCompleted will trigger the implicitClose and in turn the window load event.
-    // All joins made on the LoadEvent will also be used to create HB relations to the last event action.
-    //
-    // This forces the last event action to always be the last in any ordering, which is strictly not correct.
-    //
-    // We could add a new timer for the onLoad, that has happens before relations to the joined event actions. This way the last
-    // event action is handled correct, and an image onload will not be fused with the window onload.
 
     checkCallImplicitClose(); // if we didn't do it before
 
@@ -775,8 +778,6 @@ void FrameLoader::startCheckCompleteTimer()
     if (m_checkTimer.isActive())
         return;
 
-    // TODO(WebERA-HB) This HB is not stated explicitly here in the EventRacer impl
-    ActionLogTriggerEvent(&m_checkTimer);
     m_checkTimer.startOneShot(0);
 }
 
@@ -1089,7 +1090,7 @@ void FrameLoader::completed()
         descendant->navigationScheduler()->startTimer();
 
     if (Frame* parent = m_frame->tree()->parent())
-        parent->loader()->checkCompleted();
+        parent->loader()->checkCompleted(false);
 
     if (m_frame->view())
         m_frame->view()->maintainScrollPositionAtAnchor(0);

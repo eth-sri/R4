@@ -557,9 +557,6 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     m_docID = docID++;
     
     InspectorCounters::incrementCounter(InspectorCounters::DocumentCounter);
-
-    // WebERA:
-    updateEventDelayTimerDescriptor(); // make sure that the timer is initialized with a descriptor
 }
 
 static void histogramMutationEventUsage(const unsigned short& listenerTypes)
@@ -5782,8 +5779,6 @@ void Document::addDocumentToFullScreenChangeEventQueue(Document* doc)
 }
 #endif
 
-unsigned int Document::m_seqNumber = 0;
-
 void Document::decrementLoadEventDelayCount()
 {
     ASSERT(m_loadEventDelayCount);
@@ -5791,7 +5786,6 @@ void Document::decrementLoadEventDelayCount()
 
     // Create happens before relations for all events modifying the counter for the next load event
     m_loadEventDelayCountJoin.threadEndAction();
-    m_loadEventDelayCountLatestJoin.threadEndAction();
 
     if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive())
         m_loadEventDelayTimer.startOneShot(0);
@@ -5799,27 +5793,8 @@ void Document::decrementLoadEventDelayCount()
 
 void Document::loadEventDelayTimerFired(Timer<Document>*)
 {
-	ActionLogScope log_scope("load_event_delay");
-
-    m_loadEventDelayCountLatestJoin.joinAction();
-    m_loadEventDelayCountLatestJoin = MultiJoinHappensBefore(); // reset
-
     if (frame())
         frame()->loader()->checkCompleted();
-
-    updateEventDelayTimerDescriptor();
-}
-
-void Document::updateEventDelayTimerDescriptor()
-{
-    // WebERA:
-
-    std::stringstream params;
-    params << url().string().ascii().data() << ",";
-    params << Document::getSeqNumber();
-
-    EventActionDescriptor descriptor("LoadDocumentDelay", params.str());
-    m_loadEventDelayTimer.setEventActionDescriptor(descriptor);
 }
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
