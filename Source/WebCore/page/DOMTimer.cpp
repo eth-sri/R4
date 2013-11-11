@@ -115,12 +115,8 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     ActionLogFormat(ActionLog::WRITE_MEMORY, "Timer:%d", timer->m_timeoutId);
     ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMTimer[%p]", static_cast<void*>(timer));
 
-    // TODO(WebERA): Select an appropiate timer name
     EventActionDescriptor descriptor("DOMTimer", params.str());
     timer->setEventActionDescriptor(descriptor);
-
-    // TODO(WebERA-HB): EventRacer does not have an explicit HB-relation here
-    ActionLogTriggerEvent(timer);
 
     timer->suspendIfNeeded();
     InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);
