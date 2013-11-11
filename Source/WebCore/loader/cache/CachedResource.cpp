@@ -52,6 +52,8 @@
 #include <wtf/EventActionDescriptor.h>
 #include <string>
 
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
+
 using namespace WTF;
 
 namespace WebCore {
@@ -393,11 +395,11 @@ void CachedResource::didAddClient(CachedResourceClient* c)
     	// SRL: Use a memory location of type CachedResource and report a write on it.
     	// This is an ad-hoc synchonization that the eventracer raceanalyzer will convert
     	// to a happens-before edge.
-    	if (threadGlobalData().threadTimers().happensBefore().isCurrentEventActionValid()) {
+        if (HBIsCurrentEventActionValid()) {
     		ActionLogFormat(ActionLog::WRITE_MEMORY, "CachedResource-%p-%p", this, c);
     	}
 
-        // TODO(WebERA-HB): Document the above happens before - is this related to the HB relation added at the bottom of this file?
+        // TODO(WebERA-HB-REVIEW): Should we add an explicit HB relation here? Document this HB relation.
 
         m_clients.add(c);
         m_clientsAwaitingCallback.remove(c);
@@ -434,11 +436,11 @@ bool CachedResource::addClientToSet(CachedResourceClient* client)
 	// SRL: Use a memory location of type CachedResource and report a write on it.
 	// This is an ad-hoc synchonization that the eventracer raceanalyzer will convert
 	// to a happens-before edge.
-    if (threadGlobalData().threadTimers().happensBefore().isCurrentEventActionValid()) {
+    if (HBIsCurrentEventActionValid()) {
     	ActionLogFormat(ActionLog::WRITE_MEMORY, "CachedResource-%p-%p", this, client);
     }
 
-    // TODO(WebERA-HB): Document the above happens before - is this related to the HB relation added at the bottom of this file?
+    // TODO(WebERA-HB-REVIEW): Should we add an explicit HB relation here? Document this HB relation.
 
     m_clients.add(client);
     return true;
