@@ -256,11 +256,12 @@ protected:
     bool m_nextSnapshotUpdateTimerRunning;
     Timer<QNetworkReplyControllable> m_nextSnapshotUpdateTimer;
 
+    QNetworkReply* m_reply;
+
+    WebCore::EventActionId m_lastNetworkEventAction;
+
 protected slots:
     void scheduleNextSnapshotUpdate();
-
-protected:
-    QNetworkReply* m_reply;
 
 };
 
