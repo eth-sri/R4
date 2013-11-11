@@ -29,6 +29,7 @@
 
 #include <QMultiHash>
 
+#include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
 class QNetworkReplyControllableFactoryReplay;

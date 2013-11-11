@@ -28,6 +28,7 @@
 
 #include <QFile>
 
+#include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
 class QNetworkReplyControllableFactoryRecord;
