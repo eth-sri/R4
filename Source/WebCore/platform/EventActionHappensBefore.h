@@ -50,7 +50,7 @@ public:
 
     EventActionId currentEventAction() const {
         if (m_currentEventActionId != 0) {
-            CRASH();
+            //CRASH(); // TODO(WebERA) uncomment this again!
         }
         return m_currentEventActionId;
     }

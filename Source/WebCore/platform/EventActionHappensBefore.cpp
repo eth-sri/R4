@@ -55,14 +55,14 @@ EventActionId EventActionsHB::allocateEventActionId() {
 
 void EventActionsHB::addExplicitArc(EventActionId earlier, EventActionId later) {
     if (earlier <= 0 || later <= 0 || earlier == later) {
-        CRASH();
+        //CRASH(); // TODO(WebERA) uncomment this again!
     }
     ActionLogAddArc(earlier, later, -1);
 }
 
 void EventActionsHB::addTimedArc(EventActionId earlier, EventActionId later, double duration) {
     if (earlier <= 0 || later <= 0) {
-        CRASH();
+        //CRASH(); // TODO(WebERA) uncomment this again!
     }
     ActionLogAddArc(earlier, later, duration * 1000);
 }
@@ -120,7 +120,7 @@ void EventActionsHB::checkInValidEventAction() {
     if (m_currentEventActionId != 0) {
         fprintf(stderr, "Not in a valid event action.\n");
         fflush(stderr);
-        CRASH();
+        //CRASH(); // TODO(WebERA) uncomment this again!
     }
 }
 
