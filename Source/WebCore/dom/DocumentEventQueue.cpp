@@ -36,7 +36,7 @@
 #include "ScriptExecutionContext.h"
 #include "SuspendableTimer.h"
 
-#include <wtf/EventActionDescriptor.h>
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
 #include <wtf/ActionLogReport.h>
 
 namespace WebCore {
@@ -67,6 +67,7 @@ PassRefPtr<DocumentEventQueue> DocumentEventQueue::create(ScriptExecutionContext
 DocumentEventQueue::DocumentEventQueue(ScriptExecutionContext* context)
     : m_pendingEventTimer(adoptPtr(new DocumentEventQueueTimer(this, context)))
     , m_isClosed(false)
+    , m_lastFireEventAction(0)
 {
     m_pendingEventTimer->suspendIfNeeded();
 }
@@ -74,8 +75,6 @@ DocumentEventQueue::DocumentEventQueue(ScriptExecutionContext* context)
 DocumentEventQueue::~DocumentEventQueue()
 {
 }
-
-unsigned int DocumentEventQueue::m_seqNumber = 0;
 
 bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
 {
@@ -85,23 +84,10 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
     ASSERT(event->target());
     bool wasAdded = m_queuedEvents.add(event).isNewEntry;
     ASSERT_UNUSED(wasAdded, wasAdded); // It should not have already been in the list.
+
+    m_queuedSources.push_back(HBCurrentEventAction());
     
-    if (!m_pendingEventTimer->isActive()) {
-
-        // WebERA:
-        // TODO(WebERA): Each event should be executed by its own timer and not as part of this group timer
-
-        std::stringstream params;
-        params << DocumentEventQueue::getSeqNumber();
-
-        EventActionDescriptor descriptor("DocumentEventQueue", params.str());
-
-        m_pendingEventTimer->setEventActionDescriptor(descriptor);
-        m_pendingEventTimer->startOneShot(0);
-    }
-
-	// TODO(WebERA-HB-REVIEW): EventRacer does not have a HB relation here? 
-    ActionLogTriggerEvent(&m_pendingEventTimer);
+    tryUpdateAndStartTimer();
 
     return true;
 }
@@ -130,6 +116,18 @@ void DocumentEventQueue::enqueueOrDispatchScrollEvent(PassRefPtr<Node> target, S
 bool DocumentEventQueue::cancelEvent(Event* event)
 {
     bool found = m_queuedEvents.contains(event);
+
+    // WebERA: Remove the source from the queue
+    unsigned int index = 0;
+    ListHashSet<RefPtr<Event> >::const_iterator it = m_queuedEvents.begin();
+    std::list<EventActionId>::iterator it2 = m_queuedSources.begin();
+    while ((*it) != event) {
+        index++;
+        ++it;
+        it2++;
+    }
+    m_queuedSources.erase(it2);
+
     m_queuedEvents.remove(event);
     if (m_queuedEvents.isEmpty())
         m_pendingEventTimer->stop();
@@ -143,6 +141,22 @@ void DocumentEventQueue::close()
     m_queuedEvents.clear();
 }
 
+unsigned int DocumentEventQueue::m_seqNumber = 0;
+
+void DocumentEventQueue::tryUpdateAndStartTimer()
+{
+    if (!m_pendingEventTimer->isActive()) {
+
+        std::stringstream params;
+        params << DocumentEventQueue::getSeqNumber();
+
+        EventActionDescriptor descriptor("DocumentEventQueue", params.str());
+
+        m_pendingEventTimer->setEventActionDescriptor(descriptor);
+        m_pendingEventTimer->startOneShot(0);
+    }
+}
+
 void DocumentEventQueue::pendingEventTimerFired()
 {
     ASSERT(!m_pendingEventTimer->isActive());
@@ -150,6 +164,7 @@ void DocumentEventQueue::pendingEventTimerFired()
 
     m_nodesWithQueuedScrollEvents.clear();
 
+    /*
     // Insert a marker for where we should stop.
     ASSERT(!m_queuedEvents.contains(0));
     bool wasAdded = m_queuedEvents.add(0).isNewEntry;
@@ -165,6 +180,29 @@ void DocumentEventQueue::pendingEventTimerFired()
             break;
         dispatchEvent(event.get());
     }
+    */
+
+    // WebERA: Only trigger one event action at a  time
+
+    RefPtr<DocumentEventQueue> protector(this);
+
+    RefPtr<Event> event = m_queuedEvents.first();
+    m_queuedEvents.remove(0);
+
+    if (event) {
+        dispatchEvent(event.get());
+    }
+
+    // WebERA: Happens before (triggering event)
+    HBAddExplicitArc(m_queuedSources.front(), HBCurrentEventAction());
+    m_queuedSources.pop_front();
+
+    // WebERA: Happens before (chaining)
+    if (m_lastFireEventAction != 0) {
+        HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    }
+
+    m_lastFireEventAction = HBCurrentEventAction();
 }
 
 void DocumentEventQueue::dispatchEvent(PassRefPtr<Event> event)

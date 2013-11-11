@@ -33,6 +33,9 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/EventActionDescriptor.h>
+
+#include <list>
 
 namespace WebCore {
 
@@ -66,6 +69,7 @@ private:
 
     OwnPtr<DocumentEventQueueTimer> m_pendingEventTimer;
     ListHashSet<RefPtr<Event> > m_queuedEvents;
+    std::list<EventActionId> m_queuedSources; // WebERA
     HashSet<Node*> m_nodesWithQueuedScrollEvents;
     bool m_isClosed;
 
@@ -75,8 +79,11 @@ private:
     static unsigned int getSeqNumber() {
         return DocumentEventQueue::m_seqNumber++;
     }
-
     static unsigned int m_seqNumber;
+
+    void tryUpdateAndStartTimer();
+
+    EventActionId m_lastFireEventAction;
 };
 
 }
