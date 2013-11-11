@@ -32,10 +32,11 @@
 
 #include <sstream>
 
-#include "Timer.h"
-#include "ThreadTimers.h"
-#include <wtf/Vector.h>
+#include "WebCore/platform/Timer.h"
+#include "WebCore/platform/ThreadTimers.h"
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
 
+#include <wtf/Vector.h>
 #include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
@@ -74,6 +75,8 @@ private:
     Timer<EventSender<T> > m_timer;
     Vector<T*> m_dispatchSoonList;
     Vector<T*> m_dispatchingList;
+
+    MultiJoinHappensBefore m_sendJoin;
 };
 
 template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
@@ -86,8 +89,6 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
 {
     m_dispatchSoonList.append(sender);
     
-    
-
     if (!m_timer.isActive()) {
 
         // WebERA:
@@ -102,15 +103,26 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
         m_timer.startOneShot(0);
     }
 
-    // WebERA:
-    // Always set a happens before relation with the current timer, since the timers execution now depends on this event
-    ActionLogTriggerEvent(&m_timer);
+    m_sendJoin.threadEndAction();
 
-    // TODO(WebERA-HB): Should we split this into multiple timers? Such that the events are not clustered together. The original EventRacer implementation is splitting the timer event action - suggesting that we should do the same in the implementation.
+    // WebERA: Happens before (always trigger after the previous event)
+    if (m_timer.lastFireEventAction() != 0) {
+        HBAddExplicitArc(m_timer.lastFireEventAction(), HBCurrentEventAction());
+    }
+
+    // TODO(WebERA-HB): Should we split this into multiple timers such that events are not batched togheter?
+    // The original EventRacer implementation splits these timers into individual event actions.
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)
 {
+    m_sendJoin.threadEndAction();
+
+    // WebERA: Happens before (always trigger after the previous event)
+    if (m_timer.lastFireEventAction() != 0) {
+        HBAddExplicitArc(m_timer.lastFireEventAction(), HBCurrentEventAction());
+    }
+
     // Remove instances of this sender from both lists.
     // Use loops because we allow multiple instances to get into the lists.
     size_t size = m_dispatchSoonList.size();
@@ -127,11 +139,15 @@ template<typename T> void EventSender<T>::cancelEvent(T* sender)
 
 template<typename T> void EventSender<T>::dispatchPendingEvents()
 {
+
     // Need to avoid re-entering this function; if new dispatches are
     // scheduled before the parent finishes processing the list, they
     // will set a timer and eventually be processed.
     if (!m_dispatchingList.isEmpty())
         return;
+
+    // WebERA: Happens before (all event actions triggering this)
+    m_sendJoin.joinAction();
 
     m_timer.stop();
 

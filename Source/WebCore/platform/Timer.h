@@ -78,6 +78,10 @@ public:
         m_inEventActionRegister = active;
     }
 
+    EventActionId lastFireEventAction() {
+        return m_lastFireEventAction;
+    }
+
 private:
     virtual void fired() = 0;
 
