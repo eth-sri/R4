@@ -137,10 +137,11 @@ int ActionLogScopeDepth() {
 void ActionLogAddArc(int earlierId, int laterId, int duration) {
 	if (laterId <= earlierId) {
 		fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
-		ActionLogSave();
+        //ActionLogSave();
         //CRASH(); // TODO(WebERA) uncomment this again!
-	}
-	wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
+    } else {
+        wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
+    }
 }
 
 void ActionLogAddArcEvent(int nextId) {
