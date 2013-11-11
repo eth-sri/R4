@@ -39,11 +39,57 @@
 
 namespace WebCore {
 
+DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script, Document *document, unsigned int scriptRunnerId, unsigned int scriptOffset)
+    : m_timer(this, &DeferAsyncScriptExecution::timerFired)
+    , m_script(script)
+    , m_document(document)
+{
+
+    std::stringstream params;
+    params << scriptRunnerId << ",";
+    params << "Async" << ",";
+    params << scriptOffset;
+
+    EventActionDescriptor descriptor("ScriptRunner", params.str());
+
+    m_timer.setEventActionDescriptor(descriptor);
+    m_timer.startOneShot(0);
+}
+
+DeferAsyncScriptExecution::~DeferAsyncScriptExecution()
+{
+    if (m_timer.isActive()) {
+        m_timer.stop();
+    }
+}
+
+void DeferAsyncScriptExecution::timerFired(Timer<DeferAsyncScriptExecution> *timer)
+{
+    ASSERT_UNUSED(timer, timer == &m_timer);
+
+    RefPtr<Document> protect(m_document);
+
+    CachedScript* cachedScript = m_script.cachedScript();
+    RefPtr<Element> element = m_script.releaseElementAndClear();
+    ScriptElement* script = toScriptElement(element.get());
+    ActionLogFormat(ActionLog::READ_MEMORY, "ScriptRunner-%p-%p",
+            static_cast<void*>(this), static_cast<void*>(script));
+    script->execute(cachedScript);
+    m_document->decrementLoadEventDelayCount();
+
+    // No need to add HB relation for the event action loading the resource. That relation should have been
+    // added implicitly when creating the timer.
+}
+
 unsigned int ScriptRunner::m_seqNumber = 0;
 
 ScriptRunner::ScriptRunner(Document* document)
     : m_document(document)
-    , m_timer(this, &ScriptRunner::timerFired)
+    , m_pendingScriptsAdded(0)
+    , m_scriptRunnerId(ScriptRunner::getSeqNumber())
+    , m_inOrderTimer(this, &ScriptRunner::inOrderTimerFired)
+    , m_inOrderExecuted(0)
+    , m_inOrderLastEventAction(0)
 {
     ASSERT(document);
 }
@@ -56,6 +102,11 @@ ScriptRunner::~ScriptRunner()
         m_document->decrementLoadEventDelayCount();
     for (int i = 0; i < m_pendingAsyncScripts.size(); ++i)
         m_document->decrementLoadEventDelayCount();
+
+    for (size_t i = 0; i < m_pendingAsyncScriptsExecuted.size(); ++i) {
+        delete m_pendingAsyncScriptsExecuted[i];
+        m_document->decrementLoadEventDelayCount();
+    }
 }
 
 void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedResourceHandle<CachedScript> cachedScript, ExecutionType executionType)
@@ -71,7 +122,7 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
 
     switch (executionType) {
     case ASYNC_EXECUTION:
-        m_pendingAsyncScripts.add(scriptElement, PendingScript(element, cachedScript.get()));
+        m_pendingAsyncScripts.add(scriptElement, std::pair<unsigned int, PendingScript>(m_pendingScriptsAdded++, PendingScript(element, cachedScript.get())));
         break;
 
     case IN_ORDER_EXECUTION:
@@ -84,80 +135,105 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
 
 void ScriptRunner::suspend()
 {
-    m_timer.stop();
+    // TODO(WebERA): extend suspend/resume to include async scripts
+
+    ASSERT_NOT_REACHED();
+    m_inOrderTimer.stop();
 }
 
 void ScriptRunner::resume()
 {
-    if (hasPendingScripts())
-        m_timer.startOneShot(0);
+    //if (hasPendingScripts())
+    //    m_inOrderTimer.startOneShot(0);
+
+    updateInOrderTimer();
 }
 
 void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType executionType)
 {
+    ActionLogFormat(ActionLog::WRITE_MEMORY, "ScriptRunner-%p-%p",
+            static_cast<void*>(this), static_cast<void*>(scriptElement));
+
+    std::pair<unsigned int, PendingScript> elm;
+
     switch (executionType) {
     case ASYNC_EXECUTION:
         ASSERT(m_pendingAsyncScripts.contains(scriptElement));
-        m_scriptsToExecuteSoon.append(m_pendingAsyncScripts.take(scriptElement));
-        break;
+
+        elm = m_pendingAsyncScripts.take(scriptElement);
+        m_pendingAsyncScriptsExecuted.append(new DeferAsyncScriptExecution(elm.second, m_document, m_scriptRunnerId, elm.first));
+
+        return;
 
     case IN_ORDER_EXECUTION:
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
-        break;
+
+        updateInOrderTimer();
+
+        return;
     }
 
-    ActionLogFormat(ActionLog::WRITE_MEMORY, "ScriptRunner-%p-%p",
-    		static_cast<void*>(this), static_cast<void*>(scriptElement));
-
-    // WebERA:
-    if (!m_timer.isActive()) {
-
-        std::stringstream params;
-        params << ScriptRunner::getSeqNumber();
-
-        EventActionDescriptor descriptor("ScriptRunner", params.str());
-
-        m_timer.setEventActionDescriptor(descriptor);
-
-        m_timer.startOneShot(0);
-    }
-
-    // WebERA:
-    // Add happens before relation to all events adding scripts to the next script runner event
-    ActionLogTriggerEvent(&m_timer);
+    ASSERT_NOT_REACHED();
 }
 
-void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
+void ScriptRunner::updateInOrderTimer() {
+
+    if (m_scriptsToExecuteInOrder.size() == 0 || !m_scriptsToExecuteInOrder[0].cachedScript()->isLoaded()) {
+        return;
+    }
+
+    if (m_inOrderTimer.isActive()) {
+        return;
+    }
+
+    std::stringstream params;
+    params << m_scriptRunnerId << ",";
+    params << "InOrder" << ",";
+    params << m_inOrderExecuted;
+
+    EventActionDescriptor descriptor("ScriptRunner", params.str());
+
+    m_inOrderTimer.setEventActionDescriptor(descriptor);
+    m_inOrderTimer.startOneShot(0);
+}
+
+void ScriptRunner::inOrderTimerFired(Timer<ScriptRunner>* timer)
 {
-	ActionLogScope log_scope("script runner timer");
+    m_inOrderExecuted++;
 
-    // TOOD(WebERA): We should split this up such that only one async script is executed for each execution of the timer,
-    // right now async (and in-order) scripts will be grouped together in batches that we cant reorder later.
-
-    ASSERT_UNUSED(timer, timer == &m_timer);
+    ASSERT_UNUSED(timer, timer == &m_inOrderTimer);
 
     RefPtr<Document> protect(m_document);
 
-    Vector<PendingScript> scripts;
-    scripts.swap(m_scriptsToExecuteSoon);
+    PendingScript pendingScript = m_scriptsToExecuteInOrder[0];
+    m_scriptsToExecuteInOrder.remove(0);
 
-    size_t numInOrderScriptsToExecute = 0;
-    for (; numInOrderScriptsToExecute < m_scriptsToExecuteInOrder.size() && m_scriptsToExecuteInOrder[numInOrderScriptsToExecute].cachedScript()->isLoaded(); ++numInOrderScriptsToExecute) {
-        scripts.append(m_scriptsToExecuteInOrder[numInOrderScriptsToExecute]);
-    }
-    if (numInOrderScriptsToExecute)
-        m_scriptsToExecuteInOrder.remove(0, numInOrderScriptsToExecute);
+    // Execute the script
 
-    size_t size = scripts.size();
-    for (size_t i = 0; i < size; ++i) {
-        CachedScript* cachedScript = scripts[i].cachedScript();
-        RefPtr<Element> element = scripts[i].releaseElementAndClear();
-        ScriptElement* script = toScriptElement(element.get());
-        ActionLogFormat(ActionLog::READ_MEMORY, "ScriptRunner-%p-%p",
-        		static_cast<void*>(this), static_cast<void*>(script));
-        script->execute(cachedScript);
-        m_document->decrementLoadEventDelayCount();
+    CachedScript* cachedScript = pendingScript.cachedScript();
+    RefPtr<Element> element = pendingScript.releaseElementAndClear();
+    ScriptElement* script = toScriptElement(element.get());
+    ActionLogFormat(ActionLog::READ_MEMORY, "ScriptRunner-%p-%p",
+            static_cast<void*>(this), static_cast<void*>(script));
+    script->execute(cachedScript);
+    m_document->decrementLoadEventDelayCount();
+
+    // Happens before - chaining
+
+    if (m_inOrderLastEventAction != 0) {
+        HBAddExplicitArc(m_inOrderLastEventAction, HBCurrentEventAction());
     }
+
+    m_inOrderLastEventAction = HBCurrentEventAction();
+
+    // Happens before - resource load
+
+    ASSERT(script->eventActionToFinish() != 0);
+    HBAddExplicitArc(script->eventActionToFinish(), HBCurrentEventAction());
+
+    // Schedule the next script if possible
+
+    updateInOrderTimer();
 }
 
 }

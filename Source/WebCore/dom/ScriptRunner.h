@@ -26,6 +26,8 @@
 #ifndef ScriptRunner_h
 #define ScriptRunner_h
 
+#include <utility>
+
 #include "CachedResourceHandle.h"
 #include "Timer.h"
 #include <wtf/HashMap.h>
@@ -33,6 +35,9 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/EventActionDescriptor.h>
+
+#include "WebCore/dom/PendingScript.h"
 
 namespace WebCore {
 
@@ -40,6 +45,34 @@ class CachedScript;
 class Document;
 class PendingScript;
 class ScriptElement;
+
+/** WebERA:
+ *
+ * This is used to split all async scripts into individual event actions. Regardless of when the scripts are scheduled for execution, they
+ * will be added deferred and executed using one of these objects.
+ *
+ * The "normal" execution logic (with one internal timer) is changed to only handle deferred scripts. Deferred scripts are executed in-order.
+ * Only one deferred script will be released to the scheduler at any time.
+ *
+ * Async scripts are given to the scheduler immeditately using a DeferAsyncScriptExecution.
+ *
+ */
+class DeferAsyncScriptExecution {
+
+    public:
+        DeferAsyncScriptExecution(const PendingScript& script, Document* document, unsigned int scriptRunnerId, unsigned int scriptOffset);
+        ~DeferAsyncScriptExecution();
+
+
+    private:
+
+        void timerFired(Timer<DeferAsyncScriptExecution>* timer);
+        Timer<DeferAsyncScriptExecution> m_timer;
+
+        PendingScript m_script;
+        Document* m_document;
+
+};
 
 class ScriptRunner {
     WTF_MAKE_NONCOPYABLE(ScriptRunner); WTF_MAKE_FAST_ALLOCATED;
@@ -57,19 +90,27 @@ public:
 private:
     ScriptRunner(Document*);
 
-    void timerFired(Timer<ScriptRunner>*);
+    void inOrderTimerFired(Timer<ScriptRunner>*);
+    void updateInOrderTimer();
 
     Document* m_document;
     Vector<PendingScript> m_scriptsToExecuteInOrder;
     Vector<PendingScript> m_scriptsToExecuteSoon; // http://www.whatwg.org/specs/web-apps/current-work/#set-of-scripts-that-will-execute-as-soon-as-possible
-    HashMap<ScriptElement*, PendingScript> m_pendingAsyncScripts;
-    Timer<ScriptRunner> m_timer;
+    HashMap<ScriptElement*, std::pair<unsigned int, PendingScript> > m_pendingAsyncScripts;
+    unsigned int m_pendingScriptsAdded;
+    Vector<DeferAsyncScriptExecution*> m_pendingAsyncScriptsExecuted;
 
     static unsigned int getSeqNumber() {
         return ScriptRunner::m_seqNumber++;
     }
-
     static unsigned int m_seqNumber;
+
+    unsigned int m_scriptRunnerId;
+
+    Timer<ScriptRunner> m_inOrderTimer;
+    unsigned int m_inOrderExecuted;
+    EventActionId m_inOrderLastEventAction;
+
 };
 
 }

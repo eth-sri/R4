@@ -24,6 +24,7 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceHandle.h"
 #include <wtf/text/TextPosition.h>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WebCore {
 
@@ -59,6 +60,10 @@ public:
     bool readyToBeParserExecuted() const { return m_readyToBeParserExecuted; }
     bool willExecuteWhenDocumentFinishedParsing() const { return m_willExecuteWhenDocumentFinishedParsing; }
     CachedResourceHandle<CachedScript> cachedScript() { return m_cachedScript; }
+
+    EventActionId eventActionToFinish() {
+        return m_eventActionToFinish;
+    }
 
 protected:
     void setHaveFiredLoadEvent(bool haveFiredLoad) { m_haveFiredLoad = haveFiredLoad; }
@@ -105,6 +110,9 @@ private:
     bool m_requestUsesAccessControl : 1;
     String m_characterEncoding;
     String m_fallbackCharacterEncoding;
+
+    // WebERA:
+    EventActionId m_eventActionToFinish;
 };
 
 ScriptElement* toScriptElement(Element*);

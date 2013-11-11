@@ -70,6 +70,7 @@ ScriptElement::ScriptElement(Element* element, bool parserInserted, bool already
     , m_forceAsync(!parserInserted)
     , m_willExecuteInOrder(false)
     , m_requestUsesAccessControl(false)
+    , m_eventActionToFinish(0)
 {
     ASSERT(m_element);
 }
@@ -331,6 +332,8 @@ void ScriptElement::notifyFinished(CachedResource* resource)
         m_element->document()->addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, consoleMessage);
         return;
     }
+
+    m_eventActionToFinish = HBCurrentEventAction();
 
     if (m_willExecuteInOrder)
         m_element->document()->scriptRunner()->notifyScriptReady(this, ScriptRunner::IN_ORDER_EXECUTION);
