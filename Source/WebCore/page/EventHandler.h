@@ -523,6 +523,8 @@ private:
     void deferredEventTimerFired(Timer<EventHandler>*);
     void scheduleEvent(DeferredPlatformEvent event);
     void rescheduleTimer();
+
+    MultiJoinHappensBefore m_fakeUserEventJoin;
 };
 
 } // namespace WebCore

@@ -67,6 +67,8 @@ public:
     // threadEndAction(s) to finish.
     void joinAction();
 
+    void clear();
+
 private:
     struct LList {
         LList(int id, LList* next) : m_id(id), m_next(next) {}

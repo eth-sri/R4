@@ -88,6 +88,10 @@ MultiJoinHappensBefore::MultiJoinHappensBefore() : m_joined(false), m_endThreads
 }
 
 MultiJoinHappensBefore::~MultiJoinHappensBefore() {
+    clear();
+}
+
+void MultiJoinHappensBefore::clear() {
     while (m_endThreads != NULL) {
         LList* next = m_endThreads->m_next;
         delete m_endThreads;
