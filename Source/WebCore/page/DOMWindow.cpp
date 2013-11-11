@@ -833,12 +833,6 @@ void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const Mes
 
     // Schedule the message.
     PostMessageTimer* timer = new PostMessageTimer(this, message, sourceOrigin, source, channels.release(), target.get(), stackTrace.release());
-
-    // WebERA:
-    ActionLogTriggerEvent(timer);
-
-    // TODO(WebERA-HB): EventRacer does not have a happens before relation here
-
     timer->startOneShot(0);
 }
 
