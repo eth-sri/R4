@@ -32,6 +32,7 @@
 #include "CachedResourceClientWalker.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/Vector.h>
 
 #if USE(JSC)  

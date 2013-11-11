@@ -1323,6 +1323,7 @@ bool Node::containsIncludingShadowDOM(Node* node)
 }
 
 // WebERA: The node identifier should be usable for finding the node again.
+// WebERA(TODO): Delete? - Are we going to use these identifiers?
 String Node::getNodeReplayIdentifier() const {
 	if (isElementNode()) {
 		const Element* el = toElement(this);
@@ -2896,6 +2897,8 @@ void Node::defaultEventHandler(Event* event)
     if (event->target() != this)
         return;
     const AtomicString& eventType = event->type();
+    ActionLogScope scope("fire:default_handler");
+
     if (eventType == eventNames().keydownEvent || eventType == eventNames().keypressEvent) {
         if (event->isKeyboardEvent())
             if (Frame* frame = document()->frame())

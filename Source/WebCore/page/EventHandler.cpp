@@ -85,15 +85,14 @@
 #include "UserTypingGestureIndicator.h"
 #include "WheelEvent.h"
 #include "WindowsKeyboardCodes.h"
+#include <wtf/ActionLogReport.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/Assertions.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TemporaryChange.h>
 #include <wtf/text/WTFString.h>
 #include <platform/graphics/IntPoint.h>
-
-#include <wtf/EventActionDescriptor.h>
-#include <wtf/ActionLogReport.h>
 
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/ThreadTimers.h>
@@ -1313,6 +1312,9 @@ DragSourceAction EventHandler::updateDragSourceActionsAllowed() const
     
 HitTestResult EventHandler::hitTestResultAtPoint(const LayoutPoint& point, bool allowShadowContent, bool ignoreClipping, HitTestScrollbars testScrollbars, HitTestRequest::HitTestRequestType hitType, const LayoutSize& padding)
 {
+    // TODO(WebERA-HB-REVIEW): Removed InstrumentedUIAction, I can't see which user initiated event this is a reaction to
+	ActionLogScope log_scope("eh:hittest");
+
     enum ShadowContentFilterPolicy shadowContentFilterPolicy = allowShadowContent ? AllowShadowContent : DoNotAllowShadowContent;
     HitTestResult result(point, padding.height(), padding.width(), padding.height(), padding.width(), shadowContentFilterPolicy);
 
@@ -1468,6 +1470,8 @@ bool EventHandler::logicalScrollOverflow(ScrollLogicalDirection direction, Scrol
 
 bool EventHandler::scrollRecursively(ScrollDirection direction, ScrollGranularity granularity, Node* startingNode)
 {
+	ActionLogScope log_scope("eh:scroll");
+
     // The layout needs to be up to date to determine if we can scroll. We may be
     // here because of an onLoad event, in which case the final layout hasn't been performed yet.
     m_frame->document()->updateLayoutIgnorePendingStylesheets();
@@ -1762,6 +1766,8 @@ bool EventHandler::handleMousePressEvent(const PlatformMouseEvent& mouseEvent)
 
 bool EventHandler::handleMousePressEventDeferred(const PlatformMouseEvent& mouseEvent)
 {
+	ActionLogScope log_scope("eh:mousepress");
+
     RefPtr<FrameView> protector(m_frame->view());
 
 #if ENABLE(TOUCH_EVENTS)
@@ -1960,6 +1966,8 @@ bool EventHandler::mouseMoved(const PlatformMouseEvent& mouseEvent)
 
 bool EventHandler::mouseMovedDeferred(const PlatformMouseEvent& event)
 {
+	ActionLogScope log_scope("eh:mousemove");
+
     MaximumDurationTracker maxDurationTracker(&m_maxMouseMovedDuration);
     RefPtr<FrameView> protector(m_frame->view());
 
@@ -2122,6 +2130,8 @@ bool EventHandler::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent)
 
 bool EventHandler::handleMouseReleaseEventDeferred(const PlatformMouseEvent& mouseEvent)
 {
+	ActionLogScope log_scope("eh:mouserelease");
+
     RefPtr<FrameView> protector(m_frame->view());
 
 #if ENABLE(TOUCH_EVENTS)
@@ -2587,6 +2597,8 @@ bool EventHandler::handleWheelEvent(const PlatformWheelEvent& e)
 
 bool EventHandler::handleWheelEventDeferred(const PlatformWheelEvent& e)
 {
+	ActionLogScope log_scope("eh:wheel");
+
     Document* doc = m_frame->document();
 
     RenderObject* docRenderer = doc->renderer();
@@ -2801,6 +2813,7 @@ bool EventHandler::bestZoomableAreaForTouchPoint(const IntPoint& touchCenter, co
 #if ENABLE(CONTEXT_MENUS)
 bool EventHandler::sendContextMenuEvent(const PlatformMouseEvent& event)
 {
+
     Document* doc = m_frame->document();
     FrameView* v = m_frame->view();
     if (!v)
@@ -2928,6 +2941,8 @@ void EventHandler::dispatchFakeMouseMoveEventSoon()
     // WebERA:
     // Add happens before relation to all events activating a fake mouse event
     ActionLogTriggerEvent(&m_fakeMouseMoveEventTimer);
+
+    // TODO(WebERA-HB): This is not part of EventRacer
 }
 
 void EventHandler::dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad& quad)
@@ -3061,6 +3076,8 @@ bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
 
 bool EventHandler::keyEventDeferred(const PlatformKeyboardEvent& initialKeyEvent)
 {
+	ActionLogScope log_scope("eh:key");
+
     // WebERA: deferred event
 
     RefPtr<FrameView> protector(m_frame->view()); 

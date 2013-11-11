@@ -85,6 +85,7 @@
 #include "TextCheckingHelper.h"
 #include "TextEvent.h"
 #include "TextIterator.h"
+#include "Timer.h"
 #include "TypingCommand.h"
 #include "UserTypingGestureIndicator.h"
 #include "htmlediting.h"

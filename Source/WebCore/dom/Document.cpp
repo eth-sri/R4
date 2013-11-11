@@ -148,6 +148,7 @@
 #include "StyleSheetList.h"
 #include "TextResourceDecoder.h"
 #include "Timer.h"
+#include "ThreadTimers.h"
 #include "TransformSource.h"
 #include "TreeWalker.h"
 #include "UserContentURLPattern.h"
@@ -161,15 +162,14 @@
 #include "XPathNSResolver.h"
 #include "XPathResult.h"
 #include "htmlediting.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/MainThread.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
-
 #include <wtf/EventActionDescriptor.h>
-#include <wtf/ActionLogReport.h>
 
 #if ENABLE(SHARED_WORKERS)
 #include "SharedWorkerRepository.h"
@@ -642,6 +642,10 @@ void Document::removedLastRef()
 {
     ASSERT(!m_deletionHasBegun);
     if (m_guardRefCount) {
+    	if (threadGlobalData().threadTimers().happensBefore().isCurrentEventActionValid()) {
+    		ActionLogScopeStart("delete_document");
+    	}
+
         // If removing a child removes the last self-only ref, we don't
         // want the scope to be destructed until after
         // removeAllChildren returns, so we guard ourselves with an
@@ -682,6 +686,10 @@ void Document::removedLastRef()
 #ifndef NDEBUG
         m_inRemovedLastRefFunction = false;
 #endif
+
+    	if (threadGlobalData().threadTimers().happensBefore().isCurrentEventActionValid()) {
+    		ActionLogScopeEnd();
+    	}
 
         guardDeref();
     } else {
@@ -1688,6 +1696,7 @@ bool Document::isPendingStyleRecalc() const
 
 void Document::styleRecalcTimerFired(Timer<Document>*)
 {
+	ActionLogScope log_scope("doc style recalc");
     updateStyleIfNeeded();
 }
 
@@ -2489,6 +2498,8 @@ void Document::implicitClose()
 
 void Document::setParsing(bool b)
 {
+	if (m_bParsing == true && b == false)
+		m_bParsingJoin.threadEndAction();
     m_bParsing = b;
     if (!m_bParsing && view())
         view()->scheduleRelayout();
@@ -5037,6 +5048,7 @@ void Document::cancelFocusAppearanceUpdate()
 
 void Document::updateFocusAppearanceTimerFired(Timer<Document>*)
 {
+	ActionLogScope log_scope("dom focus");
     Node* node = focusedNode();
     if (!node)
         return;
@@ -5152,7 +5164,8 @@ void Document::didReceiveTask(void* untypedContext)
         return;
     }
 
-    // TODO(WebERA): We should add the above as a named timer
+    // TODO(WebERA-HB): Add a descriptor to the pending tasks timer and ensure we have correct happens before relations between whatever is creating these tasks, the direct execution and the pending tasks timer
+	// Notice that this is also implemented in EventRacer
 
     context->task->performTask(document);
 }
@@ -5164,6 +5177,7 @@ void Document::postTask(PassOwnPtr<Task> task)
 
 void Document::pendingTasksTimerFired(Timer<Document>*)
 {
+	ActionLogScope log_scope("doc pending task");
     while (!m_pendingTasks.isEmpty()) {
         OwnPtr<Task> task = m_pendingTasks[0].release();
         m_pendingTasks.remove(0);
@@ -5775,17 +5789,21 @@ void Document::decrementLoadEventDelayCount()
     ASSERT(m_loadEventDelayCount);
     --m_loadEventDelayCount;
 
-    // WebERA:
     // Create happens before relations for all events modifying the counter for the next load event
-    ActionLogTriggerEvent(&m_loadEventDelayTimer);
+    m_loadEventDelayCountJoin.threadEndAction();
+    m_loadEventDelayCountLatestJoin.threadEndAction();
 
-    if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive()) {
+    if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive())
         m_loadEventDelayTimer.startOneShot(0);
-    }
 }
 
 void Document::loadEventDelayTimerFired(Timer<Document>*)
 {
+	ActionLogScope log_scope("load_event_delay");
+
+    m_loadEventDelayCountLatestJoin.joinAction();
+    m_loadEventDelayCountLatestJoin = MultiJoinHappensBefore(); // reset
+
     if (frame())
         frame()->loader()->checkCompleted();
 

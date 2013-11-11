@@ -30,14 +30,21 @@
 #include "SharedTimer.h"
 #include "ThreadGlobalData.h"
 #include "Timer.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/Vector.h>
 #include <stdio.h>
 #include <iostream>
 
 #include <platform/schedule/DefaultScheduler.h>
 #include <platform/schedule/EventActionRegister.h>
+
+#include <vector>
+#include <set>
 
 using namespace std;
 
@@ -117,8 +124,20 @@ bool ThreadTimers::fireTimerCallback(void* object, const EventActionDescriptor&)
 	TimerBase* timer = (TimerBase*)object;
     timer->inEventActionRegister(false);
 
+    // Implicit happens before
+
+    timer->m_lastFireEventAction = HBCurrentEventAction();
+
+    if (timer->m_ignoreFireIntervalForHappensBefore) {
+        HBAddExplicitArc(timer->m_starterEventAction, HBCurrentEventAction());
+    } else {
+        HBAddTimedArc(timer->m_starterEventAction, HBCurrentEventAction(), timer->m_nextFireInterval);
+    }
+
+    // Set next fire time
+
     double interval = timer->repeatInterval();
-    timer->setNextFireTime(interval ? monotonicallyIncreasingTime() + interval : 0);
+    timer->setNextFireTime(interval ? monotonicallyIncreasingTime() + interval : 0, interval);
 
     // Once the timer has been fired, it may be deleted, so do nothing else with it after this point.
     timer->fired();

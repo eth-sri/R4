@@ -135,7 +135,7 @@ private:
  * generate both move and mouseover/out events. For illustrative purposes we could try to filter out some of these
  * events when creating the schedule (if the schedule should be readable by humans).
  *
- * TODO(WebERA): Update naming of timers such that they can be recreated 100% using the schedule alone and not the "controlled replay" technique
+ * TODO(WebERA): Add UI timers for paste user events. See WebCore/editing/Editor.cpp (Editor::dispatchCPPEvent) where EventRacer raised a UI event action
  *
  */
 class EventHandler {

@@ -33,6 +33,7 @@
 #include <sstream>
 
 #include "Timer.h"
+#include "ThreadTimers.h"
 #include <wtf/Vector.h>
 
 #include <wtf/EventActionDescriptor.h>
@@ -84,6 +85,9 @@ template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
 template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
 {
     m_dispatchSoonList.append(sender);
+    
+    
+
     if (!m_timer.isActive()) {
 
         // WebERA:
@@ -101,6 +105,8 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
     // WebERA:
     // Always set a happens before relation with the current timer, since the timers execution now depends on this event
     ActionLogTriggerEvent(&m_timer);
+
+    // TODO(WebERA-HB): Should we split this into multiple timers? Such that the events are not clustered together. The original EventRacer implementation is splitting the timer event action - suggesting that we should do the same in the implementation.
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)
@@ -136,6 +142,10 @@ template<typename T> void EventSender<T>::dispatchPendingEvents()
     for (size_t i = 0; i < size; ++i) {
         if (T* sender = m_dispatchingList[i]) {
             m_dispatchingList[i] = 0;
+            
+            // WebERA:
+            ActionLogScope s("dispatch-event");
+
             sender->dispatchPendingEvent(this);
         }
     }

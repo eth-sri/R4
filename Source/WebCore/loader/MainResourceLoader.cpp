@@ -51,6 +51,7 @@
 #include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/CurrentTime.h>
 
 #if PLATFORM(QT)
@@ -377,6 +378,10 @@ void MainResourceLoader::substituteMIMETypeFromPluginDatabase(const ResourceResp
 
 void MainResourceLoader::didReceiveResponse(const ResourceResponse& r)
 {
+	// SRL: Create a network response event action.
+	ActionLogScope instrumentNetworkResponseScope(
+			String::format("main_response %s", r.url().string().ascii().data()).ascii().data());
+
     if (documentLoader()->applicationCacheHost()->maybeLoadFallbackForMainResponse(request(), r))
         return;
 

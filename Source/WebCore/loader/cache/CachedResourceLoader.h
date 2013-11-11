@@ -109,6 +109,9 @@ public:
     void incrementRequestCount(const CachedResource*);
     void decrementRequestCount(const CachedResource*);
     int requestCount() const { return m_requestCount; }
+    // SRL: Create happens before arcs from the requestCount counter. A frame may start several resources to load and
+    // it waits them to finish before firing its own onload event.
+    void requestCountJoin() { m_requestCountJoin.joinAction(); }
 
     bool isPreloaded(const String& urlString) const;
     void clearPreloads();
@@ -138,6 +141,7 @@ private:
     Document* m_document;
     
     int m_requestCount;
+    MultiJoinHappensBefore m_requestCountJoin;
     
     OwnPtr<ListHashSet<CachedResource*> > m_preloads;
     struct PendingPreload {

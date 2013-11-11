@@ -45,6 +45,10 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
+#include "ThreadGlobalData.h"
+#include "ThreadTimers.h"
+#include "Timer.h"
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
 
@@ -145,6 +149,10 @@ void ResourceLoader::start()
     ASSERT(!m_handle);
     ASSERT(!m_request.isNull());
     ASSERT(m_deferredRequest.isNull());
+
+    // SRL: Log that this is a start of a resource loading.
+    ActionLogScope log_scope(
+    		String::format("load_start:%s", m_request.url().lastPathComponent().ascii().data()).ascii().data());
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
     if (m_documentLoader->scheduleArchiveLoad(this, m_request, m_request.url()))
@@ -253,8 +261,12 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r)
     if (FormData* data = m_request.httpBody())
         data->removeGeneratedFilesIfNeeded();
         
-    if (m_options.sendLoadCallbacks == SendCallbacks)
+    if (m_options.sendLoadCallbacks == SendCallbacks) {
+        ActionLogFormat(ActionLog::ENTER_SCOPE,
+    			"recv_resp:%s", m_request.url().lastPathComponent().ascii().data());
         frameLoader()->notifier()->didReceiveResponse(this, m_response);
+        ActionLogScopeEnd();
+    }
 }
 
 void ResourceLoader::didReceiveData(const char* data, int length, long long encodedDataLength, bool allAtOnce)
@@ -273,8 +285,12 @@ void ResourceLoader::didReceiveData(const char* data, int length, long long enco
     // FIXME: If we get a resource with more than 2B bytes, this code won't do the right thing.
     // However, with today's computers and networking speeds, this won't happen in practice.
     // Could be an issue with a giant local file.
-    if (m_options.sendLoadCallbacks == SendCallbacks && m_frame)
+    if (m_options.sendLoadCallbacks == SendCallbacks && m_frame) {
+    	ActionLogScope log_scope(
+        		String::format("recv_data:%s",
+        				m_request.url().lastPathComponent().ascii().data()).ascii().data());
         frameLoader()->notifier()->didReceiveData(this, data, length, static_cast<int>(encodedDataLength));
+    }
 }
 
 void ResourceLoader::willStopBufferingData(const char* data, int length)
@@ -307,8 +323,13 @@ void ResourceLoader::didFinishLoadingOnePart(double finishTime)
     if (m_notifiedLoadComplete)
         return;
     m_notifiedLoadComplete = true;
-    if (m_options.sendLoadCallbacks == SendCallbacks)
+    if (m_options.sendLoadCallbacks == SendCallbacks) {
+    	// SRL: Log end of network response.
+    	ActionLogScope log_scope(
+        		String::format("finish_load:%s",
+        				m_request.url().lastPathComponent().ascii().data()).ascii().data());
         frameLoader()->notifier()->didFinishLoad(this, finishTime);
+    }
 }
 
 void ResourceLoader::didFail(const ResourceError& error)
@@ -326,8 +347,12 @@ void ResourceLoader::didFail(const ResourceError& error)
 
     if (!m_notifiedLoadComplete) {
         m_notifiedLoadComplete = true;
+        // SRL: Log that an atomic action is generated with a load failure.
+    	ActionLogFormat(ActionLog::ENTER_SCOPE,
+    			"failed:%s", m_request.url().lastPathComponent().ascii().data());
         if (m_options.sendLoadCallbacks == SendCallbacks)
             frameLoader()->notifier()->didFailToLoad(this, error);
+        ActionLogScopeEnd();
     }
 
     releaseResources();
@@ -375,8 +400,12 @@ void ResourceLoader::cancel(const ResourceError& error)
             m_handle = 0;
         }
 
-        if (m_options.sendLoadCallbacks == SendCallbacks && m_identifier && !m_notifiedLoadComplete)
+        if (m_options.sendLoadCallbacks == SendCallbacks && m_identifier && !m_notifiedLoadComplete) {
+        	ActionLogScope log_scope(
+            		String::format("cancel_fail:%s",
+            				m_request.url().lastPathComponent().ascii().data()).ascii().data());
             frameLoader()->notifier()->didFailToLoad(this, nonNullError);
+        }
     }
 
     // If cancel() completed from within the call to willCancel() or didFailToLoad(),
@@ -470,7 +499,12 @@ void ResourceLoader::didReceiveAuthenticationChallenge(const AuthenticationChall
 
     if (m_options.allowCredentials == AllowStoredCredentials) {
         if (m_options.crossOriginCredentialPolicy == AskClientForCrossOriginCredentials || m_frame->document()->securityOrigin()->canRequest(originalRequest().url())) {
+        	// SRL: Event action for https request.
+        	ActionLogFormat(ActionLog::ENTER_SCOPE,
+            		"auth_recv:%s",
+            		m_request.url().lastPathComponent().ascii().data());
             frameLoader()->notifier()->didReceiveAuthenticationChallenge(this, challenge);
+            ActionLogScopeEnd();
             return;
         }
     }
@@ -489,7 +523,12 @@ void ResourceLoader::didCancelAuthenticationChallenge(const AuthenticationChalle
     // Protect this in this delegate method since the additional processing can do
     // anything including possibly derefing this; one example of this is Radar 3266216.
     RefPtr<ResourceLoader> protector(this);
+    // SRL: Event action for https.
+    ActionLogFormat(ActionLog::ENTER_SCOPE,
+    		"cancel_auth:%s",
+    		m_request.url().lastPathComponent().ascii().data());
     frameLoader()->notifier()->didCancelAuthenticationChallenge(this, challenge);
+    ActionLogScopeEnd();
 }
 
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)

@@ -29,14 +29,20 @@
 
 #include <wtf/ExportMacros.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 #include <wtf/StringSet.h>
 
-#include <platform/schedule/Scheduler.h>
+#include "Timer.h"
+#include <stdio.h>
 
+#include "schedule/Scheduler.h"
 #include "schedule/EventActionRegister.h"
 #include "wtf/EventActionSchedule.h"
+
+#include "EventActionHappensBefore.h"
 
 namespace WebCore {
 
@@ -76,11 +82,8 @@ namespace WebCore {
         void fireTimersInNestedEventLoop();
 
         // WebERA:
-        // These are static because we can't (for some unknown reason) access these through threadglobaldata
-        // from the clients. If we do that we will get an invalid pointer back.
-        // Making these static is not correct since multiple threads will be merged together, however we do not
-        // support multiple threads either way (nor workers) so this should not result in any problems in practice.
         EventActionRegister* eventActionRegister() { return &m_eventActionRegister; }
+        EventActionsHB& happensBefore() { return m_eventActionsHB; }
 
         // Only the scheduler can be static. All the other objects are thread-local.
         static void setScheduler(Scheduler* scheduler);
@@ -106,6 +109,7 @@ namespace WebCore {
 
         // Thread-local.
         EventActionRegister m_eventActionRegister;
+        EventActionsHB m_eventActionsHB;
     };
 
 }

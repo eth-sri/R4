@@ -47,7 +47,6 @@ XMLHttpRequestProgressEventThrottle::XMLHttpRequestProgressEventThrottle(EventTa
     , m_dispatchDeferredEventsTimer(this, &XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents)
 {
     ASSERT(target);
-
 }
 
 XMLHttpRequestProgressEventThrottle::~XMLHttpRequestProgressEventThrottle()
@@ -86,6 +85,7 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
 
         ActionLogTriggerEvent(this);
+        // TODO(WebERA-HB): EventRacer does not have this happens before
 
         return;
 
@@ -235,6 +235,7 @@ void XMLHttpRequestProgressEventThrottle::resume()
     EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
 
     ActionLogTriggerEvent(&m_dispatchDeferredEventsTimer);
+    // TODO(WebERA-HB): EventRacer does not have this happens before
 
     m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
     m_dispatchDeferredEventsTimer.startOneShot(0);

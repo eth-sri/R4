@@ -23,7 +23,6 @@
 #ifndef UString_h
 #define UString_h
 
-#include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {

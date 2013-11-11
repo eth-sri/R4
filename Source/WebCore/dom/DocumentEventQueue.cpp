@@ -100,6 +100,7 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
         m_pendingEventTimer->startOneShot(0);
     }
 
+	// TODO(WebERA-HB-REVIEW): EventRacer does not have a HB relation here? 
     ActionLogTriggerEvent(&m_pendingEventTimer);
 
     return true;

@@ -461,6 +461,9 @@ PassOwnPtr<ColorChooser> Chrome::createColorChooser(ColorChooserClient* client, 
 
 void Chrome::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> fileChooser)
 {
+	// SRL: Do not enable instrumentation during open dialog. At that time, no
+	// events may arrive to the page (yet, unrelated timer events may come).
+	HBDisabledInstrumentation noInstr;
     m_client->runOpenPanel(frame, fileChooser);
 }
 

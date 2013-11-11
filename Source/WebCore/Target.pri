@@ -1209,6 +1209,8 @@ SOURCES += \
     platform/text/TextStream.cpp \
     platform/ThreadGlobalData.cpp \
     platform/ThreadTimers.cpp \
+    platform/EventActionHappensBefore.cpp \
+    platform/EventActionHappensBeforeReport.cpp \
     platform/Timer.cpp \
     platform/schedule/DefaultScheduler.cpp \
     platform/text/UnicodeRange.cpp \
@@ -2385,6 +2387,8 @@ HEADERS += \
     platform/text/transcoder/FontTranscoder.h \
     platform/ThreadGlobalData.h \
     platform/ThreadTimers.h \
+    platform/EventActionHappensBefore.h \
+    platform/EventActionHappensBeforeReport.h \
     platform/Timer.h \
     platform/schedule/Scheduler.h \
     platform/schedule/DefaultScheduler.h \

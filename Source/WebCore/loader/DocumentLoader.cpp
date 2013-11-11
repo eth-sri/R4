@@ -52,6 +52,7 @@
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
+#include "Timer.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
 #include <wtf/unicode/Unicode.h>

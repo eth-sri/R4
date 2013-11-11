@@ -94,6 +94,7 @@
 #include "StyleMedia.h"
 #include "StyleResolver.h"
 #include "SuddenTermination.h"
+#include "Timer.h"
 #include "WebKitPoint.h"
 #include "WindowFeatures.h"
 #include <algorithm>
@@ -836,6 +837,8 @@ void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const Mes
     // WebERA:
     ActionLogTriggerEvent(timer);
 
+    // TODO(WebERA-HB): EventRacer does not have a happens before relation here
+
     timer->startOneShot(0);
 }
 
@@ -990,6 +993,8 @@ void DOMWindow::alert(const String& message)
     if (!page)
         return;
 
+    // SRL: Avoid getting recursive events inside the current event.
+    HBDisabledInstrumentation disable_instrumentation;
     page->chrome()->runJavaScriptAlert(m_frame, message);
 }
 

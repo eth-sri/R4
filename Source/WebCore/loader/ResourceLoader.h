@@ -33,6 +33,7 @@
 #include "ResourceLoaderOptions.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "Timer.h"
 
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>

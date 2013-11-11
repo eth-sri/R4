@@ -17,11 +17,11 @@
 #include <queue>
 
 ActionLogScope::ActionLogScope(const char* name) {
-    ActionLogScopeStart(name);
+	ActionLogScopeStart(name);
 }
 
 ActionLogScope::~ActionLogScope() {
-    ActionLogScopeEnd();
+	ActionLogScopeEnd();
 }
 
 static bool strict_mode = true;
@@ -33,11 +33,11 @@ void ActionLogStrictMode(bool strict) {
 
 void ActionLogScopeStart(const char* name) {
 //	printf("Scope %s\n", name);
-    int scopeId = wtfThreadData().scopeSet()->addString(name);
-    if (!wtfThreadData().actionLog()->enterScope(scopeId) && strict_mode) {
-        fprintf(stderr, "Can't log start scope %s\n", name);
-        CRASH();
-    }
+	int scopeId = wtfThreadData().scopeSet()->addString(name);
+	if (!wtfThreadData().actionLog()->enterScope(scopeId) && strict_mode) {
+		fprintf(stderr, "Can't log start scope %s\n", name);
+		CRASH();
+	}
 }
 
 void ActionLogScopeEnd() {
@@ -84,27 +84,27 @@ void ActionLogFormat(ActionLog::CommandType cmd, const char* format, ...) {
 }
 
 void ActionLogReportArrayRead(size_t array, int index) {
-    ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
-    ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$[%d]", static_cast<int>(array), index);
+	ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
+	ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$[%d]", static_cast<int>(array), index);
 }
 
 void ActionLogReportArrayWrite(size_t array, int index) {
-    ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
-    ActionLogFormat(ActionLog::WRITE_MEMORY, "Array[%d]$[%d]", static_cast<int>(array), index);
+	ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
+	ActionLogFormat(ActionLog::WRITE_MEMORY, "Array[%d]$[%d]", static_cast<int>(array), index);
 }
 
 void ActionLogReportArrayReadScan(size_t array, int index) {
-    ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$[%d]", static_cast<int>(array), index);
+	ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$[%d]", static_cast<int>(array), index);
 }
 
 void ActionLogReportArrayReadLen(size_t array) {
-    ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
-    // Read through all cells.
-    //ActionLogFormat(ActionLog::READ_MEMORY, "Array[%p]$W", static_cast<int>(array));
+	ActionLogFormat(ActionLog::READ_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
+	// Read through all cells.
+	//ActionLogFormat(ActionLog::READ_MEMORY, "Array[%p]$W", static_cast<int>(array));
 }
 
 void ActionLogReportArrayModify(size_t array) {
-    ActionLogFormat(ActionLog::WRITE_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
+	ActionLogFormat(ActionLog::WRITE_MEMORY, "Array[%d]$LEN", static_cast<int>(array));
 }
 
 void ActionLogReportMemoryValue(const char* value) {
@@ -131,16 +131,16 @@ void ActionLogExitOperation() {
 }
 
 int ActionLogScopeDepth() {
-    return wtfThreadData().actionLog()->scopeDepth();
+	return wtfThreadData().actionLog()->scopeDepth();
 }
 
 void ActionLogAddArc(int earlierId, int laterId, int duration) {
-    if (laterId <= earlierId) {
-        fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
-        ActionLogSave();
-        CRASH();
-    }
-    wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
+	if (laterId <= earlierId) {
+		fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
+		ActionLogSave();
+		CRASH();
+	}
+	wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
 }
 
 void ActionLogAddArcEvent(int nextId) {
@@ -150,37 +150,30 @@ void ActionLogAddArcEvent(int nextId) {
     }
 }
 
+// TODO(WebERA-HB): Make sure that all uses of this are correct (that is, all uses of this is incorrect right now!
 void ActionLogTriggerEvent(void* eventId) {
-    wtfThreadData().actionLog()->triggerEvent(eventId);
+	wtfThreadData().actionLog()->triggerEvent(eventId);
 }
 
 void ActionLogEventTriggered(void* eventId) {
-    wtfThreadData().actionLog()->eventTriggered(eventId);
-}
-
-void ActionLogTriggerEventCommand(void* eventId) {
-    wtfThreadData().actionLog()->triggerEventCommand(eventId);
-}
-
-void ActionLogEventCommandTriggered(void* eventId) {
-    wtfThreadData().actionLog()->eventCommandTriggered(eventId);
+	wtfThreadData().actionLog()->eventTriggered(eventId);
 }
 
 int ActionLogRegisterSource(const char* src) {
-    return wtfThreadData().jsSet()->addString(src);
+	return wtfThreadData().jsSet()->addString(src);
 }
 
 bool ActionLogWillAddCommand(ActionLog::CommandType cmd) {
-    return wtfThreadData().actionLog()->willLogCommand(cmd);
+	return wtfThreadData().actionLog()->willLogCommand(cmd);
 }
 
 void ActionLogSave() {
-    FILE* f = fopen("/tmp/ER_actionlog", "wb");
-    wtfThreadData().variableSet()->saveToFile(f);
-    wtfThreadData().scopeSet()->saveToFile(f);
-    wtfThreadData().actionLog()->saveToFile(f);
-    wtfThreadData().jsSet()->saveToFile(f);
-    wtfThreadData().dataSet()->saveToFile(f);
-    fclose(f);
+	FILE* f = fopen("/tmp/ER_actionlog", "wb");
+	wtfThreadData().variableSet()->saveToFile(f);
+	wtfThreadData().scopeSet()->saveToFile(f);
+	wtfThreadData().actionLog()->saveToFile(f);
+	wtfThreadData().jsSet()->saveToFile(f);
+	wtfThreadData().dataSet()->saveToFile(f);
+	fclose(f);
 }
 

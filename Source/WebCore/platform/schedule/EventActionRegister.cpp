@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
+
 namespace WebCore {
 
 struct EventActionHandler {
@@ -42,7 +44,6 @@ public:
 EventActionRegister::EventActionRegister()
     : m_maps(new EventActionRegisterMaps)
     , m_isDispatching(false)
-    , m_nextEventActionDescriptorId(0)
     , m_dispatchHistory(new EventActionSchedule())
 {
 }
@@ -113,13 +114,16 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
     // Pre-Execution
 
-    unsigned long id = m_nextEventActionDescriptorId++;
+    EventActionId id = HBAllocateEventActionId();
 
     eventActionDispatchStart(id, descriptor);
 
+    // TODO(WebERA): Add proper event types
     ActionLogEnterOperation(id, ActionLog::UNKNOWN);
     ActionLogEventTriggered(l[0].object);
-    ActionLogEventCommandTriggered(l[0].object);
+
+    HBEnterEventAction(id, ActionLog::UNKNOWN);
+    // TODO(WebERA-HB) trigger conditional happens before if used...
 
 	// Execute the function.
 
@@ -141,6 +145,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
     // Post-Execution
 
+    HBExitEventAction();
     ActionLogExitOperation();
     eventActionDispatchEnd(true);
 

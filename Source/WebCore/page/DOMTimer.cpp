@@ -31,11 +31,10 @@
 #include "ScheduledAction.h"
 #include "ScriptExecutionContext.h"
 #include "UserGestureIndicator.h"
+#include <wtf/ActionLogReport.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
-
-#include <wtf/EventActionDescriptor.h>
-#include <wtf/ActionLogReport.h>
 
 #include <string>
 #include <sstream>
@@ -93,6 +92,8 @@ DOMTimer::~DOMTimer()
 
 int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int timeout, bool singleShot)
 {
+	// SRL: Log that a timer created by JavaScript (e.g. setTimeout) is created.
+	ActionLogScope timer_scope("DOM Timer");
 
     // WebERA: We need to access action before it is given to the DOMTimer, afterwards it will be NULL
 
@@ -110,10 +111,15 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     // or if it is a one-time timer and it has fired (DOMTimer::fired).
     DOMTimer* timer = new DOMTimer(context, action, timeout, singleShot);
 
+    // SRL: Record a write to a timer with the given id when the timer is created.
+    ActionLogFormat(ActionLog::WRITE_MEMORY, "Timer:%d", timer->m_timeoutId);
+    ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMTimer[%p]", static_cast<void*>(timer));
+
     // TODO(WebERA): Select an appropiate timer name
     EventActionDescriptor descriptor("DOMTimer", params.str());
     timer->setEventActionDescriptor(descriptor);
 
+    // TODO(WebERA-HB): EventRacer does not have an explicit HB-relation here
     ActionLogTriggerEvent(timer);
 
     timer->suspendIfNeeded();
@@ -129,6 +135,10 @@ void DOMTimer::removeById(ScriptExecutionContext* context, int timeoutId)
     // respectively
     if (timeoutId <= 0)
         return;
+
+    // SRL: Record a write to a timer with the given id when the timer is deleted.
+    ActionLogFormat(ActionLog::WRITE_MEMORY, "Timer:%d", timeoutId);
+    ActionLogFormat(ActionLog::MEMORY_VALUE, "undefined");
 
     InspectorInstrumentation::didRemoveTimer(context, timeoutId);
 
@@ -155,6 +165,10 @@ void DOMTimer::fired()
             if (m_nestingLevel >= maxTimerNestingLevel)
                 augmentRepeatInterval(minimumInterval - repeatInterval());
         }
+
+        // SRL: Record a timer read when it fires.
+        ActionLogFormat(ActionLog::READ_MEMORY, "Timer:%d", m_timeoutId);
+        ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMTimer[%p]", static_cast<void*>(this));
 
         // No access to member variables after this point, it can delete the timer.
         m_action->execute(context);

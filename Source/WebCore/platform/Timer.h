@@ -28,7 +28,10 @@
 
 #include <wtf/Noncopyable.h>
 #include <wtf/Threading.h>
+#include <wtf/text/WTFString.h>
 #include <wtf/EventActionDescriptor.h>
+
+#include "EventActionHappensBeforeReport.h"
 
 namespace WebCore {
 
@@ -42,6 +45,10 @@ public:
     TimerBase();
     virtual ~TimerBase();
 
+    void ignoreFireIntervalForHappensBefore() {
+    	m_ignoreFireIntervalForHappensBefore = true;
+    }
+
     void start(double nextFireInterval, double repeatInterval);
 
     // TODO(WebERA): Repeating timers should be split up into multiple descriptors or?
@@ -54,7 +61,7 @@ public:
     double nextFireInterval() const;
     double repeatInterval() const { return m_repeatInterval; }
 
-    void augmentFireInterval(double delta) { setNextFireTime(m_nextFireTime + delta); }
+    void augmentFireInterval(double delta) { setNextFireTime(m_nextFireTime + delta, delta); }
     void augmentRepeatInterval(double delta) { augmentFireInterval(delta); m_repeatInterval += delta; }
 
     static void fireTimersInNestedEventLoop();
@@ -77,7 +84,7 @@ private:
     void checkConsistency() const;
     void checkHeapIndex() const;
 
-    void setNextFireTime(double);
+    void setNextFireTime(double, double);
 
     bool inHeap() const { return m_heapIndex != -1; }
 
@@ -93,6 +100,11 @@ private:
     double m_repeatInterval; // 0 if not repeating
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
+
+    EventActionId m_lastFireEventAction;
+    EventActionId m_starterEventAction;
+    double m_nextFireInterval;  // The interval for which the next file was set to.
+    bool m_ignoreFireIntervalForHappensBefore;
 
     EventActionDescriptor m_eventActionDescriptor;
     bool m_inEventActionRegister;

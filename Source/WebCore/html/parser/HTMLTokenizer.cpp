@@ -34,6 +34,8 @@
 #include "HTMLNames.h"
 #include "MarkupTokenizerInlineMethods.h"
 #include "NotImplemented.h"
+#include "Timer.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/UnusedParam.h>
@@ -190,6 +192,8 @@ bool HTMLTokenizer::flushEmitAndResumeIn(SegmentedString& source, HTMLTokenizerS
 
 bool HTMLTokenizer::nextToken(SegmentedString& source, HTMLToken& token)
 {
+	ActionLogScope log_scope("HTML tokenizer");
+
     // If we have a token in progress, then we're supposed to be called back
     // with the same token so we can finish it.
     ASSERT(!m_token || m_token == &token || token.type() == HTMLTokenTypes::Uninitialized);

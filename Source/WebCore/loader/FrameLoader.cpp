@@ -99,15 +99,16 @@
 #include "SerializedScriptValue.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
+#include "ThreadTimers.h"
+#include "Timer.h"
 #include "WindowFeatures.h"
 #include "XMLDocumentParser.h"
+#include <wtf/ActionLogReport.h>
+#include <wtf/EventActionDescriptor.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
-
-#include <wtf/EventActionDescriptor.h>
-#include <wtf/ActionLogReport.h>
 
 #if ENABLE(SHARED_WORKERS)
 #include "SharedWorkerRepository.h"
@@ -711,12 +712,39 @@ void FrameLoader::checkCompleted()
     if (!allChildrenAreComplete())
         return;
 
+    // SRL: Include the join happens before relations.
+    m_frame->document()->parsingJoin();
+    //threadGlobalData().threadTimers().happensBefore().splitCurrentEventActionIfNotInScope(true);
+    m_frame->document()->cachedResourceLoader()->requestCountJoin();
+    //threadGlobalData().threadTimers().happensBefore().splitCurrentEventActionIfNotInScope(true); <-- TODO(WebERA-HB-REVIEW): Why do we need to do this?
+
+    m_frame->document()->delayingLoadEventJoin();
+    for (Frame* child = m_frame->tree()->firstChild(); child; child = child->tree()->nextSibling()) {
+    	if (child->loader() != this) {
+    		child->loader()->m_isCompleteJoin.joinAction();
+    	}
+    }
+
     // OK, completed.
     m_isComplete = true;
+    // SRL: Notify any parent that the current frame is finished.
+    m_isCompleteJoin.threadEndAction();
     m_requestedHistoryItem = 0;
     m_frame->document()->setReadyState(Document::Complete);
 
     RefPtr<Frame> protect(m_frame);
+
+    // TODO(WebERA-HB): In EventRacer, the event action was split into two (in the following call),
+    // in order to split any local event action (such as an image onload) from being connected together with the window onload.
+    //
+    // Right now, the last event to trigger checkCompleted will trigger the implicitClose and in turn the window load event.
+    // All joins made on the LoadEvent will also be used to create HB relations to the last event action.
+    //
+    // This forces the last event action to always be the last in any ordering, which is strictly not correct.
+    //
+    // We could add a new timer for the onLoad, that has happens before relations to the joined event actions. This way the last
+    // event action is handled correct, and an image onload will not be fused with the window onload.
+
     checkCallImplicitClose(); // if we didn't do it before
 
     m_frame->navigationScheduler()->startTimer();
@@ -747,6 +775,7 @@ void FrameLoader::startCheckCompleteTimer()
     if (m_checkTimer.isActive())
         return;
 
+    // TODO(WebERA-HB) This HB is not stated explicitly here in the EventRacer impl
     ActionLogTriggerEvent(&m_checkTimer);
     m_checkTimer.startOneShot(0);
 }

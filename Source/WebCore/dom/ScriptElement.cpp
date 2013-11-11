@@ -44,6 +44,8 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "Text.h"
+#include "Timer.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
@@ -308,6 +310,7 @@ void ScriptElement::execute(CachedScript* cachedScript)
     if (cachedScript->errorOccurred())
         dispatchErrorEvent();
     else if (!cachedScript->wasCanceled()) {
+    	ActionLogScope log_scope("execute script tag");
         executeScript(ScriptSourceCode(cachedScript));
         dispatchLoadEvent();
     }

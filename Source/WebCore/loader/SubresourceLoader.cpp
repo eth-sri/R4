@@ -38,6 +38,7 @@
 #include "MemoryCache.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
@@ -175,9 +176,13 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
         if (response.httpStatusCode() == 304) {
             // 304 Not modified / Use local copy
             // Existing resource is ok, just use it updating the expiration time.
+        	// SRL: Create a network response event action.
+        	ActionLogFormat(ActionLog::ENTER_SCOPE,
+        			"recv_304:%s", m_resource->url().lastPathComponent().ascii().data());
             memoryCache()->revalidationSucceeded(m_resource, response);
             if (!reachedTerminalState())
                 ResourceLoader::didReceiveResponse(response);
+            ActionLogScopeEnd();
             return;
         }
         // Did not get 304 response, continue as a regular resource load.

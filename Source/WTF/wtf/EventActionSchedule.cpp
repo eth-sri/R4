@@ -66,7 +66,7 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
 
         EventActionDescriptor descriptor = EventActionDescriptor::deserialize(description);
 
-        schedule->append(std::pair<unsigned long, EventActionDescriptor>(strtoul(id.c_str(), NULL, 10), descriptor));
+        schedule->append(std::pair<EventActionId, EventActionDescriptor>(atoi(id.c_str()), descriptor));
     }
 
     return schedule;

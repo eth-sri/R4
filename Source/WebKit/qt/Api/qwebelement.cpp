@@ -169,6 +169,10 @@ QWebElement::QWebElement(WebCore::Node* node)
     }
 }
 
+void* QWebElement::webkitNodePtr() const {
+	return static_cast<void*>(m_element);
+}
+
 /*!
     Constructs a copy of \a other.
 */

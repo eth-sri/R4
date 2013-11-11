@@ -38,8 +38,6 @@
 #include "ScriptValue.h"
 #include <runtime/JSLock.h>
 
-//#include "JavaScriptCore/bytecode/CodeBlock.h"
-
 #if ENABLE(WORKERS)
 #include "JSWorkerContext.h"
 #include "WorkerContext.h"
@@ -53,7 +51,6 @@ namespace WebCore {
 PassOwnPtr<ScheduledAction> ScheduledAction::create(ExecState* exec, DOMWrapperWorld* isolatedWorld, ContentSecurityPolicy* policy)
 {
     JSValue v = exec->argument(0);
-
     CallData callData;
     CallType callType = getCallData(v, callData);
     if (callType == CallTypeNone) {

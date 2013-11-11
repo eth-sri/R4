@@ -676,7 +676,6 @@ void Interpreter::initialize(LLInt::Data* llintData, bool canUseJIT)
 #elif ENABLE(COMPUTED_GOTO_CLASSIC_INTERPRETER)
     if (canUseJIT) {
         // If the JIT is present, don't use jump destinations for opcodes.
-        
         for (int i = 0; i < numOpcodeIDs; ++i) {
             Opcode opcode = bitwise_cast<void*>(static_cast<uintptr_t>(i));
             m_opcodeTable[i] = opcode;
@@ -1023,7 +1022,7 @@ static CallFrame* getCallerInfo(JSGlobalData* globalData, CallFrame* callFrame, 
     return callerFrame;
 }
 
-static ALWAYS_INLINE const UString getSourceURLFromCallFrame(CallFrame* callFrame) 
+static ALWAYS_INLINE const UString getSourceURLFromCallFrame(CallFrame* callFrame)
 {
     ASSERT(!callFrame->hasHostCallFrameFlag());
 #if ENABLE(CLASSIC_INTERPRETER)
@@ -2053,10 +2052,10 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
         #endif // ENABLE(COMPUTED_GOTO_CLASSIC_INTERPRETER)
         return JSValue();
     }
-    
+
     ASSERT(m_initialized);
     ASSERT(m_classicEnabled);
-    
+
 #if ENABLE(JIT)
 #if ENABLE(CLASSIC_INTERPRETER)
     // Mixing Interpreter + JIT is not supported.
@@ -3036,7 +3035,7 @@ JSValue Interpreter::privateExecute(ExecutionFlag flag, RegisterFile* registerFi
     }
     DEFINE_OPCODE(op_put_global_var) {
         /* put_global_var globalObject(c) index(n) value(r)
-         
+
            Puts value into global slot index.
          */
         JSGlobalObject* scope = codeBlock->globalObject();

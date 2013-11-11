@@ -78,9 +78,9 @@ HTMLParserScheduler::HTMLParserScheduler(HTMLDocumentParser* parser)
     , m_parserChunkSize(parserChunkSize(m_parser->document()->page()))
     , m_continueNextChunkTimer(this, &HTMLParserScheduler::continueNextChunkTimerFired)
     , m_isSuspendedWithActiveTimer(false)
-    , m_continueNextChunkTimerActive(false)
 {
-    // TODO(WebERA-HB): The EventRacer implementation mentions an exception caused by a network request, should we add this?
+	// Note(veselin): the next chunk could be depending on a network event so the timeout 0 is not important for the happens before.
+	m_continueNextChunkTimer.ignoreFireIntervalForHappensBefore();
 }
 
 HTMLParserScheduler::~HTMLParserScheduler()
@@ -93,19 +93,17 @@ void HTMLParserScheduler::continueNextChunkTimerFired(Timer<HTMLParserScheduler>
     ASSERT_UNUSED(timer, timer == &m_continueNextChunkTimer);
     // FIXME: The timer class should handle timer priorities instead of this code.
     // If a layout is scheduled, wait again to let the layout timer run first.
-    //if (m_parser->document()->isLayoutTimerActive()) {
-
-    //    updateTimerName(); // WebERA
-    //    m_continueNextChunkTimer.startOneShot(0);
-    //    m_continueNextChunkTimerActive = true;
-
-    //    return;
-    //}
-
+    
     // WebERA: A timer should always finish its task when called. It can't reschedule itself otherwise the
     // scheduler would think that this timer has been executed and move on - causing a deadlock.
+    
+    /*
+    if (m_parser->document()->isLayoutTimerActive()) {
+        m_continueNextChunkTimer.startOneShot(0);
+        return;
+    }
+    */
 
-    m_continueNextChunkTimerActive = false;
     m_parser->resumeParsingAfterYield();
 }
 
@@ -123,25 +121,24 @@ void HTMLParserScheduler::scheduleForResume()
 {
     updateTimerName(); // WebERA
     m_continueNextChunkTimer.startOneShot(0);
-    m_continueNextChunkTimerActive = true;
 }
 
 
 void HTMLParserScheduler::suspend()
 {
-    ASSERT(!m_isSuspendedWithActiveTimer);
-    m_isSuspendedWithActiveTimer = true;
-
     // TODO(WebERA): Warning, we are assuming that the timer is still active and has not been moved into
     // the EventActionRegister. If that is the case then this operation is not safe.
-    if (m_continueNextChunkTimer.isActive())
-    {
-        m_continueNextChunkTimer.stop();
-    }
+
+    ASSERT(!m_isSuspendedWithActiveTimer);
+    if (!m_continueNextChunkTimer.isActive())
+        return;
+    m_isSuspendedWithActiveTimer = true;
+    m_continueNextChunkTimer.stop();
 }
 
 void HTMLParserScheduler::resume()
 {
+    ASSERT(!m_continueNextChunkTimer.isActive());
     if (!m_isSuspendedWithActiveTimer)
         return;
 
@@ -170,6 +167,7 @@ void HTMLParserScheduler::updateTimerName()
         ActionLogTriggerEvent(&m_continueNextChunkTimer);
 
         // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
+        // TODO(WebERA-HB-REVIEW) The original implementation does not have a happens before relation here, but in the parser...
     }
 }
 

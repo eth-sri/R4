@@ -12,8 +12,8 @@
 
 class ActionLogScope {
 public:
-    ActionLogScope(const char* name);
-    ~ActionLogScope();
+	ActionLogScope(const char* name);
+	~ActionLogScope();
 };
 
 void ActionLogStrictMode(bool strict);
@@ -41,12 +41,9 @@ void ActionLogAddArc(int earlierId, int laterId, int duration);
 void ActionLogSave();
 
 // Logs that an event identified by a pointer eventId is triggered node.
-void ActionLogTriggerEventCommand(void* eventId);
+void ActionLogTriggerEvent(void* eventId);
 // Logs that the id of the currently entered operation is the one triggered by a
 // previous call of ActionLogTriggerEvent with the same eventId.
-void ActionLogEventCommandTriggered(void* eventId);
-
-void ActionLogTriggerEvent(void* eventId);
 void ActionLogEventTriggered(void* eventId);
 
 int ActionLogRegisterSource(const char* src);

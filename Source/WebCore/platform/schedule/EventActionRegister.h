@@ -69,7 +69,7 @@ public:
 
 private:
 
-    void eventActionDispatchStart(unsigned long id, const EventActionDescriptor& descriptor)
+    void eventActionDispatchStart(EventActionId id, const EventActionDescriptor& descriptor)
     {
         ASSERT(!m_isDispatching);
 
@@ -90,7 +90,6 @@ private:
 
     EventActionRegisterMaps* m_maps;
     bool m_isDispatching;
-    unsigned long m_nextEventActionDescriptorId;
 
     EventActionSchedule* m_dispatchHistory;
 };

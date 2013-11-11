@@ -27,6 +27,9 @@
 #include "config.h"
 #include "WTFThreadData.h"
 
+#include "ActionLog.h"
+#include "StringSet.h"
+
 namespace WTF {
 
 ThreadSpecific<WTFThreadData>* WTFThreadData::staticData;
@@ -53,6 +56,11 @@ WTFThreadData::~WTFThreadData()
         m_atomicStringTableDestructor(m_atomicStringTable);
 #if USE(JSC)
     delete m_defaultIdentifierTable;
+    delete m_variableSet;
+    delete m_scopeSet;
+    delete m_jsSet;
+    delete m_dataSet;
+    delete m_actionLog;
 #endif
 }
 

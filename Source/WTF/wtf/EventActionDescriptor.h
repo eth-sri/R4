@@ -27,6 +27,10 @@
 #include <string>
 
 namespace WebCore {
+// TODO(WebERA) Move this to the WTF namespace
+
+    // Ids for event actions.
+    typedef int EventActionId;
 
     /**
      * An EventActionDescriptor represents a concrete event action to be executed in the system.

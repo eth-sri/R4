@@ -402,6 +402,9 @@ private:
     PageDismissalType m_pageDismissalEventBeingDispatched;
     bool m_isComplete;
 
+    // SRL: Create happens before arc for parent frames to load only after this frame loaded.
+    MultiJoinHappensBefore m_isCompleteJoin;
+
     RefPtr<SerializedScriptValue> m_pendingStateObject;
 
     bool m_needsClear;

@@ -37,6 +37,9 @@
 #include "WebCoreJSClientData.h"
 #include <wtf/MainThread.h>
 
+#include "Interpreter.h"
+#include <stdio.h>
+
 using namespace JSC;
 
 namespace WebCore {
@@ -45,11 +48,38 @@ const ClassInfo JSDOMWindowBase::s_info = { "Window", &JSDOMGlobalObject::s_info
 
 const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = { &allowsAccessFrom, &supportsProfiling, &supportsRichSourceInfo, &shouldInterruptScript };
 
+// SRL: When a JS object is a wrapper of a DOM Node, we return the pointer
+// to the DOM Node as opposed to the pointer to the JS wrapper object.
+namespace {
+void* convertJSWrapperToNode(void* ptr) {
+	JSCell* cell = static_cast<JSCell*>(ptr);
+	if (cell->isObject() && cell->inherits(&JSNode::s_info)) {
+		return static_cast<JSNode*>(cell)->impl();
+	}
+	return ptr;
+}
+
+void* convertWindowShellToJSWindow(void* ptr) {
+	JSCell* cell = static_cast<JSCell*>(ptr);
+	if (cell->isObject() && cell->inherits(&JSDOMWindowShell::s_info)) {
+		void* result = static_cast<JSDOMWindowShell*>(cell)->window();
+		return result != NULL ? result : ptr;
+	}
+	return ptr;
+}
+
+}  // namespace
+
 JSDOMWindowBase::JSDOMWindowBase(JSGlobalData& globalData, Structure* structure, PassRefPtr<DOMWindow> window, JSDOMWindowShell* shell)
     : JSDOMGlobalObject(globalData, structure, shell->world(), &s_globalObjectMethodTable)
     , m_impl(window)
     , m_shell(shell)
 {
+	// SRL: Initialize the hook in interpreter for using DOM Nodes instead of JS wrapper objects.
+	// Note(veselin): This is a bit hacky.
+	// printf("Initializing the JSNode memory location handler.\n");
+	Interpreter::m_jsDomNodeUnwrapper = &convertJSWrapperToNode;
+	Interpreter::m_jsWindowUnwrapper = &convertWindowShellToJSWindow;
 }
 
 void JSDOMWindowBase::finishCreation(JSGlobalData& globalData, JSDOMWindowShell* shell)

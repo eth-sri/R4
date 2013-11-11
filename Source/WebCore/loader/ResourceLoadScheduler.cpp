@@ -36,6 +36,7 @@
 #include "ResourceLoader.h"
 #include "ResourceRequest.h"
 #include "SubresourceLoader.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
 

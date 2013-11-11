@@ -745,6 +745,8 @@ void CachedResourceLoader::decrementRequestCount(const CachedResource* res)
     if (res->ignoreForRequestCount())
         return;
 
+    // SRL: Tell the parent who is checking for happens before, that we are finished.
+    m_requestCountJoin.threadEndAction();
     --m_requestCount;
     ASSERT(m_requestCount > -1);
 }

@@ -76,6 +76,8 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
 
     case IN_ORDER_EXECUTION:
         m_scriptsToExecuteInOrder.append(PendingScript(element, cachedScript.get()));
+        ActionLogFormat(ActionLog::WRITE_MEMORY, "ScriptRunner-%p-%p",
+        		static_cast<void*>(this), static_cast<void*>(scriptElement));
         break;
     }
 }
@@ -104,6 +106,9 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         break;
     }
 
+    ActionLogFormat(ActionLog::WRITE_MEMORY, "ScriptRunner-%p-%p",
+    		static_cast<void*>(this), static_cast<void*>(scriptElement));
+
     // WebERA:
     if (!m_timer.isActive()) {
 
@@ -113,6 +118,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         EventActionDescriptor descriptor("ScriptRunner", params.str());
 
         m_timer.setEventActionDescriptor(descriptor);
+
         m_timer.startOneShot(0);
     }
 
@@ -123,6 +129,8 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
 
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
+	ActionLogScope log_scope("script runner timer");
+
     // TOOD(WebERA): We should split this up such that only one async script is executed for each execution of the timer,
     // right now async (and in-order) scripts will be grouped together in batches that we cant reorder later.
 
@@ -144,7 +152,10 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
     for (size_t i = 0; i < size; ++i) {
         CachedScript* cachedScript = scripts[i].cachedScript();
         RefPtr<Element> element = scripts[i].releaseElementAndClear();
-        toScriptElement(element.get())->execute(cachedScript);
+        ScriptElement* script = toScriptElement(element.get());
+        ActionLogFormat(ActionLog::READ_MEMORY, "ScriptRunner-%p-%p",
+        		static_cast<void*>(this), static_cast<void*>(script));
+        script->execute(cachedScript);
         m_document->decrementLoadEventDelayCount();
     }
 }

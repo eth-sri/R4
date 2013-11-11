@@ -33,12 +33,10 @@
 #include <limits.h>
 #include <limits>
 #include <math.h>
+#include <wtf/ActionLogReport.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
-
-#include <WebCore/platform/ThreadGlobalData.h>
-#include <WebCore/platform/ThreadTimers.h>
 
 #include <stdio.h>
 
@@ -59,6 +57,7 @@ static Vector<TimerBase*>& timerHeap()
 {
     return threadGlobalData().threadTimers().timerHeap();
 }
+
 
 // ----------------
 
@@ -111,8 +110,6 @@ inline void swap(TimerHeapReference a, TimerHeapReference b)
     a = timerB;
     b = timerA;
 }
-
-// ----------------
 
 // Class to represent iterators in the heap when calling the standard library heap algorithms.
 // Uses a custom pointer and reference type that update indices for pointers in the heap.
@@ -199,6 +196,8 @@ TimerBase::TimerBase()
     : m_nextFireTime(0)
     , m_repeatInterval(0)
     , m_heapIndex(-1)
+    , m_lastFireEventAction(0)
+    , m_ignoreFireIntervalForHappensBefore(false)
     , m_inEventActionRegister(false)
 #ifndef NDEBUG
     , m_thread(currentThread())
@@ -209,6 +208,14 @@ TimerBase::TimerBase()
 TimerBase::~TimerBase()
 {
     stop();
+
+    // TODO(WebERA-HB-REVIEW): Why should this not also be the case for event actions calling stop?
+    if (m_lastFireEventAction != 0 &&
+            HBIsCurrentEventActionValid() &&
+            m_lastFireEventAction != HBCurrentEventAction()) {
+
+            HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    }
     ASSERT(!inHeap());
 }
 
@@ -217,7 +224,7 @@ void TimerBase::start(double nextFireInterval, double repeatInterval)
     ASSERT(m_thread == currentThread());
 
     m_repeatInterval = repeatInterval;
-    setNextFireTime(monotonicallyIncreasingTime() + nextFireInterval);
+    setNextFireTime(monotonicallyIncreasingTime() + nextFireInterval, nextFireInterval);
 }
 
 void TimerBase::stop()
@@ -225,7 +232,7 @@ void TimerBase::stop()
     ASSERT(m_thread == currentThread());
 
     m_repeatInterval = 0;
-    setNextFireTime(0);
+    setNextFireTime(0, 0);
 
     if (m_inEventActionRegister) {
         WebCore::threadGlobalData().threadTimers().deregisterEventActionHandler(this);
@@ -270,7 +277,7 @@ void TimerBase::heapDecreaseKey()
     checkHeapIndex();
 }
 
-void TimerBase::heapDelete()
+inline void TimerBase::heapDelete()
 {
     ASSERT(m_nextFireTime == 0);
     heapPop();
@@ -322,21 +329,30 @@ void TimerBase::heapPopMin()
     ASSERT(this == timerHeap().last());
 }
 
-void TimerBase::setNextFireTime(double newTime)
+void TimerBase::setNextFireTime(double newTime, double interval)
 {
     ASSERT(m_thread == currentThread());
 
     // Keep heap valid while changing the next-fire time.
     double oldTime = m_nextFireTime;
     if (oldTime != newTime) {
+    	if (newTime != 0) {
+    		m_nextFireInterval = interval;
+            if (HBIsCurrentEventActionValid()) {
+   				m_starterEventAction = HBCurrentEventAction();
+    		} else {
+    			// Unfortunately, there are bad cases in WebKit that start load timers during OnPaint events.
+    			// We attribute them to the last UI action.
+    			// WTFReportBacktrace();
+                m_starterEventAction = HBLastUIEventAction();
+    		}
 
-        // WebERA:
-        ActionLogTriggerEventCommand(this);
+    		ActionLogTriggerEvent(this);
+    	}
 
         m_nextFireTime = newTime;
         static unsigned currentHeapInsertionOrder;
         m_heapInsertionOrder = currentHeapInsertionOrder++;
-
         bool wasFirstTimerInHeap = m_heapIndex == 0;
 
         if (oldTime == 0)
@@ -347,18 +363,6 @@ void TimerBase::setNextFireTime(double newTime)
             heapDecreaseKey();
         else
             heapIncreaseKey();
-
-        // DEBUG(WebERA)
-//        if (m_eventActionDescriptor.isNull()) {
-//        	// WTFReportBacktrace();
-//            std::string name = m_eventActionDescriptor.getDescription();
-//            if (oldTime == 0)
-//                fprintf(stderr, "  Add timer: %s\n", name.c_str());
-//            else if (newTime == 0)
-//                fprintf(stderr, "  Remove timer: %s\n", name.c_str());
-//            else if (newTime < oldTime)
-//                fprintf(stderr, "  Modify timer: %s\n", name.c_str());
-//        }
 
         bool isFirstTimerInHeap = m_heapIndex == 0;
 

@@ -35,6 +35,7 @@
 #include "Event.h"
 #include "EventException.h"
 #include "InspectorInstrumentation.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
@@ -91,8 +92,25 @@ DOMWindow* EventTarget::toDOMWindow()
     return 0;
 }
 
+// SRL: Record a read or write for attaching an event listener.
+namespace {
+void EventTargetAccess(ActionLog::CommandType command, EventTarget* target, const char* eventType) {
+	Node* node = target->toNode();
+	ActionLogFormat(command,
+			"%s[%p].%s",
+			node ? (node->nodeName().isEmpty() ? "" : node->nodeName().ascii().data()) : "",
+			static_cast<void*>(node ? node : target),
+			eventType);
+}
+}  // namespace
+
 bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> listener, bool useCapture)
 {
+	// SRL: This is a write to the set of events.
+	ActionLogScope scope("addEventListener");
+	EventTargetAccess(ActionLog::WRITE_MEMORY, this, eventType.string().ascii().data());
+	ActionLogFormat(ActionLog::MEMORY_VALUE, "Event[%p]", static_cast<void*>(listener.get()));
+
     EventTargetData* d = ensureEventTargetData();
     return d->eventListenerMap.add(eventType, listener, useCapture);
 }
@@ -102,6 +120,11 @@ bool EventTarget::removeEventListener(const AtomicString& eventType, EventListen
     EventTargetData* d = eventTargetData();
     if (!d)
         return false;
+
+    ActionLogScope scope("removeEventListener");
+    // SRL: This is a write to the set of events.
+    EventTargetAccess(ActionLog::WRITE_MEMORY, this, eventType.string().ascii().data());
+    ActionLogFormat(ActionLog::MEMORY_VALUE, "undefined");
 
     size_t indexOfRemovedListener;
 
@@ -192,10 +215,22 @@ bool EventTarget::fireEventListeners(Event* event)
     if (!d)
         return true;
 
+    // SRL: Firing an event at a node means the node does exist. This is a read to it.
+    ActionLogFormat(ActionLog::READ_MEMORY, "NodeTree:%p", static_cast<void*>(this));
+    // SRL: event firing is equivalent to a read from the event listener memory location.
+    EventTargetAccess(ActionLog::READ_MEMORY, this, event->type().string().ascii().data());
+
     EventListenerVector* listenerVector = d->eventListenerMap.find(event->type());
 
-    if (listenerVector)
+    if (listenerVector) {
+    	// SRL: Record that an event has been fired.
+    	ActionLogFormat(ActionLog::ENTER_SCOPE, "fire:%s @ %s",
+    			event->type().string().ascii().data(),
+    			(event->eventPhase() == Event::AT_TARGET) ? "TARGET" :
+    					(event->eventPhase() == Event::CAPTURING_PHASE ? "CAPTURE" : "BUBBLE"));
         fireEventListeners(event, d, *listenerVector);
+        ActionLogScopeEnd();
+    }
     
     return !event->defaultPrevented();
 }
@@ -237,6 +272,9 @@ void EventTarget::fireEventListeners(Event* event, EventTargetData* d, EventList
 const EventListenerVector& EventTarget::getEventListeners(const AtomicString& eventType)
 {
     DEFINE_STATIC_LOCAL(EventListenerVector, emptyVector, ());
+
+	// SRL: A read of the event listener.
+	EventTargetAccess(ActionLog::READ_MEMORY, this, eventType.string().ascii().data());
 
     EventTargetData* d = eventTargetData();
     if (!d)

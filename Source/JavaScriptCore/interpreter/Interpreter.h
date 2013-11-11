@@ -288,6 +288,7 @@ namespace JSC {
         HashMap<Opcode, OpcodeID> m_opcodeIDTable; // Maps Opcode => OpcodeID for decompiling
 #endif
 
+
 #if !ASSERT_DISABLED
         bool m_initialized;
 #endif

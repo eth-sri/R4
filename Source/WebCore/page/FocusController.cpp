@@ -56,6 +56,7 @@
 #include "ShadowRoot.h"
 #include "ShadowTree.h"
 #include "SpatialNavigation.h"
+#include "Timer.h"
 #include "Widget.h"
 #include "htmlediting.h" // For firstPositionInOrBeforeNode
 #include <limits>

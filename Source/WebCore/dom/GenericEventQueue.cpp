@@ -29,6 +29,8 @@
 
 #include "Event.h"
 
+#include <wtf/ActionLogReport.h>
+
 namespace WebCore {
 
 PassOwnPtr<GenericEventQueue> GenericEventQueue::create(EventTarget* owner)
@@ -79,6 +81,7 @@ bool GenericEventQueue::cancelEvent(Event* event)
 
 void GenericEventQueue::timerFired(Timer<GenericEventQueue>*)
 {
+	ActionLogScope log_scope("generic event queue");
     ASSERT(!m_timer.isActive());
     ASSERT(!m_pendingEvents.isEmpty());
 

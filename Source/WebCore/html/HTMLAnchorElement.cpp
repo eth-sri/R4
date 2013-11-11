@@ -504,6 +504,9 @@ void HTMLAnchorElement::handleClick(Event* event)
     if (!frame)
         return;
 
+    ActionLogScope scopeName("fire:click @ AnchorElement");
+    ActionLogFormat(ActionLog::READ_MEMORY, "NodeTree:%p", static_cast<void*>(this));
+
     String url = stripLeadingAndTrailingHTMLSpaces(fastGetAttribute(hrefAttr));
     appendServerMapMousePosition(url, event);
     KURL kurl = document()->completeURL(url);

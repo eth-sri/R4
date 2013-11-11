@@ -143,9 +143,11 @@ public:
     void render(QPainter* painter);
     void render(QPainter* painter, const QRect& clipRect);
 
+    void* webkitNodePtr() const;
+
 private:
-    explicit QWebElement(WebCore::Element*);
     explicit QWebElement(WebCore::Node*);
+    explicit QWebElement(WebCore::Element*);
 
     static QWebElement enclosingElement(WebCore::Node*);
 

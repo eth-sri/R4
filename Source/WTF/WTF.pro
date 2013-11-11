@@ -119,7 +119,6 @@ HEADERS += \
     StdLibExtras.h \
     StringExtras.h \
     StringHasher.h \
-    StringSet.h \
     TCPackedCache.h \
     TCSpinLock.h \
     TCSystemAlloc.h \
@@ -160,10 +159,11 @@ HEADERS += \
     VectorTraits.h \
     VMTags.h \
     WTFThreadData.h \
-    wtf/ActionLog.h \
-    wtf/ActionLogReport.h \
-    wtf/EventActionSchedule.h \
-    wtf/EventActionDescriptor.h
+    StringSet.h \
+    ActionLog.h \
+    ActionLogReport.h \
+    EventActionSchedule.h \
+    EventActionDescriptor.h
 
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
@@ -205,7 +205,6 @@ SOURCES += \
     RefCountedLeakCounter.cpp \
     SHA1.cpp \
     StackBounds.cpp \
-    StringSet.cpp \
     TCSystemAlloc.cpp \
     Threading.cpp \
     TypeTraits.cpp \
@@ -219,10 +218,11 @@ SOURCES += \
     unicode/CollatorDefault.cpp \
     unicode/icu/CollatorICU.cpp \
     unicode/UTF8.cpp \
-    wtf/ActionLog.cpp \
-    wtf/ActionLogReport.cpp \
-    wtf/EventActionSchedule.cpp \
-    wtf/EventActionDescriptor.cpp
+    StringSet.cpp \
+    ActionLog.cpp \
+    ActionLogReport.cpp \
+    EventActionSchedule.cpp \
+    EventActionDescriptor.cpp
 
 unix: SOURCES += \
     OSAllocatorPosix.cpp \

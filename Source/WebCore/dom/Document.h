@@ -49,6 +49,7 @@
 #include "TreeScope.h"
 #include "ViewportArguments.h"
 #include "WebKitMutationObserver.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/Deque.h>
 #include <wtf/FixedArray.h>
 #include <wtf/OwnPtr.h>
@@ -696,6 +697,7 @@ public:
     void setReadyState(ReadyState);
     void setParsing(bool);
     bool parsing() const { return m_bParsing; }
+    void parsingJoin() { m_bParsingJoin.joinAction(); }
     int minimumLayoutDelay();
 
     bool shouldScheduleLayout();
@@ -1124,6 +1126,7 @@ public:
     void incrementLoadEventDelayCount() { ++m_loadEventDelayCount; }
     void decrementLoadEventDelayCount();
     bool isDelayingLoadEvent() const { return m_loadEventDelayCount; }
+    void delayingLoadEventJoin() { m_loadEventDelayCountJoin.joinAction(); }
 
 #if ENABLE(TOUCH_EVENTS)
     PassRefPtr<Touch> createTouch(DOMWindow*, EventTarget*, int identifier, int pageX, int pageY, int screenX, int screenY, int radiusX, int radiusY, float rotationAngle, float force, ExceptionCode&) const;
@@ -1347,6 +1350,7 @@ private:
     bool m_visuallyOrdered;
     ReadyState m_readyState;
     bool m_bParsing;
+    MultiJoinHappensBefore m_bParsingJoin;
     
     Timer<Document> m_styleRecalcTimer;
     bool m_pendingStyleRecalcShouldForce;
@@ -1483,6 +1487,8 @@ private:
 #endif
 
     int m_loadEventDelayCount;
+    MultiJoinHappensBefore m_loadEventDelayCountJoin;
+    MultiJoinHappensBefore m_loadEventDelayCountLatestJoin;
     Timer<Document> m_loadEventDelayTimer;
 
     ViewportArguments m_viewportArguments;
@@ -1536,6 +1542,8 @@ inline Node::Node(Document* document, ConstructionType type)
     trackForDebugging();
 #endif
     InspectorCounters::incrementCounter(InspectorCounters::NodeCounter);
+    // SRL: Creating a logged so that following events on it are marked after it.
+    ActionLogFormat(ActionLog::WRITE_MEMORY, "NodeTree:%p", static_cast<void*>(this));
 }
 
 Node* eventTargetNodeForDocument(Document*);

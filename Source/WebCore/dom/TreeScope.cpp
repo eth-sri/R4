@@ -36,7 +36,9 @@
 #include "HTMLMapElement.h"
 #include "HTMLNames.h"
 #include "Page.h"
+#include "Timer.h"
 #include "TreeScopeAdopter.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/CString.h>
 
@@ -76,16 +78,31 @@ Element* TreeScope::getElementById(const AtomicString& elementId) const
 {
     if (elementId.isEmpty())
         return 0;
-    return m_elementsById.getElementById(elementId.impl(), this);
+    // SRL: The id of the element is a memory location. This is a read.
+    ActionLogFormat(ActionLog::READ_MEMORY,
+    		"Tree[%p]:%s", static_cast<const void*>(this), elementId.string().ascii().data());
+    Element* result = m_elementsById.getElementById(elementId.impl(), this);
+    ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMNode[%p]", static_cast<void*>(result));
+    return result;
 }
 
 void TreeScope::addElementById(const AtomicString& elementId, Element* element)
 {
+	// SRL: The id of the element is a memory location. This is a write.
+    ActionLogFormat(ActionLog::WRITE_MEMORY,
+    		"Tree[%p]:%s", static_cast<const void*>(this), elementId.string().ascii().data());
+    ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMNode[%p]", static_cast<void*>(element));
+
     m_elementsById.add(elementId.impl(), element);
 }
 
 void TreeScope::removeElementById(const AtomicString& elementId, Element* element)
 {
+	// SRL: The id of the element is a memory location. This is a write.
+    ActionLogFormat(ActionLog::WRITE_MEMORY,
+    		"Tree[%p]:%s", static_cast<const void*>(this), elementId.string().ascii().data());
+    ActionLogFormat(ActionLog::MEMORY_VALUE, "undefined");
+
     m_elementsById.remove(elementId.impl(), element);
 }
 

@@ -201,6 +201,9 @@ private:
     bool m_endWasDelayed;
     unsigned m_pumpSessionNestingLevel;
 
+    // WebERA:
+    EventActionId m_lastParseEventAction;
+
     // WebERA: We could also use textPosition, however this has a bit lower overhead
     unsigned long m_tokensSeen;
 };

@@ -34,6 +34,8 @@
 #include "MouseEvent.h"
 #include "ScopedEventQueue.h"
 #include "WindowEventContext.h"
+#include "Timer.h"
+#include <wtf/ActionLogReport.h>
 #include <wtf/RefPtr.h>
 #include <wtf/UnusedParam.h>
 
@@ -261,6 +263,9 @@ void EventDispatcher::ensureEventAncestors(Event* event)
 
 bool EventDispatcher::dispatchEvent(PassRefPtr<Event> event)
 {
+	ActionLogScope log_scope(
+			String::format("event:%s", event->type().string().ascii().data()).ascii().data());
+
     event->setTarget(eventTargetRespectingSVGTargetRules(m_node.get()));
 
     ASSERT(!eventDispatchForbidden());

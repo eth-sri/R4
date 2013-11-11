@@ -110,7 +110,9 @@ enum StyleChangeType {
  * A number of queue*Event methods have been added for programatically dispatching events using
  * timers registered in ThreadTimers.
  *
- * TODO(WebERA): Add missing queue*Event methods
+ * TODO(WebERA): If we are to add automatic exploration from EventRacer then we should 
+ * this would be a good place to record (and replay) user interactions. Please see the history
+ * of this file for some ideas of how to do this.
  */
 class Node : public EventTarget, public ScriptWrappable, public TreeShared<ContainerNode> {
     friend class Document;
@@ -818,7 +820,6 @@ protected:
     void setItemRef(const String&);
     void setItemType(const String&);
 #endif
-
 };
 
 // Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()

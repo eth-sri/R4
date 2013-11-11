@@ -119,6 +119,8 @@
 #include "WebEventConversion.h"
 #include "WindowFeatures.h"
 #include "WorkerThread.h"
+#include <wtf/ActionLogReport.h>
+#include <wtf/EventActionDescriptor.h>
 
 #include <QAction>
 #include <QApplication>
@@ -152,9 +154,6 @@
 #if USE(QT_MOBILITY_SYSTEMINFO)
 #include <qsysteminfo.h>
 #endif
-
-#include <wtf/EventActionDescriptor.h>
-#include <wtf/ActionLogReport.h>
 
 using namespace WebCore;
 
@@ -2001,6 +2000,7 @@ QWebPage::~QWebPage()
     delete d;
 }
 
+
 /*!
     Returns the main frame of the page.
 
@@ -2053,6 +2053,7 @@ QWebHistory *QWebPage::history() const
     d->createMainFrame();
     return &d->history;
 }
+
 
 /*!
     Sets the \a view that is associated with the web page.

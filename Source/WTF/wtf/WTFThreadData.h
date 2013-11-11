@@ -34,8 +34,6 @@
 #include <wtf/text/StringHash.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
-#include <wtf/StringSet.h>
-#include <wtf/ActionLog.h>
 
 #if USE(JSC)
 // FIXME: This is a temporary layering violation while we move more string code to WTF.
@@ -69,6 +67,10 @@ private:
 };
 
 }
+
+class StringSet;
+class ActionLog;
+class EventAttachLog;
 #endif
 
 namespace WTF {
@@ -111,28 +113,28 @@ public:
         return m_stackBounds;
     }
 
-
-    // WebERA:
+    // SRL: Log files support.
 
     StringSet* variableSet() {
-        return m_variableSet;
+    	return m_variableSet;
     }
 
     StringSet* scopeSet() {
-        return m_scopeSet;
+    	return m_scopeSet;
     }
 
     StringSet* jsSet() {
-        return m_jsSet;
+    	return m_jsSet;
     }
 
     StringSet* dataSet() {
-        return m_dataSet;
+    	return m_dataSet;
     }
 
     ActionLog* actionLog() {
-        return m_actionLog;
+    	return m_actionLog;
     }
+
 #endif
 
 private:
