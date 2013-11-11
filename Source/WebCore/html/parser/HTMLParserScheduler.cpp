@@ -119,16 +119,22 @@ void HTMLParserScheduler::checkForYieldBeforeScript(PumpSession& session)
 
 void HTMLParserScheduler::scheduleForResume()
 {
-    updateTimerName(); // WebERA
+    // WebERA:
+
+    // Convert an unsigned long into a string
+    std::stringstream params;
+    params << EventActionDescriptor::escapeParam(m_parser->getDocumentUrl());
+    params << ",";
+    params << m_parser->getTokensSeen();
+
+    EventActionDescriptor descriptor("HTMLDocumentParser", params.str());
+    m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
     m_continueNextChunkTimer.startOneShot(0);
 }
 
 
 void HTMLParserScheduler::suspend()
 {
-    // TODO(WebERA): Warning, we are assuming that the timer is still active and has not been moved into
-    // the EventActionRegister. If that is the case then this operation is not safe.
-
     ASSERT(!m_isSuspendedWithActiveTimer);
     if (!m_continueNextChunkTimer.isActive())
         return;
@@ -146,29 +152,6 @@ void HTMLParserScheduler::resume()
 
     // WebERA - we are assuming that the timer was suspended and already contains the correct descriptor
     m_continueNextChunkTimer.startOneShot(0);
-}
-
-void HTMLParserScheduler::updateTimerName()
-{
-    // Convert an unsigned long into a string
-    std::stringstream params;
-    params << EventActionDescriptor::escapeParam(m_parser->getDocumentUrl());
-    params << ",";
-    params << m_parser->getTokensSeen();
-
-    EventActionDescriptor descriptor("HTMLDocumentParser", params.str());
-    m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
-
-    const EventActionDescriptor currentDescriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
-
-    // Don't add the happens before relation for network events, since we should already have added that relation in the parser.
-    if (strcmp(currentDescriptor.getType(), "Network") != 0) {
-
-        ActionLogTriggerEvent(&m_continueNextChunkTimer);
-
-        // TODO(WebERA-HB): The EventRacer implementation mentions an exception if this is caused by a script, should we still do this?
-        // TODO(WebERA-HB-REVIEW) The original implementation does not have a happens before relation here, but in the parser...
-    }
 }
 
 }

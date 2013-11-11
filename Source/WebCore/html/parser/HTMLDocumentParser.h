@@ -203,6 +203,8 @@ private:
 
     // WebERA:
     EventActionId m_lastParseEventAction;
+    EventActionId m_lastNonInsertedParseEventAction;
+    MultiJoinHappensBefore m_modifiedInputJoin;
 
     // WebERA: We could also use textPosition, however this has a bit lower overhead
     unsigned long m_tokensSeen;

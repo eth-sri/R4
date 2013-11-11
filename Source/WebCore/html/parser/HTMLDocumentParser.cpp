@@ -93,7 +93,8 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument* document, bool reportErrors
     , m_xssAuditor(this)
     , m_endWasDelayed(false)
     , m_pumpSessionNestingLevel(0)
-    , m_lastParseEventAction(-1)
+    , m_lastParseEventAction(0)
+    , m_lastNonInsertedParseEventAction(0)
     , m_tokensSeen(0)
 {
 }
@@ -107,7 +108,8 @@ HTMLDocumentParser::HTMLDocumentParser(DocumentFragment* fragment, Element* cont
     , m_xssAuditor(this)
     , m_endWasDelayed(false)
     , m_pumpSessionNestingLevel(0)
-    , m_lastParseEventAction(-1)
+    , m_lastParseEventAction(0)
+    , m_lastNonInsertedParseEventAction(0)
     , m_tokensSeen(0)
 {
     // TODO(WebERA): Should we handle non-schedulable parsing?
@@ -279,18 +281,38 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
     // much we parsed as part of didWriteHTML instead of willWriteHTML.
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), m_input.current().length(), m_tokenizer->lineNumber().zeroBasedInt());
 
+    // WebERA: Happens before (chaining)
+
     // Note(veselin): We order pops from the queue with happens before, but
     // HTML modifications with scripts are a special case. They could be
     // triggered by events that do not participate in the same parsing order.
     // We recognize them by the insertion point and in this case, we omit the
     // happens before arc.
+    EventActionId currentEventAction = HBCurrentEventAction();
+
     if (!m_input.hasInsertionPoint()) {
-    	EventActionId currentEventAction = HBCurrentEventAction();
-    	if (m_lastParseEventAction != -1 && m_lastParseEventAction != currentEventAction) {
-    		threadGlobalData().threadTimers().happensBefore().addExplicitArc(m_lastParseEventAction, currentEventAction);
+
+        if (m_lastNonInsertedParseEventAction != 0 && m_lastNonInsertedParseEventAction != currentEventAction) {
+            HBAddExplicitArc(m_lastNonInsertedParseEventAction, currentEventAction);
     	}
-    	m_lastParseEventAction = currentEventAction;
+        m_lastNonInsertedParseEventAction = currentEventAction;
+
+    } else {
+
+        // TODO(WebERA-HB): This should be removed. However, right now we can't replay tokens correctly if inserted tokens are inserted in different positions
+        // Is this not identical to the "default" HB relation added when triggering a new timer?
+        if (m_lastParseEventAction != 0 && m_lastParseEventAction != currentEventAction) {
+            HBAddExplicitArc(m_lastParseEventAction, currentEventAction);
+        }
+
     }
+
+    m_lastParseEventAction = currentEventAction;
+
+    // WebERA: Happens before (event actions modifying the document)
+
+    m_modifiedInputJoin.joinAction();
+    m_modifiedInputJoin.clear();
 
     while (canTakeNextToken(mode, session) && !session.needsYield) {
         ++m_tokensSeen;
@@ -354,13 +376,12 @@ bool HTMLDocumentParser::hasInsertionPoint()
 
 void HTMLDocumentParser::insert(const SegmentedString& source)
 {
-    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
-    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    // WebERA: Happens before
 
-    // TODO(WebERA-HB-REVIEW) new HB-relation
+    m_modifiedInputJoin.threadEndAction();
 
-    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
-        ActionLogTriggerEvent(m_parserScheduler->getTimer());
+    if (m_lastParseEventAction != 0) {
+        HBAddExplicitArc(m_lastParseEventAction, HBCurrentEventAction());
     }
 
     if (isStopped())
@@ -389,13 +410,12 @@ void HTMLDocumentParser::insert(const SegmentedString& source)
 
 void HTMLDocumentParser::append(const SegmentedString& source)
 {
-    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
-    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    // WebERA: Happens before
 
-    // TODO(WebERA-HB-REVIEW) new HB-relation
+    m_modifiedInputJoin.threadEndAction();
 
-    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
-        ActionLogTriggerEvent(m_parserScheduler->getTimer());
+    if (m_lastParseEventAction != 0) {
+        HBAddExplicitArc(m_lastParseEventAction, HBCurrentEventAction());
     }
 
     if (isStopped())
@@ -476,13 +496,12 @@ void HTMLDocumentParser::endIfDelayed()
 
 void HTMLDocumentParser::finish()
 {
-    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
-    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    // WebERA: Happens before
 
-    // TODO(WebERA-HB-REVIEW) new HB-relation
+    m_modifiedInputJoin.threadEndAction();
 
-    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
-        ActionLogTriggerEvent(m_parserScheduler->getTimer());
+    if (m_lastParseEventAction != 0) {
+        HBAddExplicitArc(m_lastParseEventAction, HBCurrentEventAction());
     }
 
     // FIXME: We should ASSERT(!m_parserStopped) here, since it does not
@@ -536,13 +555,12 @@ bool HTMLDocumentParser::isWaitingForScripts() const
 
 void HTMLDocumentParser::resumeParsingAfterScriptExecution()
 {
-    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
-    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    // WebERA: Happens before
 
-    // TODO(WebERA-HB-REVIEW) new HB-relation
+    m_modifiedInputJoin.threadEndAction();
 
-    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
-        ActionLogTriggerEvent(m_parserScheduler->getTimer());
+    if (m_lastParseEventAction != 0) {
+        HBAddExplicitArc(m_lastParseEventAction, HBCurrentEventAction());
     }
 
     ASSERT(!isExecutingScript());
@@ -576,13 +594,12 @@ void HTMLDocumentParser::appendCurrentInputStreamToPreloadScannerAndScan()
 
 void HTMLDocumentParser::notifyFinished(CachedResource* cachedResource)
 {
-    // WebERA: A network action is affecting the parser, this is used by HTMLParserScheduler to construct happens before relations
-    const EventActionDescriptor descriptor = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    // WebERA: Happens before
 
-    // TODO(WebERA-HB-REVIEW) new HB-relation
+    m_modifiedInputJoin.threadEndAction();
 
-    if (strcmp(descriptor.getType(), "Network") == 0 && m_parserScheduler.get() != NULL) {
-        ActionLogTriggerEvent(m_parserScheduler->getTimer());
+    if (m_lastParseEventAction != 0) {
+        HBAddExplicitArc(m_lastParseEventAction, HBCurrentEventAction());
     }
 
     // pumpTokenizer can cause this parser to be detached from the Document,
