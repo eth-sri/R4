@@ -795,8 +795,6 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
 
     m_callbackTimer.setEventActionDescriptor(descriptor);
     m_callbackTimer.startOneShot(0);
-
-    ActionLogTriggerEvent(&m_callbackTimer);
 }
 
 void CachedResource::CachedResourceCallback::cancel()
