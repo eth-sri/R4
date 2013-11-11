@@ -63,6 +63,12 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         return;
     }
 
+    // WebERA: Happens before (throttled elements must not arrive to early)
+
+    if (m_lastFireEventAction != 0) {
+        HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    }
+
     if (!isActive()) {
         // The timer is not active so the least frequent event for now is every byte.
         // Just go ahead and dispatch the event.
@@ -82,16 +88,11 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
         setEventActionDescriptor(descriptor);
 
+        // WebERA: Happens before (chaining implicit)
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
-
-        ActionLogTriggerEvent(this);
-        // TODO(WebERA-HB): EventRacer does not have this happens before
 
         return;
 
-    } else {
-        // WebERA:
-        ActionLogTriggerEvent(this);
     }
 
     // The timer is already active so minimumProgressEventDispatchingIntervalInSeconds is the least frequent event.
@@ -153,6 +154,11 @@ void XMLHttpRequestProgressEventThrottle::flushProgressEvent()
 
 void XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents(Timer<XMLHttpRequestProgressEventThrottle>* timer)
 {
+    // WebERA: Happens before (join all event actions throttled)
+
+    m_progressEventActionJoin.joinAction();
+    m_progressEventActionJoin.clear();
+
     ASSERT_UNUSED(timer, timer == &m_dispatchDeferredEventsTimer);
     ASSERT(m_deferEvents);
     m_deferEvents = false;
@@ -196,6 +202,15 @@ bool XMLHttpRequestProgressEventThrottle::hasEventToDispatch() const
 
 void XMLHttpRequestProgressEventThrottle::suspend()
 {
+    // WebERA: Happens before (suspend must happen after last execution)
+    // TODO(WebERA-HB) If HB is added by default for stop, then we could omit this
+
+    if (m_lastFireEventAction != 0) {
+        HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    }
+
+    m_suspendingEventActionJoin.threadEndAction();
+
     // If re-suspended before deferred events have been dispatched, just stop the dispatch
     // and continue the last suspend.
     if (m_dispatchDeferredEventsTimer.isActive()) {
@@ -228,19 +243,12 @@ void XMLHttpRequestProgressEventThrottle::resume()
     // could insert new active DOM objects to the list.
     // m_deferEvents is kept true until all deferred events have been dispatched.
 
-    std::stringstream params;
-    params << "DEFERRED" << ",";
-    params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
-
-    EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
-
-    ActionLogTriggerEvent(&m_dispatchDeferredEventsTimer);
-    // TODO(WebERA-HB): EventRacer does not have this happens before
-
-    m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
+    // WebERA: Happens before (default)
     m_dispatchDeferredEventsTimer.startOneShot(0);
 
-    // TODO(WebERA): Should there be a happens before relation between the event suspending the request also?
+    // WebERA: Happens before (all previous suspends)
+    m_suspendingEventActionJoin.joinAction();
+    m_suspendingEventActionJoin.clear();
 }
 
 } // namespace WebCore

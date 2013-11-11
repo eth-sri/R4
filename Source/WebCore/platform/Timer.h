@@ -101,8 +101,11 @@ private:
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
 
+protected:
     EventActionId m_lastFireEventAction;
     EventActionId m_starterEventAction;
+
+private:
     double m_nextFireInterval;  // The interval for which the next file was set to.
     bool m_ignoreFireIntervalForHappensBefore;
 

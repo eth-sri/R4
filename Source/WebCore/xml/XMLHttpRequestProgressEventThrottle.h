@@ -27,9 +27,12 @@
 #ifndef XMLHttpRequestProgressEventThrottle_h
 #define XMLHttpRequestProgressEventThrottle_h
 
-#include "Timer.h"
+#include "WebCore/platform/Timer.h"
+#include "WebCore/platform/EventActionHappensBeforeReport.h"
+
 #include "wtf/PassRefPtr.h"
 #include "wtf/Vector.h"
+#include "wtf/EventActionDescriptor.h"
 
 namespace WebCore {
 
@@ -89,6 +92,9 @@ private:
     }
 
     static unsigned int m_seqNumber;
+
+    MultiJoinHappensBefore m_progressEventActionJoin;
+    MultiJoinHappensBefore m_suspendingEventActionJoin;
 };
 
 } // namespace WebCore
