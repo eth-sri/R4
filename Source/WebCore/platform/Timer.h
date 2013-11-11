@@ -78,10 +78,6 @@ public:
         m_inEventActionRegister = active;
     }
 
-    EventActionId lastFireEventAction() {
-        return m_lastFireEventAction;
-    }
-
 private:
     virtual void fired() = 0;
 
@@ -105,7 +101,6 @@ private:
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
 
-protected:
     EventActionId m_lastFireEventAction;
     EventActionId m_starterEventAction;
 

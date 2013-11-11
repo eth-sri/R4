@@ -45,6 +45,8 @@ XMLHttpRequestProgressEventThrottle::XMLHttpRequestProgressEventThrottle(EventTa
     , m_total(0)
     , m_deferEvents(false)
     , m_dispatchDeferredEventsTimer(this, &XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents)
+    , m_lastFireDispatchEventAction(0)
+    , m_lastFireDeferEventAction(0)
 {
     ASSERT(target);
 }
@@ -65,8 +67,8 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
 
     // WebERA: Happens before (throttled elements must not arrive to early)
 
-    if (m_lastFireEventAction != 0) {
-        HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    if (m_lastFireDispatchEventAction != 0) {
+        HBAddExplicitArc(m_lastFireDispatchEventAction, HBCurrentEventAction());
     }
 
     if (!isActive()) {
@@ -82,7 +84,7 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         // WebERA:
 
         std::stringstream params;
-        params << "BSE" << ",";
+        params << "BASE" << ",";
         params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
 
         EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
@@ -90,6 +92,8 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
 
         // WebERA: Happens before (chaining implicit)
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
+
+        // TODO(WebERA) Did we change this? Document.
 
         return;
 
@@ -152,13 +156,34 @@ void XMLHttpRequestProgressEventThrottle::flushProgressEvent()
     dispatchEvent(event);
 }
 
-void XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents(Timer<XMLHttpRequestProgressEventThrottle>* timer)
+void XMLHttpRequestProgressEventThrottle::fired()
 {
     // WebERA: Happens before (join all event actions throttled)
 
     m_progressEventActionJoin.joinAction();
     m_progressEventActionJoin.clear();
 
+    m_lastFireDispatchEventAction = HBCurrentEventAction();
+
+    ASSERT(isActive());
+    if (!hasEventToDispatch()) {
+        // No progress event was queued since the previous dispatch, we can safely stop the timer.
+        stop();
+        return;
+    }
+
+    dispatchEvent(XMLHttpRequestProgressEvent::create(eventNames().progressEvent, m_lengthComputable, m_loaded, m_total));
+    m_total = 0;
+    m_loaded = 0;
+}
+
+bool XMLHttpRequestProgressEventThrottle::hasEventToDispatch() const
+{
+    return (m_total || m_loaded) && isActive();
+}
+
+void XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents(Timer<XMLHttpRequestProgressEventThrottle>* timer)
+{
     ASSERT_UNUSED(timer, timer == &m_dispatchDeferredEventsTimer);
     ASSERT(m_deferEvents);
     m_deferEvents = false;
@@ -179,25 +204,12 @@ void XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents(Timer<XMLHttpRe
     // If not, just send the most up-to-date progress on resume.
     if (deferredProgressEvent)
         dispatchEvent(deferredProgressEvent);
-}
 
-void XMLHttpRequestProgressEventThrottle::fired()
-{
-    ASSERT(isActive());
-    if (!hasEventToDispatch()) {
-        // No progress event was queued since the previous dispatch, we can safely stop the timer.
-        stop();
-        return;
+    if (m_lastFireDeferEventAction != 0) {
+        HBAddExplicitArc(m_lastFireDeferEventAction, HBCurrentEventAction());
     }
 
-    dispatchEvent(XMLHttpRequestProgressEvent::create(eventNames().progressEvent, m_lengthComputable, m_loaded, m_total));
-    m_total = 0;
-    m_loaded = 0;
-}
-
-bool XMLHttpRequestProgressEventThrottle::hasEventToDispatch() const
-{
-    return (m_total || m_loaded) && isActive();
+    m_lastFireDeferEventAction = HBCurrentEventAction();
 }
 
 void XMLHttpRequestProgressEventThrottle::suspend()
@@ -205,8 +217,8 @@ void XMLHttpRequestProgressEventThrottle::suspend()
     // WebERA: Happens before (suspend must happen after last execution)
     // TODO(WebERA-HB) If HB is added by default for stop, then we could omit this
 
-    if (m_lastFireEventAction != 0) {
-        HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    if (m_lastFireDeferEventAction != 0) {
+        HBAddExplicitArc(m_lastFireDeferEventAction, HBCurrentEventAction());
     }
 
     m_suspendingEventActionJoin.threadEndAction();
@@ -242,6 +254,13 @@ void XMLHttpRequestProgressEventThrottle::resume()
     // the list of active DOM objects to resume them, and any activated JS event-handler
     // could insert new active DOM objects to the list.
     // m_deferEvents is kept true until all deferred events have been dispatched.
+
+    std::stringstream params;
+    params << "DEFERRED" << ",";
+    params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
+
+    EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
+    m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
 
     // WebERA: Happens before (default)
     m_dispatchDeferredEventsTimer.startOneShot(0);

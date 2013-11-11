@@ -77,11 +77,13 @@ private:
     Vector<T*> m_dispatchingList;
 
     MultiJoinHappensBefore m_sendJoin;
+    EventActionId m_lastEventAction;
 };
 
 template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
     : m_eventType(eventType)
     , m_timer(this, &EventSender::timerFired)
+    , m_lastEventAction(0)
 {
 }
 
@@ -106,8 +108,8 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
     m_sendJoin.threadEndAction();
 
     // WebERA: Happens before (always trigger after the previous event)
-    if (m_timer.lastFireEventAction() != 0) {
-        HBAddExplicitArc(m_timer.lastFireEventAction(), HBCurrentEventAction());
+    if (m_lastEventAction != 0) {
+        HBAddExplicitArc(m_lastEventAction, HBCurrentEventAction());
     }
 
     // TODO(WebERA-HB): Should we split this into multiple timers such that events are not batched togheter?
@@ -119,8 +121,8 @@ template<typename T> void EventSender<T>::cancelEvent(T* sender)
     m_sendJoin.threadEndAction();
 
     // WebERA: Happens before (always trigger after the previous event)
-    if (m_timer.lastFireEventAction() != 0) {
-        HBAddExplicitArc(m_timer.lastFireEventAction(), HBCurrentEventAction());
+    if (m_lastEventAction != 0) {
+        HBAddExplicitArc(m_lastEventAction, HBCurrentEventAction());
     }
 
     // Remove instances of this sender from both lists.
@@ -166,6 +168,8 @@ template<typename T> void EventSender<T>::dispatchPendingEvents()
         }
     }
     m_dispatchingList.clear();
+
+    m_lastEventAction = HBCurrentEventAction();
 }
 
 } // namespace WebCore

@@ -93,8 +93,14 @@ private:
 
     static unsigned int m_seqNumber;
 
+    // BASE
     MultiJoinHappensBefore m_progressEventActionJoin;
+    EventActionId m_lastFireDispatchEventAction;
+
+    // DEFERRED
     MultiJoinHappensBefore m_suspendingEventActionJoin;
+    EventActionId m_lastFireDeferEventAction;
+
 };
 
 } // namespace WebCore
