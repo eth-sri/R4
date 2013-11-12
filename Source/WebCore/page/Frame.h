@@ -266,9 +266,16 @@ namespace WebCore {
 
     inline void Frame::init()
     {
-        threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
+        // WebERA: This happens when we initialize the main frame
+        if (!HBIsCurrentEventActionValid()) {
+            threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
+        }
+
         m_loader.init();
-        threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
+
+        if (!HBIsCurrentEventActionValid()) {
+            threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
+        }
     }
 
     inline FrameLoader* Frame::loader() const
