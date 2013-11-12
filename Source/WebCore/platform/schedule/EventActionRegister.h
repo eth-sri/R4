@@ -51,6 +51,10 @@ public:
     // Attempts to execute an event action. Returns true on success.
     bool runEventAction(const EventActionDescriptor& descriptor);
 
+    // Ghost operations, used to simulate the execution of certain un-schedulable event actions
+    void enterGhostEventAction(EventActionId id, ActionLog::EventActionType type);
+    void exitGhostEventAction();
+
     // Used to inspect the currently executed event action globally
     const EventActionDescriptor& currentEventActionDispatching() const
     {

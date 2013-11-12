@@ -40,6 +40,9 @@
 #include "ScriptController.h"
 #include "UserScriptTypes.h"
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+
 #if PLATFORM(WIN)
 #include "FrameWin.h"
 #endif
@@ -263,7 +266,9 @@ namespace WebCore {
 
     inline void Frame::init()
     {
+        threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
         m_loader.init();
+        threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
     }
 
     inline FrameLoader* Frame::loader() const
