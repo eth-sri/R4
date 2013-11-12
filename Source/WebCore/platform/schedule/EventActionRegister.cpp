@@ -123,7 +123,6 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     ActionLogEventTriggered(l[0].object);
 
     HBEnterEventAction(id, ActionLog::UNKNOWN);
-    // TODO(WebERA-HB) trigger conditional happens before if used...
 
 	// Execute the function.
 
@@ -150,6 +149,18 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     eventActionDispatchEnd(true);
 
     return true;
+}
+
+void EventActionRegister::enterGhostEventAction(EventActionId id, ActionLog::EventActionType type)
+{
+    ActionLogEnterOperation(id, type);
+    HBEnterEventAction(id, type);
+}
+
+void EventActionRegister::exitGhostEventAction()
+{
+    HBExitEventAction();
+    ActionLogExitOperation();
 }
 
 void EventActionRegister::debugPrintNames() const
