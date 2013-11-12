@@ -56,7 +56,9 @@ bool HBIsCurrentEventActionValid()
 
 void HBAddExplicitArc(EventActionId earlier, EventActionId later)
 {
-    threadGlobalData().threadTimers().happensBefore().addExplicitArc(earlier, later);
+    if (earlier != later) { // filter out self loops
+        threadGlobalData().threadTimers().happensBefore().addExplicitArc(earlier, later);
+    }
 }
 
 void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration)
