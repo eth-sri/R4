@@ -63,7 +63,6 @@ class DeferAsyncScriptExecution {
         DeferAsyncScriptExecution(const PendingScript& script, Document* document, unsigned int scriptRunnerId, unsigned int scriptOffset);
         ~DeferAsyncScriptExecution();
 
-
     private:
 
         void timerFired(Timer<DeferAsyncScriptExecution>* timer);

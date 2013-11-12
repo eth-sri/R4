@@ -60,6 +60,7 @@ DeferAsyncScriptExecution::~DeferAsyncScriptExecution()
 {
     if (m_timer.isActive()) {
         m_timer.stop();
+        m_document->decrementLoadEventDelayCount();
     }
 }
 
@@ -104,8 +105,7 @@ ScriptRunner::~ScriptRunner()
         m_document->decrementLoadEventDelayCount();
 
     for (size_t i = 0; i < m_pendingAsyncScriptsExecuted.size(); ++i) {
-        delete m_pendingAsyncScriptsExecuted[i];
-        m_document->decrementLoadEventDelayCount();
+        delete m_pendingAsyncScriptsExecuted[i]; // decrements the counter
     }
 }
 
