@@ -359,6 +359,13 @@ QNetworkReply* QNetworkReplyControllable::release()
 
 void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*)
 {
+    // HB - Force HB relations between subsequent network events in the same request
+    if (m_lastNetworkEventAction != 0) {
+        HBAddExplicitArc(m_lastNetworkEventAction, HBCurrentEventAction());
+    }
+
+    m_lastNetworkEventAction = HBCurrentEventAction();
+
     QueuedSnapshot queuedSnapshot = m_snapshotQueue.takeFirst();
     m_currentSnapshot = queuedSnapshot.second;
 
@@ -407,13 +414,6 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
     EventActionDescriptor descriptor("Network", params.str());
     m_nextSnapshotUpdateTimer.setEventActionDescriptor(descriptor);
     m_nextSnapshotUpdateTimer.startOneShot(0);
-
-    // HB - Force HB relations between subsequent network events in the same request
-    if (m_lastNetworkEventAction != 0) {
-        HBAddExplicitArc(m_lastNetworkEventAction, HBCurrentEventAction());
-    }
-
-    m_lastNetworkEventAction = HBCurrentEventAction();
 }
 
 QNetworkReplyControllableLive::QNetworkReplyControllableLive(QNetworkReply* reply, QObject* parent)
