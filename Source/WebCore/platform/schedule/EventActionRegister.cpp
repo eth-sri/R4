@@ -119,10 +119,8 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     eventActionDispatchStart(id, descriptor);
 
     // TODO(WebERA): Add proper event types
-    ActionLogEnterOperation(id, ActionLog::UNKNOWN);
-    ActionLogEventTriggered(l[0].object);
-
     HBEnterEventAction(id, ActionLog::UNKNOWN);
+    ActionLogEventTriggered(l[0].object);
 
 	// Execute the function.
 
@@ -145,7 +143,6 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     // Post-Execution
 
     HBExitEventAction();
-    ActionLogExitOperation();
     eventActionDispatchEnd(true);
 
     return true;
@@ -153,14 +150,12 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
 void EventActionRegister::enterGhostEventAction(EventActionId id, ActionLog::EventActionType type)
 {
-    ActionLogEnterOperation(id, type);
     HBEnterEventAction(id, type);
 }
 
 void EventActionRegister::exitGhostEventAction()
 {
     HBExitEventAction();
-    ActionLogExitOperation();
 }
 
 void EventActionRegister::debugPrintNames() const
