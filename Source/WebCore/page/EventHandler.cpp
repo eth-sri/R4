@@ -590,7 +590,6 @@ EventHandler::EventHandler(Frame* frame)
     , m_baseEventType(PlatformEvent::NoType)
     , m_deferredEventTimer(this, &EventHandler::deferredEventTimerFired)
 {
-    updateFakeMouseMoveEventTimerDescriptor();
 }
 
 EventHandler::~EventHandler()
@@ -2930,21 +2929,14 @@ void EventHandler::dispatchFakeMouseMoveEventSoon()
     // to receive these moves only after the user is done scrolling, reducing
     // pauses during the scroll.
 
-    /*if (m_maxMouseMovedDuration > fakeMouseMoveShortInterval) {
+    if (m_maxMouseMovedDuration > fakeMouseMoveShortInterval) {
         if (m_fakeMouseMoveEventTimer.isActive())
             m_fakeMouseMoveEventTimer.stop();
         m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveLongInterval);
     } else {
         if (!m_fakeMouseMoveEventTimer.isActive())
             m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveShortInterval);
-    }*/
-
-    // WebERA: Use a fixed interval to make it easier to replay the timer
-    if (!m_fakeMouseMoveEventTimer.isActive())
-        m_fakeMouseMoveEventTimer.startOneShot(fakeMouseMoveShortInterval);
-
-    // Add a HB relation between any event action triggering a fake user event and the triggered event action
-    m_fakeUserEventJoin.threadEndAction();
+    }
 }
 
 void EventHandler::dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad& quad)
@@ -2981,22 +2973,6 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
     IntPoint globalPoint = view->contentsToScreen(IntRect(view->windowToContents(m_currentMousePosition), IntSize())).location();
     PlatformMouseEvent fakeMouseMoveEvent(m_currentMousePosition, globalPoint, NoButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey, metaKey, currentTime());
     mouseMoved(fakeMouseMoveEvent);
-
-    m_fakeUserEventJoin.joinAction();
-    m_fakeUserEventJoin.clear();
-
-    updateFakeMouseMoveEventTimerDescriptor();
-}
-
-unsigned int EventHandler::m_seqNumber = 0;
-
-void EventHandler::updateFakeMouseMoveEventTimerDescriptor()
-{
-    std::stringstream params;
-    params << EventHandler::getSeqNumber();
-
-    EventActionDescriptor descriptor("FakeMouseMoveEvent", params.str());
-    m_fakeMouseMoveEventTimer.setEventActionDescriptor(descriptor);
 }
 
 void EventHandler::setResizingFrameSet(HTMLFrameSetElement* frameSet)
