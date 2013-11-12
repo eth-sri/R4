@@ -49,6 +49,7 @@
 #include "StyleRule.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/text/AtomicString.h>
+#include <wtf/EventActionDescriptor.h>
 
 #if ENABLE(SVG)
 #include "SVGFontFaceElement.h"
@@ -67,6 +68,8 @@ CSSFontSelector::CSSFontSelector(Document* document)
     // FIXME: An old comment used to say there was no need to hold a reference to m_document
     // because "we are guaranteed to be destroyed before the document". But there does not
     // seem to be any such guarantee.
+
+    m_beginLoadingTimer.setEventActionDescriptor(EventActionDescriptor("CSSFontSelector", ""));
 
     ASSERT(m_document);
     fontCache()->addClient(this);
