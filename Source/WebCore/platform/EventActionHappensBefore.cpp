@@ -87,10 +87,10 @@ void EventActionsHB::setCurrentEventActionInvalid() {
 }
 
 void EventActionsHB::checkInValidEventAction() {
-    if (m_currentEventActionId != 0) {
+    if (m_currentEventActionId == 0) {
         fprintf(stderr, "Not in a valid event action.\n");
         fflush(stderr);
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 }
 
