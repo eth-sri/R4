@@ -34,6 +34,9 @@
 #include "qdir.h"
 #include "qfile.h"
 
+#include <WebCore/platform/ThreadGlobalData.h>
+#include <WebCore/platform/ThreadTimers.h>
+
 class QWebViewPrivate {
 public:
     QWebViewPrivate(QWebView *view)
@@ -793,8 +796,13 @@ void QWebView::reload()
 */
 void QWebView::resizeEvent(QResizeEvent *e)
 {
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(WebCore::HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
+
+
     if (d->page)
         d->page->setViewportSize(e->size());
+
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
 }
 
 /*! \reimp

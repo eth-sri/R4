@@ -126,7 +126,11 @@ bool ThreadTimers::fireTimerCallback(void* object, const EventActionDescriptor&)
 
     // Implicit happens before
 
-    timer->m_lastFireEventAction = HBCurrentEventAction();
+    if (HBIsCurrentEventActionValid()) {
+        timer->m_lastFireEventAction = HBCurrentEventAction();
+    } else {
+        timer->m_lastFireEventAction = 0;
+    }
 
     if (timer->m_ignoreFireIntervalForHappensBefore) {
         HBAddExplicitArc(timer->m_starterEventAction, HBCurrentEventAction());
