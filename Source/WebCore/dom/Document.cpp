@@ -489,6 +489,7 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 #ifndef NDEBUG
     , m_didDispatchViewportPropertiesChanged(false)
 #endif
+    , m_lastPendingTasksEventAction(0)
 {
     m_document = this;
 
@@ -5138,10 +5139,16 @@ public:
         : documentReference(documentReference)
         , task(task)
     {
+        if (HBIsCurrentEventActionValid()) {
+            startEventActionId = HBCurrentEventAction();
+        } else {
+            startEventActionId = 0;
+        }
     }
 
     RefPtr<DocumentWeakReference> documentReference;
     OwnPtr<ScriptExecutionContext::Task> task;
+    EventActionId startEventActionId;
 };
 
 void Document::didReceiveTask(void* untypedContext)
@@ -5157,12 +5164,22 @@ void Document::didReceiveTask(void* untypedContext)
 
     Page* page = document->page();
     if ((page && page->defersLoading()) || !document->m_pendingTasks.isEmpty()) {
+
+        // TODO(WebERA-HB-REVIEW): Are these tasks ever created in one event action and executed by another?
+        if (context->startEventActionId != 0) {
+            HBAddExplicitArc(context->startEventActionId, HBCurrentEventAction());
+        }
+
+        document->m_addedPendingTaskJoin.threadEndAction();
+
         document->m_pendingTasks.append(context->task.release());
         return;
     }
 
-    // TODO(WebERA-HB): Add a descriptor to the pending tasks timer and ensure we have correct happens before relations between whatever is creating these tasks, the direct execution and the pending tasks timer
-	// Notice that this is also implemented in EventRacer
+    // TODO(WebERA-HB-REVIEW): Are these tasks ever created in one event action and executed by another?
+    if (context->startEventActionId != 0) {
+        HBAddExplicitArc(context->startEventActionId, HBCurrentEventAction());
+    }
 
     context->task->performTask(document);
 }
@@ -5175,6 +5192,20 @@ void Document::postTask(PassOwnPtr<Task> task)
 void Document::pendingTasksTimerFired(Timer<Document>*)
 {
 	ActionLogScope log_scope("doc pending task");
+
+    // WebERA: Happens before (chaining)
+
+    if (m_lastPendingTasksEventAction != 0) {
+        HBAddExplicitArc(m_lastPendingTasksEventAction, HBCurrentEventAction());
+    }
+
+    m_lastPendingTasksEventAction = HBCurrentEventAction();
+
+    // WebERA: Happens before (added pending task -> pending task executed)
+
+    m_addedPendingTaskJoin.joinAction();
+    m_addedPendingTaskJoin.clear();
+
     while (!m_pendingTasks.isEmpty()) {
         OwnPtr<Task> task = m_pendingTasks[0].release();
         m_pendingTasks.remove(0);
@@ -5196,14 +5227,26 @@ void Document::suspendScheduledTasks(ActiveDOMObject::ReasonForSuspension reason
     m_scheduledTasksAreSuspended = true;
 }
 
+unsigned int Document::m_seqNumber = 0;
+
 void Document::resumeScheduledTasks()
 {
+
     ASSERT(m_scheduledTasksAreSuspended);
 
     if (m_parser)
         m_parser->resumeScheduledTasks();
-    if (!m_pendingTasks.isEmpty())
+    if (!m_pendingTasks.isEmpty()) {
+
+        // WebERA
+
+        std::stringstream params;
+        params << Document::getSeqNumber();
+
+        EventActionDescriptor descriptor("PendingTasks", params.str());
+        m_pendingTasksTimer.setEventActionDescriptor(descriptor);
         m_pendingTasksTimer.startOneShot(0);
+    }
     scriptRunner()->resume();
     resumeActiveDOMObjects();
     resumeScriptedAnimationControllerCallbacks();
