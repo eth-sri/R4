@@ -67,36 +67,6 @@ void EventActionsHB::addTimedArc(EventActionId earlier, EventActionId later, dou
     ActionLogAddArc(earlier, later, duration * 1000);
 }
 
-//void EventActionsHB::addConditionalArc(EventActionId earlier, void* later) {
-    /*if (m_currentEventActionId == -1) return;
-
-        PendingArcVector& pending_arc_vector = m_pendingArcs[reinterpret_cast<long int>(eventId)];
-        pending_arc_vector.push_back(PendingArc(m_currentEventActionId, 0));
-    }*/
-//}
-
-//void EventActionsHB::addConditionalTimedArc(EventActionId earlier, void* later, double duration) {
-
-//}
-
-//void EventActionsHB::addConditionalArcs(void* later) {
-    /*if (m_currentEventActionId == -1) return;
-
-    PendingArcs::iterator it = m_pendingArcs.find(reinterpret_cast<long int>(eventId));
-    if (it == m_pendingArcs.end()) return;
-
-    PendingArcVector& pending_arc_vector = it->second;
-
-    for (PendingArcVector::iterator iter = pending_arc_vector.begin(); iter != pending_arc_vector.end(); iter++) {
-        if (m_currentEventActionId <= iter->m_eventActionId) {
-            CRASH();
-        }
-        addArc(iter->m_eventActionId, m_currentEventActionId, iter->m_timeout);
-    }
-
-    m_pendingArcs.erase(it);*/
-//}
-
 void EventActionsHB::setCurrentEventAction(EventActionId newEventActionId, ActionLog::EventActionType type) {
     m_currentEventActionId = newEventActionId;
 

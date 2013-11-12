@@ -45,11 +45,6 @@ bool HBIsCurrentEventActionValid();
 void HBAddExplicitArc(EventActionId earlier, EventActionId later);
 void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration);
 
-// AUTOMATICALLY ADD ARCS BETWEEN AN EVENT ACTION AND THE EVENT ACTION OF A TIMER (IF IT IS TRIGGERED)
-/*void HBConditionalArc(EventActionId earlier, void* later);
-void HBConditionalTimedArc(EventActionId earlier, void* later, double duration);
-void HBAddConditionalArcs(void* later);*/
-
 EventActionId HBLastUIEventAction();
 
 // Class to instrument ad-hoc synchronization in WebKit and obtain happens-before.

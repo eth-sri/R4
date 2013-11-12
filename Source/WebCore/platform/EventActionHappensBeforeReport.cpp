@@ -64,21 +64,6 @@ void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration)
     threadGlobalData().threadTimers().happensBefore().addTimedArc(earlier, later, duration);
 }
 
-/*void HBConditionalArc(EventActionId earlier, void* later)
-{
-    threadGlobalData().threadTimers().happensBefore().addConditionalArc(earlier, later);
-}
-
-void HBConditionalTimedArc(EventActionId earlier, void* later, double duration)
-{
-    threadGlobalData().threadTimers().happensBefore().addConditionalTimedArc(earlier, later, duration);
-}
-
-void HBAddConditionalArcs(void* later)
-{
-    threadGlobalData().threadTimers().happensBefore().addConditionalArcs(later);
-}*/
-
 EventActionId HBLastUIEventAction()
 {
     return threadGlobalData().threadTimers().happensBefore().lastUIEventAction();

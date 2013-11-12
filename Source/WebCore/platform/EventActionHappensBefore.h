@@ -65,10 +65,6 @@ public:
     void addExplicitArc(EventActionId earlier, EventActionId later);
     void addTimedArc(EventActionId earlier, EventActionId later, double duration);
 
-    //void addConditionalArc(EventActionId earlier, void* later);
-    //void addConditionalTimedArc(EventActionId earlier, void* later, double duration);
-    //void addConditionalArcs(void* later);
-
     EventActionId lastUIEventAction() const {
          return m_lastUIEventAction;
     }
@@ -88,20 +84,6 @@ public:
     }
 
 private:
-/*
-    struct PendingArc {
-        int m_eventActionId;
-        int m_timeout;
-
-        PendingArc(int eventActionId, int timeout)
-            : m_eventActionId(eventActionId)
-            , m_timeout(timeout)
-        {
-        }
-    };
-    typedef std::vector<PendingArc> PendingArcVector;
-    typedef std::map<long int, PendingArcVector> PendingArcs;*/
-
     EventActionId m_currentEventActionId;
     EventActionId m_nextEventActionId;
 
