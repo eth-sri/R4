@@ -49,8 +49,8 @@ public:
     EventActionId allocateEventActionId();
 
     EventActionId currentEventAction() const {
-        if (m_currentEventActionId != 0) {
-            //CRASH(); // TODO(WebERA) uncomment this again!
+        if (m_currentEventActionId == 0) {
+            CRASH();
         }
         return m_currentEventActionId;
     }

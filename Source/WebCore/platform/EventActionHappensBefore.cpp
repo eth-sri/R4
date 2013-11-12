@@ -55,14 +55,14 @@ EventActionId EventActionsHB::allocateEventActionId() {
 
 void EventActionsHB::addExplicitArc(EventActionId earlier, EventActionId later) {
     if (earlier <= 0 || later <= 0 || earlier == later) {
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
     ActionLogAddArc(earlier, later, -1);
 }
 
 void EventActionsHB::addTimedArc(EventActionId earlier, EventActionId later, double duration) {
     if (earlier <= 0 || later <= 0) {
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
     ActionLogAddArc(earlier, later, duration * 1000);
 }
