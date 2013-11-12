@@ -796,8 +796,8 @@ void QWebView::reload()
 */
 void QWebView::resizeEvent(QResizeEvent *e)
 {
+    // TODO(WebERA): This should use a real event action and not a ghost
     WebCore::threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(WebCore::HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
-
 
     if (d->page)
         d->page->setViewportSize(e->size());
