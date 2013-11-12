@@ -132,10 +132,12 @@ bool ThreadTimers::fireTimerCallback(void* object, const EventActionDescriptor&)
         timer->m_lastFireEventAction = 0;
     }
 
-    if (timer->m_ignoreFireIntervalForHappensBefore) {
-        HBAddExplicitArc(timer->m_starterEventAction, HBCurrentEventAction());
-    } else {
-        HBAddTimedArc(timer->m_starterEventAction, HBCurrentEventAction(), timer->m_nextFireInterval);
+    if (timer->m_starterEventAction != 0 && HBIsCurrentEventActionValid()) {
+        if (timer->m_ignoreFireIntervalForHappensBefore) {
+            HBAddExplicitArc(timer->m_starterEventAction, HBCurrentEventAction());
+        } else {
+            HBAddTimedArc(timer->m_starterEventAction, HBCurrentEventAction(), timer->m_nextFireInterval);
+        }
     }
 
     // Set next fire time
