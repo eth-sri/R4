@@ -88,11 +88,20 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
         for (; it2 != l.end(); it2++) {
 
-            eventActionDispatchStart(0, descriptor);
+            // Note, it is a bit undefined how well the happens before relations are applied if we
+            // abort an event action. Thus, HB relations should not be used if event action providers are used.
 
-            std::cout << "Running " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
+            EventActionId id = HBAllocateEventActionId();
+
+            eventActionDispatchStart(id, descriptor);
+
+            HBEnterEventAction(id, ActionLog::UNKNOWN);
+            ActionLogEventTriggered(l[0].object);
+
+            std::cout << "Running " << descriptor.toString() << std::endl; // DEBUG(WebERA)
             bool found = (it2->function)(it2->object, descriptor);
 
+            HBExitEventAction();
             eventActionDispatchEnd(found);
 
             if (found) {
