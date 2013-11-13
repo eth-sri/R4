@@ -29,6 +29,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sstream>
 #include "config.h"
 #include "NavigationScheduler.h"
 
@@ -48,6 +49,7 @@
 #include "Page.h"
 #include "UserGestureIndicator.h"
 #include <wtf/CurrentTime.h>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WebCore {
 
@@ -309,6 +311,14 @@ void NavigationScheduler::scheduleRedirect(double delay, const String& url)
     if (url.isEmpty())
         return;
 
+    // WebERA
+
+    std::stringstream params;
+    params << "REDIRECT" << ",";
+    params << EventActionDescriptor::escapeParam(url.ascii().data());
+
+    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", params.str()));
+
     // We want a new back/forward list item if the refresh timeout is > 1 second.
     if (!m_redirect || delay <= m_redirect->delay())
         schedule(adoptPtr(new ScheduledRedirect(delay, m_frame->document()->securityOrigin(), url, true, delay <= 1)));
@@ -355,6 +365,14 @@ void NavigationScheduler::scheduleLocationChange(SecurityOrigin* securityOrigin,
     // This may happen when a frame changes the location of another frame.
     bool duringLoad = !loader->stateMachine()->committedFirstRealDocumentLoad();
 
+    // WebERA
+
+    std::stringstream params;
+    params << "LOCATIONCHANGE" << ",";
+    params << EventActionDescriptor::escapeParam(url.ascii().data());
+
+    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", params.str()));
+
     schedule(adoptPtr(new ScheduledLocationChange(securityOrigin, url, referrer, lockHistory, lockBackForwardList, duringLoad)));
 }
 
@@ -376,6 +394,10 @@ void NavigationScheduler::scheduleFormSubmission(PassRefPtr<FormSubmission> subm
         || (submission->state()->formSubmissionTrigger() == SubmittedByJavaScript
             && m_frame->tree()->parent() && !ScriptController::processingUserGesture());
 
+    // WebERA
+
+    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", "FORMSUBMISSION"));
+
     schedule(adoptPtr(new ScheduledFormSubmission(submission, lockBackForwardList, duringLoad)));
 }
 
@@ -386,6 +408,10 @@ void NavigationScheduler::scheduleRefresh()
     const KURL& url = m_frame->document()->url();
     if (url.isEmpty())
         return;
+
+    // WebERA
+
+    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", "REFRESH"));
 
     schedule(adoptPtr(new ScheduledRefresh(m_frame->document()->securityOrigin(), url.string(), m_frame->loader()->outgoingReferrer())));
 }
@@ -403,12 +429,18 @@ void NavigationScheduler::scheduleHistoryNavigation(int steps)
         return;
     }
 
+    // WebERA
+
+    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", "HISTORY"));
+
     // In all other cases, schedule the history traversal to occur asynchronously.
     schedule(adoptPtr(new ScheduledHistoryNavigation(steps)));
 }
 
 void NavigationScheduler::timerFired(Timer<NavigationScheduler>*)
 {
+    m_timer.setEventActionDescriptor(EventActionDescriptor()); // unset descriptor so we don't reuse the same again by accident
+
     if (!m_frame->page())
         return;
     if (m_frame->page()->defersLoading())
