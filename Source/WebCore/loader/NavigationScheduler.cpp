@@ -317,7 +317,7 @@ void NavigationScheduler::scheduleRedirect(double delay, const String& url)
     params << "REDIRECT" << ",";
     params << EventActionDescriptor::escapeParam(url.ascii().data());
 
-    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", params.str()));
+    m_timer.setEventActionDescriptor(EventActionDescriptor(USER_INTERFACE, "Navigation", params.str()));
 
     // We want a new back/forward list item if the refresh timeout is > 1 second.
     if (!m_redirect || delay <= m_redirect->delay())
@@ -371,7 +371,7 @@ void NavigationScheduler::scheduleLocationChange(SecurityOrigin* securityOrigin,
     params << "LOCATIONCHANGE" << ",";
     params << EventActionDescriptor::escapeParam(url.ascii().data());
 
-    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", params.str()));
+    m_timer.setEventActionDescriptor(EventActionDescriptor(USER_INTERFACE, "Navigation", params.str()));
 
     schedule(adoptPtr(new ScheduledLocationChange(securityOrigin, url, referrer, lockHistory, lockBackForwardList, duringLoad)));
 }
@@ -396,7 +396,7 @@ void NavigationScheduler::scheduleFormSubmission(PassRefPtr<FormSubmission> subm
 
     // WebERA
 
-    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", "FORMSUBMISSION"));
+    m_timer.setEventActionDescriptor(EventActionDescriptor(USER_INTERFACE, "Navigation", "FORMSUBMISSION"));
 
     schedule(adoptPtr(new ScheduledFormSubmission(submission, lockBackForwardList, duringLoad)));
 }
@@ -411,7 +411,7 @@ void NavigationScheduler::scheduleRefresh()
 
     // WebERA
 
-    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", "REFRESH"));
+    m_timer.setEventActionDescriptor(EventActionDescriptor(USER_INTERFACE, "Navigation", "REFRESH"));
 
     schedule(adoptPtr(new ScheduledRefresh(m_frame->document()->securityOrigin(), url.string(), m_frame->loader()->outgoingReferrer())));
 }
@@ -431,7 +431,7 @@ void NavigationScheduler::scheduleHistoryNavigation(int steps)
 
     // WebERA
 
-    m_timer.setEventActionDescriptor(EventActionDescriptor("Navigation", "HISTORY"));
+    m_timer.setEventActionDescriptor(EventActionDescriptor(USER_INTERFACE, "Navigation", "HISTORY"));
 
     // In all other cases, schedule the history traversal to occur asynchronously.
     schedule(adoptPtr(new ScheduledHistoryNavigation(steps)));
@@ -439,7 +439,7 @@ void NavigationScheduler::scheduleHistoryNavigation(int steps)
 
 void NavigationScheduler::timerFired(Timer<NavigationScheduler>*)
 {
-    m_timer.setEventActionDescriptor(EventActionDescriptor()); // unset descriptor so we don't reuse the same again by accident
+    m_timer.setEventActionDescriptor(EventActionDescriptor::null); // unset descriptor so we don't reuse the same again by accident
 
     if (!m_frame->page())
         return;

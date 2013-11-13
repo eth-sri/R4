@@ -99,7 +99,7 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
         params << m_eventType.string().ascii().data() << ",";
         params << EventSenderSeqNumber::getSeqNumber();
 
-        EventActionDescriptor descriptor("EventSender", params.str());
+        EventActionDescriptor descriptor(OTHER, "EventSender", params.str());
 
         m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);

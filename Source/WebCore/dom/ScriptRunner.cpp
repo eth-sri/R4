@@ -50,7 +50,7 @@ DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script
     params << "Async" << ",";
     params << scriptOffset;
 
-    EventActionDescriptor descriptor("ScriptRunner", params.str());
+    EventActionDescriptor descriptor(PARSING, "ScriptRunner", params.str());
 
     m_timer.setEventActionDescriptor(descriptor);
     m_timer.startOneShot(0);
@@ -191,7 +191,7 @@ void ScriptRunner::updateInOrderTimer() {
     params << "InOrder" << ",";
     params << m_inOrderExecuted;
 
-    EventActionDescriptor descriptor("ScriptRunner", params.str());
+    EventActionDescriptor descriptor(PARSING, "ScriptRunner", params.str());
 
     m_inOrderTimer.setEventActionDescriptor(descriptor);
     m_inOrderTimer.startOneShot(0);

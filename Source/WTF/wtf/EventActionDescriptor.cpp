@@ -32,8 +32,9 @@ namespace WebCore {
 
 EventActionDescriptor EventActionDescriptor::null;
 
-EventActionDescriptor::EventActionDescriptor(const std::string& type, const std::string& params)
-    : m_type(type)
+EventActionDescriptor::EventActionDescriptor(EventActionCategory category, const std::string& type, const std::string& params)
+    : m_category(category)
+    , m_type(type)
 	, m_params(params)
     , m_isNull(false)
 {
@@ -46,7 +47,7 @@ EventActionDescriptor::EventActionDescriptor()
 
 bool EventActionDescriptor::operator==(const EventActionDescriptor& other) const
 {
-    return m_type == other.m_type && m_params == other.m_params;
+    return m_category == other.m_category && m_type == other.m_type && m_params == other.m_params;
 }
 
 bool EventActionDescriptor::operator!=(const EventActionDescriptor& other) const
@@ -57,7 +58,7 @@ bool EventActionDescriptor::operator!=(const EventActionDescriptor& other) const
 std::string EventActionDescriptor::toString() const
 {
     std::stringstream result;
-    result << m_type << "(" << m_params << ")";
+    result << m_category << "-" << m_type << "(" << m_params << ")";
 
     return result.str();
 }
@@ -69,10 +70,17 @@ std::string EventActionDescriptor::serialize() const
 
 EventActionDescriptor EventActionDescriptor::deserialize(const std::string& raw)
 {
+    size_t typeStartPos = raw.find('-');
+    assert(typeStartPos != std::string::npos);
     size_t typeEndPos = raw.find('(');
     assert(typeEndPos != std::string::npos);
 
-    return EventActionDescriptor(raw.substr(0, typeEndPos), raw.substr(typeEndPos+1, raw.size()-typeEndPos-2));
+    assert(typeStartPos < typeEndPos);
+
+    return EventActionDescriptor(
+                (EventActionCategory)atoi((raw.substr(0, typeStartPos)).c_str()),
+                raw.substr(typeStartPos+1, typeEndPos-typeStartPos-1),
+                raw.substr(typeEndPos+1, raw.size()-typeEndPos-2));
 }
 
 std::string EventActionDescriptor::getParameter(unsigned int number) const

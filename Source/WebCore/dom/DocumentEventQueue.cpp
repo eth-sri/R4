@@ -154,7 +154,7 @@ void DocumentEventQueue::tryUpdateAndStartTimer()
         std::stringstream params;
         params << DocumentEventQueue::getSeqNumber();
 
-        EventActionDescriptor descriptor("DocumentEventQueue", params.str());
+        EventActionDescriptor descriptor(OTHER, "DocumentEventQueue", params.str());
 
         m_pendingEventTimer->setEventActionDescriptor(descriptor);
         m_pendingEventTimer->startOneShot(0);

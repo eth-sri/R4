@@ -87,7 +87,7 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         params << "BASE" << ",";
         params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
 
-        EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
+        EventActionDescriptor descriptor(NETWORK, "XMLHttpRequestProgressEventThrottle", params.str());
         setEventActionDescriptor(descriptor);
 
         // WebERA: Happens before (chaining implicit)
@@ -259,7 +259,7 @@ void XMLHttpRequestProgressEventThrottle::resume()
     params << "DEFERRED" << ",";
     params << XMLHttpRequestProgressEventThrottle::getSeqNumber();
 
-    EventActionDescriptor descriptor("XMLHttpRequestProgressEventThrottle", params.str());
+    EventActionDescriptor descriptor(NETWORK, "XMLHttpRequestProgressEventThrottle", params.str());
     m_dispatchDeferredEventsTimer.setEventActionDescriptor(descriptor);
 
     // WebERA: Happens before (default)

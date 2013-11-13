@@ -5244,7 +5244,7 @@ void Document::resumeScheduledTasks()
         std::stringstream params;
         params << Document::getSeqNumber();
 
-        EventActionDescriptor descriptor("PendingTasks", params.str());
+        EventActionDescriptor descriptor(PARSING, "PendingTasks", params.str());
         m_pendingTasksTimer.setEventActionDescriptor(descriptor);
         m_pendingTasksTimer.startOneShot(0);
     }

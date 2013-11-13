@@ -29,6 +29,14 @@
 namespace WebCore {
 // TODO(WebERA) Move this to the WTF namespace
 
+    enum EventActionCategory {
+        OTHER = 0,
+        TIMER,
+        USER_INTERFACE,
+        NETWORK,
+        PARSING
+    };
+
     // Ids for event actions.
     typedef int EventActionId;
 
@@ -51,11 +59,12 @@ namespace WebCore {
      */
     class EventActionDescriptor {
     public:
-        EventActionDescriptor(const std::string& type, const std::string& params);
+        EventActionDescriptor(EventActionCategory category, const std::string& type, const std::string& params);
         EventActionDescriptor();
 
         bool isNull() const { return m_isNull; }
 
+        EventActionCategory getCategory() const { return m_category; }
         const char* getType() const { return m_type.c_str(); }
         const char* getParams() const { return m_params.c_str(); }
 
@@ -75,6 +84,7 @@ namespace WebCore {
         static std::string escapeParam(const std::string& param);
 
     private:
+        EventActionCategory m_category;
         std::string m_type;
         std::string m_params;
 

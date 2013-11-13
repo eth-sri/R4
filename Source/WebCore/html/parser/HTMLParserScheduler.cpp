@@ -127,7 +127,7 @@ void HTMLParserScheduler::scheduleForResume()
     params << ",";
     params << m_parser->getTokensSeen();
 
-    EventActionDescriptor descriptor("HTMLDocumentParser", params.str());
+    EventActionDescriptor descriptor(PARSING, "HTMLDocumentParser", params.str());
     m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
     m_continueNextChunkTimer.startOneShot(0);
 }

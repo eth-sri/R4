@@ -793,7 +793,7 @@ CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* r
 {
     // WebERA: This callback is used when loading cached resources
 
-    EventActionDescriptor descriptor("CachedResourceDelay", resource->url().string().ascii().data());
+    EventActionDescriptor descriptor(NETWORK, "CachedResourceDelay", resource->url().string().ascii().data());
 
     m_callbackTimer.setEventActionDescriptor(descriptor);
     m_callbackTimer.startOneShot(0);

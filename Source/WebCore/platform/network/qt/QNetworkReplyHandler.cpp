@@ -411,7 +411,7 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
            << "," << (signal == QNetworkReplyInitialSnapshot::FINISHED ? ULONG_MAX : m_sequenceNumber++);
     // use ULONG_MAX to indicate the last network event in this sequence
 
-    EventActionDescriptor descriptor("Network", params.str());
+    EventActionDescriptor descriptor(NETWORK, "Network", params.str());
     m_nextSnapshotUpdateTimer.setEventActionDescriptor(descriptor);
     m_nextSnapshotUpdateTimer.startOneShot(0);
 }

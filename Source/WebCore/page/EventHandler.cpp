@@ -4002,7 +4002,7 @@ void EventHandler::rescheduleTimer()
     if (!m_deferredEventTimer.isActive() && m_deferredEventQueue.size() > 0) {
         DeferredPlatformEvent event = m_deferredEventQueue.first();
 
-        EventActionDescriptor descriptor("UserEvent", event.serialize());
+        EventActionDescriptor descriptor(USER_INTERFACE, "UserEvent", event.serialize());
         m_deferredEventTimer.setEventActionDescriptor(descriptor);
         m_deferredEventTimer.startOneShot(0);
     }

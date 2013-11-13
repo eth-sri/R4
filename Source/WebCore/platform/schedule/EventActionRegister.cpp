@@ -95,7 +95,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
             eventActionDispatchStart(id, descriptor);
 
-            HBEnterEventAction(id, ActionLog::UNKNOWN);
+            HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
             ActionLogEventTriggered(l[0].object);
 
             std::cout << "Running " << descriptor.toString() << std::endl; // DEBUG(WebERA)
@@ -128,7 +128,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     eventActionDispatchStart(id, descriptor);
 
     // TODO(WebERA): Add proper event types
-    HBEnterEventAction(id, ActionLog::UNKNOWN);
+    HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
     ActionLogEventTriggered(l[0].object);
 
 	// Execute the function.

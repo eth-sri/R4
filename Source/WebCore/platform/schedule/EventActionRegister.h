@@ -71,6 +71,31 @@ public:
 
     void debugPrintNames() const;
 
+    ActionLog::EventActionType toActionLogType(EventActionCategory category) {
+
+        // TODO(WebERA-HB-REVIEW): I have retained the old ActionLog types, but I don't know if we can just add in our slightly different types (or if these types are correct).
+
+        switch (category) {
+        case OTHER:
+        case PARSING:
+            return ActionLog::UNKNOWN;
+            break;
+        case TIMER:
+            return ActionLog::TIMER;
+            break;
+        case USER_INTERFACE:
+            return ActionLog::USER_INTERFACE;
+            break;
+        case NETWORK:
+            return ActionLog::NETWORK;
+            break;
+
+        default:
+            ASSERT_NOT_REACHED();
+            return ActionLog::UNKNOWN;
+        }
+    }
+
 private:
 
     void eventActionDispatchStart(EventActionId id, const EventActionDescriptor& descriptor)

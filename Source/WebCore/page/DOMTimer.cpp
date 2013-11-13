@@ -115,7 +115,7 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     ActionLogFormat(ActionLog::WRITE_MEMORY, "Timer:%d", timer->m_timeoutId);
     ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMTimer[%p]", static_cast<void*>(timer));
 
-    EventActionDescriptor descriptor("DOMTimer", params.str());
+    EventActionDescriptor descriptor(TIMER, "DOMTimer", params.str());
     timer->setEventActionDescriptor(descriptor);
 
     timer->suspendIfNeeded();
