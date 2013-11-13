@@ -213,6 +213,11 @@ PassRefPtr<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement,
 
 Frame::~Frame()
 {
+    // WebERA: This happens when we destroy the main frame
+    if (!HBIsCurrentEventActionValid()) {
+        threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
+    }
+
     setView(0);
     loader()->cancelAndClear();
 
@@ -231,6 +236,10 @@ Frame::~Frame()
     if (m_view) {
         m_view->hide();
         m_view->clearFrame();
+    }
+
+    if (!HBIsCurrentEventActionValid()) {
+        threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
     }
 }
 
