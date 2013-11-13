@@ -63,7 +63,10 @@ void HBAddExplicitArc(EventActionId earlier, EventActionId later)
 
 void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration)
 {
-    threadGlobalData().threadTimers().happensBefore().addTimedArc(earlier, later, duration);
+    if (earlier != later) { // filter out self loops
+        threadGlobalData().threadTimers().happensBefore().addTimedArc(earlier, later, duration);
+    }
+
 }
 
 EventActionId HBLastUIEventAction()

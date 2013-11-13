@@ -36,7 +36,7 @@ void ActionLogScopeStart(const char* name) {
 	int scopeId = wtfThreadData().scopeSet()->addString(name);
 	if (!wtfThreadData().actionLog()->enterScope(scopeId) && strict_mode) {
 		fprintf(stderr, "Can't log start scope %s\n", name);
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
 	}
 }
 
@@ -44,7 +44,7 @@ void ActionLogScopeEnd() {
 //	printf("Endscope\n");
     if (!wtfThreadData().actionLog()->exitScope() && strict_mode) {
         fprintf(stderr, "Can't log end scope\n");
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 }
 
@@ -70,7 +70,7 @@ void ActionLogFormatV(ActionLog::CommandType cmd, const char* format, va_list ap
     }
     if (!wtfThreadData().actionLog()->logCommand(cmd, stringId) && strict_mode) {
         fprintf(stderr, "Can't log command %s %s\n", ActionLog::CommandType_AsString(cmd), strspace);
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 
 //	printf("%s %s\n", ActionLog::CommandType_AsString(cmd), strspace);
@@ -111,7 +111,7 @@ void ActionLogReportMemoryValue(const char* value) {
     int stringId = wtfThreadData().dataSet()->addString(value);
     if (!wtfThreadData().actionLog()->logCommand(ActionLog::MEMORY_VALUE, stringId) && strict_mode) {
         fprintf(stderr, "Can't log value %s\n", value);
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 }
 
@@ -119,14 +119,14 @@ void ActionLogEnterOperation(int id, ActionLog::EventActionType type) {
     wtfThreadData().actionLog()->startEventAction(id);
     if (!wtfThreadData().actionLog()->setEventActionType(type) && strict_mode) {
         fprintf(stderr, "Can't set optype %s\n", ActionLog::EventActionType_AsString(type));
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 }
 
 void ActionLogExitOperation() {
     if (!wtfThreadData().actionLog()->endEventAction() && strict_mode) {
         fprintf(stderr, "Can't log exit op.\n");
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 }
 
@@ -137,8 +137,8 @@ int ActionLogScopeDepth() {
 void ActionLogAddArc(int earlierId, int laterId, int duration) {
 	if (laterId <= earlierId) {
 		fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
-        //ActionLogSave();
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        ActionLogSave();
+        CRASH();
     } else {
         wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
     }
@@ -147,11 +147,10 @@ void ActionLogAddArc(int earlierId, int laterId, int duration) {
 void ActionLogAddArcEvent(int nextId) {
     if (!wtfThreadData().actionLog()->logCommand(ActionLog::TRIGGER_ARC, nextId) && strict_mode) {
         fprintf(stderr, "Can't log add arc to %d\n", nextId);
-        //CRASH(); // TODO(WebERA) uncomment this again!
+        CRASH();
     }
 }
 
-// TODO(WebERA-HB): Make sure that all uses of this are correct (that is, all uses of this is incorrect right now!
 void ActionLogTriggerEvent(void* eventId) {
 	wtfThreadData().actionLog()->triggerEvent(eventId);
 }
