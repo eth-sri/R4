@@ -592,7 +592,7 @@ void QWebFramePrivate::addQtSenderToGlobalObject()
 
 QWebFrame::QWebFrame(QWebPage *parent, QWebFrameData *frameData)
     : QObject(parent)
-    , d(new QWebFramePrivate)
+    , d(new QWebFramePrivate(this))
 {
     d->page = parent;
     d->init(this, frameData);
@@ -609,7 +609,7 @@ QWebFrame::QWebFrame(QWebPage *parent, QWebFrameData *frameData)
 
 QWebFrame::QWebFrame(QWebFrame *parent, QWebFrameData *frameData)
     : QObject(parent)
-    , d(new QWebFramePrivate)
+    , d(new QWebFramePrivate(this))
 {
     d->page = parent->d->page;
     d->init(this, frameData);
@@ -932,8 +932,26 @@ QWebPage *QWebFrame::page() const
 */
 void QWebFrame::load(const QUrl &url)
 {
+
+    // WebERA:
+    m_loadUrl = url;
+
+    d->m_loadTimer.setEventActionDescriptor(
+                WebCore::EventActionDescriptor(
+                    "BrowserLoadUrl",
+                    WebCore::EventActionDescriptor::escapeParam(url.toString().toStdString())
+    ));
+    d->m_loadTimer.startOneShot(0);
+}
+
+void QWebFramePrivate::loadAsync(WebCore::Timer<QWebFramePrivate>* timer) {
+    m_parent->loadAsync();
+}
+
+void QWebFrame::loadAsync()
+{
     // The load() overload ensures that the url is absolute.
-    load(QNetworkRequest(url));
+    load(QNetworkRequest(m_loadUrl));
 }
 
 /*!

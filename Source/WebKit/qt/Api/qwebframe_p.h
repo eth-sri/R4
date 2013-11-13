@@ -43,6 +43,8 @@ using QTM_NAMESPACE::QOrientationSensor;
 #include "texmap/TextureMapper.h"
 #endif
 
+#include <WebCore/platform/Timer.h>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WebCore {
     class FrameLoaderClientQt;
@@ -74,7 +76,7 @@ public:
 
 class QWebFramePrivate {
 public:
-    QWebFramePrivate()
+    QWebFramePrivate(QWebFrame* parent)
         : q(0)
         , horizontalScrollBarPolicy(Qt::ScrollBarAsNeeded)
         , verticalScrollBarPolicy(Qt::ScrollBarAsNeeded)
@@ -87,6 +89,8 @@ public:
 #if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
         , rootTextureMapperLayer(0)
 #endif
+        , m_loadTimer(this, &QWebFramePrivate::loadAsync)
+        , m_parent(parent)
         {}
     void init(QWebFrame* qframe, QWebFrameData* frameData);
     void setPage(QWebPage*);
@@ -137,6 +141,12 @@ private:
 #if USE(JSC)
     void addQtSenderToGlobalObject();
 #endif
+
+public:
+    // WebERA:
+    WebCore::Timer<QWebFramePrivate> m_loadTimer;
+    void loadAsync(WebCore::Timer<QWebFramePrivate>* timer);
+    QWebFrame* m_parent;
 };
 
 class QWebHitTestResultPrivate {

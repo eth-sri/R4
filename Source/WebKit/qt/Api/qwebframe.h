@@ -131,6 +131,7 @@ public:
     void enableReplayUserEventMode();
 
     void load(const QUrl &url);
+    void loadAsync();
     void load(const QNetworkRequest &request, QNetworkAccessManager::Operation operation = QNetworkAccessManager::GetOperation, const QByteArray &body = QByteArray());
     void setHtml(const QString &html, const QUrl &baseUrl = QUrl());
     void setContent(const QByteArray &data, const QString &mimeType = QString(), const QUrl &baseUrl = QUrl());
@@ -240,6 +241,9 @@ private:
     friend class WebCore::TextureMapperLayerClientQt;
     QWebFramePrivate *d;
     Q_PRIVATE_SLOT(d, void _q_orientationChanged())
+
+    // WebERA:
+    QUrl m_loadUrl;
 };
 
 #endif
