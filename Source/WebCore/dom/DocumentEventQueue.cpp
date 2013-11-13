@@ -85,7 +85,11 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
     bool wasAdded = m_queuedEvents.add(event).isNewEntry;
     ASSERT_UNUSED(wasAdded, wasAdded); // It should not have already been in the list.
 
-    m_queuedSources.push_back(HBCurrentEventAction());
+    if (HBIsCurrentEventActionValid()) {
+        m_queuedSources.push_back(HBCurrentEventAction());
+    } else { // A repaint can cause a resize event, associate this event with the last UI action
+        m_queuedSources.push_back(HBLastUIEventAction());
+    }
     
     tryUpdateAndStartTimer();
 
