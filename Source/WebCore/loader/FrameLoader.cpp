@@ -2361,6 +2361,12 @@ void FrameLoader::frameDetached()
 
 void FrameLoader::detachFromParent()
 {
+    // WebERA: This happens when we destroy the main frame
+    // EventAction: BrowserCloseUIEvent(b)
+    if (!HBIsCurrentEventActionValid()) {
+        threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
+    }
+
     RefPtr<Frame> protect(m_frame);
 
     closeURL();
@@ -2382,6 +2388,10 @@ void FrameLoader::detachFromParent()
         m_frame->setView(0);
         m_frame->willDetachPage();
         m_frame->detachFromPage();
+    }
+
+    if (!HBIsCurrentEventActionValid()) {
+        threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
     }
 }
 

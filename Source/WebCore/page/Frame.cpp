@@ -214,6 +214,7 @@ PassRefPtr<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement,
 Frame::~Frame()
 {
     // WebERA: This happens when we destroy the main frame
+    // EventAction: BrowserCloseUIEvent(a)
     if (!HBIsCurrentEventActionValid()) {
         threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(HBAllocateEventActionId(), ActionLog::USER_INTERFACE);
     }
