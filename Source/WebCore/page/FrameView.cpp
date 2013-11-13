@@ -2023,8 +2023,8 @@ void FrameView::endDisableRepaints()
 
 void FrameView::layoutTimerFired(Timer<FrameView>*)
 {
-	// SRL: Add debug information.
-	ActionLogScope log_scope("layout timer");
+    // TODO(WebERA-HB-REVIEW): Will this ever trigger any JavaScript?
+    //ActionLogScope log_scope("layout timer");
 #ifdef INSTRUMENT_LAYOUT_SCHEDULING
     if (!m_frame->document()->ownerElement())
         printf("Layout timer fired at %d\n", m_frame->document()->elapsedTime());

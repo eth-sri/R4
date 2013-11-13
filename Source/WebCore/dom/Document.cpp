@@ -1694,7 +1694,8 @@ bool Document::isPendingStyleRecalc() const
 
 void Document::styleRecalcTimerFired(Timer<Document>*)
 {
-	ActionLogScope log_scope("doc style recalc");
+    // TODO(WebERA-HB-REVIEW): Can this trigger any JavaScript?
+    //ActionLogScope log_scope("doc style recalc");
     updateStyleIfNeeded();
 }
 
