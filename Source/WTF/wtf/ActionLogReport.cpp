@@ -31,6 +31,11 @@ void ActionLogStrictMode(bool strict) {
     strict_mode = strict;
 }
 
+// TODO(WebERA): Remove this, mostly this requires us to find a more proper way of saving a log and shutting down WebKit
+bool ActionLogInStrictMode() {
+    return strict_mode;
+}
+
 void ActionLogScopeStart(const char* name) {
 //	printf("Scope %s\n", name);
 	int scopeId = wtfThreadData().scopeSet()->addString(name);

@@ -17,6 +17,7 @@ public:
 };
 
 void ActionLogStrictMode(bool strict);
+bool ActionLogInStrictMode();
 
 void ActionLogScopeStart(const char* name);
 void ActionLogScopeEnd();

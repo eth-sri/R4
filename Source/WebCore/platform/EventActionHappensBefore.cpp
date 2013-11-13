@@ -55,14 +55,18 @@ EventActionId EventActionsHB::allocateEventActionId() {
 
 void EventActionsHB::addExplicitArc(EventActionId earlier, EventActionId later) {
     if (earlier <= 0 || later <= 0 || earlier == later) {
-        CRASH();
+        if (ActionLogInStrictMode()) {
+            CRASH();
+        }
     }
     ActionLogAddArc(earlier, later, -1);
 }
 
 void EventActionsHB::addTimedArc(EventActionId earlier, EventActionId later, double duration) {
     if (earlier <= 0 || later <= 0) {
-        CRASH();
+        if (ActionLogInStrictMode()) {
+            CRASH();
+        }
     }
     ActionLogAddArc(earlier, later, duration * 1000);
 }
@@ -88,9 +92,11 @@ void EventActionsHB::setCurrentEventActionInvalid() {
 
 void EventActionsHB::checkInValidEventAction() {
     if (m_currentEventActionId == 0) {
-        fprintf(stderr, "Not in a valid event action.\n");
-        fflush(stderr);
-        CRASH();
+        if (ActionLogInStrictMode()) {
+            fprintf(stderr, "Not in a valid event action.\n");
+            fflush(stderr);
+            CRASH();
+        }
     }
 }
 
