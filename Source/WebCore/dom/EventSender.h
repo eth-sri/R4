@@ -118,11 +118,14 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)
 {
-    m_sendJoin.threadEndAction();
+    if (HBIsCurrentEventActionValid()) { // Not the case if this is triggere by GC
+        m_sendJoin.threadEndAction();
 
-    // WebERA: Happens before (always trigger after the previous event)
-    if (m_lastEventAction != 0) {
-        HBAddExplicitArc(m_lastEventAction, HBCurrentEventAction());
+
+        // WebERA: Happens before (always trigger after the previous event)
+        if (m_lastEventAction != 0) {
+            HBAddExplicitArc(m_lastEventAction, HBCurrentEventAction());
+        }
     }
 
     // Remove instances of this sender from both lists.

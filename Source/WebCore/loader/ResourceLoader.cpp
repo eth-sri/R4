@@ -150,9 +150,10 @@ void ResourceLoader::start()
     ASSERT(!m_request.isNull());
     ASSERT(m_deferredRequest.isNull());
 
+    // TODO(WebERA-HB-REVIEW): Will this trigger any JavaScript
     // SRL: Log that this is a start of a resource loading.
-    ActionLogScope log_scope(
-    		String::format("load_start:%s", m_request.url().lastPathComponent().ascii().data()).ascii().data());
+    //ActionLogScope log_scope(
+    //		String::format("load_start:%s", m_request.url().lastPathComponent().ascii().data()).ascii().data());
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
     if (m_documentLoader->scheduleArchiveLoad(this, m_request, m_request.url()))
