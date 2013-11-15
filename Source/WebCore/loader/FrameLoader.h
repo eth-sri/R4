@@ -432,6 +432,8 @@ private:
     // WebERA:
     Timer<FrameLoader> m_documentLoadedTimer;
     void documentLoadedTimerFired(Timer<FrameLoader>* timer);
+
+    std::string m_lastLoadUrl;
 };
 
 // This function is called by createWindow() in JSDOMWindowBase.cpp, for example, for

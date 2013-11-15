@@ -112,8 +112,6 @@ HTMLDocumentParser::HTMLDocumentParser(DocumentFragment* fragment, Element* cont
     , m_lastNonInsertedParseEventAction(0)
     , m_tokensSeen(0)
 {
-    // TODO(WebERA): Should we handle non-schedulable parsing?
-
     bool reportErrors = false; // For now document fragment parsing never reports errors.
     m_tokenizer->setState(tokenizerStateForContextElement(contextElement, reportErrors));
 }

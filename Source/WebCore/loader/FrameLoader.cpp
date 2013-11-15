@@ -199,11 +199,6 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
     , m_forcedSandboxFlags(SandboxNone)
     , m_documentLoadedTimer(this, &FrameLoader::documentLoadedTimerFired)
 {
-    // TODO(WebERA): Put name that identifies the document loaded.
-
-    WTF::EventActionDescriptor descriptor(WTF::PARSING, "DocumentLoaded", "");
-    m_documentLoadedTimer.setEventActionDescriptor(descriptor);
-
 }
 
 FrameLoader::~FrameLoader()
@@ -714,6 +709,8 @@ void FrameLoader::checkCompleted(bool async)
 
     // WebERA: We allow non-async calls such that the checkCompleted call to the parent frame (of a completed child) is done sync. as is normal behaviour
     if (async) {
+        WTF::EventActionDescriptor descriptor(WTF::PARSING, "DocumentLoaded", m_lastLoadUrl);
+        m_documentLoadedTimer.setEventActionDescriptor(descriptor);
         m_documentLoadedTimer.startOneShot(0);
     } else {
         documentLoadedTimerFired(NULL);
@@ -1259,6 +1256,8 @@ void FrameLoader::loadURL(const KURL& newURL, const String& referrer, const Stri
             // frame, where the user has clicked on the same link repeatedly.
             m_loadType = FrameLoadTypeSame;
     }
+
+    m_lastLoadUrl = newURL.string().ascii().data();
 }
 
 SubstituteData FrameLoader::defaultSubstituteDataForURL(const KURL& url)
@@ -1355,6 +1354,8 @@ void FrameLoader::load(DocumentLoader* newDocumentLoader)
 
 void FrameLoader::loadWithDocumentLoader(DocumentLoader* loader, FrameLoadType type, PassRefPtr<FormState> prpFormState)
 {
+    m_lastLoadUrl = loader->url().string().ascii().data();
+
     // Retain because dispatchBeforeLoadEvent may release the last reference to it.
     RefPtr<Frame> protect(m_frame);
 
@@ -2536,6 +2537,8 @@ void FrameLoader::loadPostRequest(const ResourceRequest& inRequest, const String
                 m_provisionalDocumentLoader->setIsClientRedirect(true);
         }
     }
+
+    m_lastLoadUrl = inRequest.url().string().ascii().data();
 }
 
 unsigned long FrameLoader::loadResourceSynchronously(const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
