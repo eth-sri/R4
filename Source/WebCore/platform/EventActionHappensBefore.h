@@ -66,7 +66,10 @@ public:
     void addTimedArc(WTF::EventActionId earlier, WTF::EventActionId later, double duration);
 
     WTF::EventActionId lastUIEventAction() const {
-         return m_lastUIEventAction;
+        if (m_lastUIEventAction == 0) {
+            CRASH();
+        }
+        return m_lastUIEventAction;
     }
 
     void checkInValidEventAction();
