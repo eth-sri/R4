@@ -94,59 +94,11 @@ extern const int GeneralDragHysteresis;
 
 enum HitTestScrollbars { ShouldHitTestScrollbars, DontHitTestScrollbars };
 
-// WebERA: Deferred event queue
-enum EventType { MousePressEvent, MouseReleaseEvent, MouseMoveEvent, KeystrokeEvent, MouseWheelEvent };
-
-class DeferredPlatformEvent {
-
-public:
-    DeferredPlatformEvent(EventType, const PlatformMouseEvent&);
-    DeferredPlatformEvent(EventType, const PlatformKeyboardEvent&);
-    DeferredPlatformEvent(EventType, const PlatformWheelEvent&);
-
-    EventType getType() const { return m_type; }
-    const PlatformMouseEvent& getMouseEvent() const { return m_mouseEvent; }
-    const PlatformKeyboardEvent& getKeyboardEvent() const { return m_keyboardEvent; }
-    const PlatformWheelEvent& getWheelEvent() const { return m_wheelEvent; }
-
-    std::string serialize() const;
-    static DeferredPlatformEvent deserialize(const std::string& raw);
-
-private:
-    EventType m_type;
-
-    PlatformMouseEvent m_mouseEvent;
-    PlatformKeyboardEvent m_keyboardEvent;
-    PlatformWheelEvent m_wheelEvent;
-
-};
-
-/**
- * WebERA:
- *
- * This is the first class to receive and handle user interactions in WebKit. To allow monitoring and generation of
- * schedules based on real user interaction we modify this class in the following way:
- *
- * - Mouse presses, releases and movements (mouse down, up, move, and click events), scroll, and wheelscroll
- *   are deferred and registered as timers in ThreadTimers
- * - Key input events are deferred and registered as timers in ThreadTimers
- *
- * Note, a huge number of move events are generated. However, we want to have at least some of these becaue they
- * generate both move and mouseover/out events. For illustrative purposes we could try to filter out some of these
- * events when creating the schedule (if the schedule should be readable by humans).
- *
- * TODO(WebERA): Add UI timers for paste user events. See WebCore/editing/Editor.cpp (Editor::dispatchCPPEvent) where EventRacer raised a UI event action
- *
- */
 class EventHandler {
     WTF_MAKE_NONCOPYABLE(EventHandler);
 public:
     EventHandler(Frame*);
     ~EventHandler();
-
-    // WebERA:
-    void enableReplayUserEventMode();
-    static bool userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
 
     void clear();
     void nodeWillBeRemoved(Node*);
@@ -203,23 +155,15 @@ public:
     bool tabsToAllFormControls(KeyboardEvent*) const;
 
     bool mouseMoved(const PlatformMouseEvent&);
-    bool mouseMovedDeferred(const PlatformMouseEvent&);
     bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
 
     void lostMouseCapture();
 
-    // WebERA START
-    void handleUserEvent(const DeferredPlatformEvent& event);
-
     bool handleMousePressEvent(const PlatformMouseEvent&);
-    bool handleMousePressEventDeferred(const PlatformMouseEvent&);
     bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* hoveredNode = 0, bool onlyUpdateScrollbars = false);
     bool handleMouseReleaseEvent(const PlatformMouseEvent&);
-    bool handleMouseReleaseEventDeferred(const PlatformMouseEvent&);
     bool handleWheelEvent(const PlatformWheelEvent&);
-    bool handleWheelEventDeferred(const PlatformWheelEvent&);
     void defaultWheelEventHandler(Node*, WheelEvent*);
-    // WebERA STOP
 
 #if ENABLE(GESTURE_EVENTS)
     bool handleGestureEvent(const PlatformGestureEvent&);
@@ -243,7 +187,6 @@ public:
 
     static unsigned accessKeyModifiers();
     bool handleAccessKey(const PlatformKeyboardEvent&);
-    bool keyEventDeferred(const PlatformKeyboardEvent&);
     bool keyEvent(const PlatformKeyboardEvent&);
     void defaultKeyboardEventHandler(KeyboardEvent*);
 
@@ -507,13 +450,15 @@ private:
     double m_maxMouseMovedDuration;
     PlatformEvent::Type m_baseEventType;
 
-    // WebERA
-    WTF::Vector<DeferredPlatformEvent> m_deferredEventQueue;
-    Timer<EventHandler> m_deferredEventTimer;
+    // WebERA:
+    void updateFakeMouseMoveEventTimerDescriptor();
 
-    void deferredEventTimerFired(Timer<EventHandler>*);
-    void scheduleEvent(DeferredPlatformEvent event);
-    void rescheduleTimer();
+    static unsigned int getSeqNumber() {
+        return m_seqNumber++;
+    }
+    static unsigned int m_seqNumber;
+
+    MultiJoinHappensBefore m_fakeUserEventJoin;
 
 };
 

@@ -55,6 +55,24 @@ class QWebPluginFactory;
 class QWebSecurityOrigin;
 class QtViewportAttributesPrivate;
 
+/**
+ * WebERA:
+ *
+ * This is the first class to receive and handle user interactions in WebKit. To allow monitoring and generation of
+ * schedules based on real user interaction we modify this class in the following way:
+ *
+ * - Mouse presses, releases and movements (mouse down, up, move, and click events), scroll, and wheelscroll
+ *   are deferred and registered as timers in ThreadTimers
+ * - Key input events are deferred and registered as timers in ThreadTimers
+ *
+ * Note, a huge number of move events are generated. However, we want to have at least some of these becaue they
+ * generate both move and mouseover/out events. For illustrative purposes we could try to filter out some of these
+ * events when creating the schedule (if the schedule should be readable by humans).
+ *
+ * TODO(WebERA): Add UI timers for paste user events. See WebCore/editing/Editor.cpp (Editor::dispatchCPPEvent) where EventRacer raised a UI event action
+ *
+ */
+
 namespace WebCore {
     class ChromeClientQt;
     class EditorClientQt;
@@ -293,7 +311,12 @@ public:
     void setPreferredContentsSize(const QSize &size) const;
     void setActualVisibleContentRect(const QRect& rect) const;
 
+    // WebERA:
+    void enableReplayUserEventMode();
+
     virtual bool event(QEvent*);
+    void eventDeferred(QEvent*);
+
     bool focusNextPrevChild(bool next);
 
     QVariant inputMethodQuery(Qt::InputMethodQuery property) const;

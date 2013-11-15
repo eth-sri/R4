@@ -155,7 +155,396 @@
 #include <qsysteminfo.h>
 #endif
 
+#include <platform/graphics/IntPoint.h>
+
 using namespace WebCore;
+
+// WebERA START
+
+DeferredQEvent::DeferredQEvent(const QEvent* ev)
+{
+    QEvent::Type eventType = ev->type();
+
+    if (eventType == QEvent::MouseMove ||
+        eventType == QEvent::MouseButtonPress ||
+        eventType == QEvent::MouseButtonDblClick ||
+        eventType == QEvent::MouseButtonRelease) {
+
+        const QMouseEvent* event = static_cast<const QMouseEvent*>(ev);
+        QSharedPointer<QMouseEvent> copy = QSharedPointer<QMouseEvent>(new QMouseEvent(
+            event->type(),
+            event->pos(),
+            event->globalPos(),
+            event->button(),
+            event->buttons(),
+            event->modifiers()
+        ));
+
+        m_event = copy;
+
+#ifndef QT_NO_CONTEXTMENU
+    } else if (eventType == QEvent::ContextMenu) {
+
+        const QContextMenuEvent* event = static_cast<const QContextMenuEvent*>(ev);
+        QSharedPointer<QContextMenuEvent> copy = QSharedPointer<QContextMenuEvent>(new QContextMenuEvent(
+            event->reason(),
+            event->pos(),
+            event->globalPos(),
+            event->modifiers()
+        ));
+
+        m_event = copy;
+
+#endif
+#ifndef QT_NO_WHEELEVENT
+    } else if (eventType == QEvent::Wheel) {
+
+        const QWheelEvent* event = static_cast<const QWheelEvent*>(ev);
+        QSharedPointer<QWheelEvent> copy = QSharedPointer<QWheelEvent>(new QWheelEvent(
+            event->pos(),
+            event->globalPos(),
+            event->delta(),
+            event->buttons(),
+            event->modifiers(),
+            event->orientation()
+        ));
+
+        m_event = copy;
+
+#endif
+    } else if (eventType == QEvent::KeyPress ||
+               eventType == QEvent::KeyRelease) {
+
+        const QKeyEvent* event = static_cast<const QKeyEvent*>(ev);
+        QSharedPointer<QKeyEvent> copy = QSharedPointer<QKeyEvent>(new QKeyEvent(
+            event->type(),
+            event->key(),
+            event->modifiers(),
+            event->text(),
+            event->isAutoRepeat(),
+            (ushort)event->count()
+        ));
+
+        m_event = copy;
+
+    } else if (eventType == QEvent::FocusIn ||
+               eventType == QEvent::FocusOut) {
+
+        const QFocusEvent* event = static_cast<const QFocusEvent*>(ev);
+        QSharedPointer<QFocusEvent> copy = QSharedPointer<QFocusEvent>(new QFocusEvent(
+            event->type(),
+            event->reason()
+        ));
+
+        m_event = copy;
+
+    } else if (eventType == QEvent::Leave) {
+
+        QSharedPointer<QEvent> copy = QSharedPointer<QEvent>(new QEvent(QEvent::Leave));
+
+        m_event = copy;
+
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+
+}
+
+DeferredQEvent::DeferredQEvent(QSharedPointer<QEvent> ev)
+    : m_event(ev)
+{
+}
+
+std::string DeferredQEvent::serialize() const
+{
+
+    std::stringstream out;
+    out << (int)m_event->type() << ",";
+
+    QEvent::Type eventType = m_event->type();
+
+    if (eventType == QEvent::MouseMove ||
+        eventType == QEvent::MouseButtonPress ||
+        eventType == QEvent::MouseButtonDblClick ||
+        eventType == QEvent::MouseButtonRelease) {
+
+        const QMouseEvent* event = (const QMouseEvent*)m_event.data();
+
+        out << event->pos().x() << ","
+            << event->pos().y() << ","
+            << event->globalPos().x() << ","
+            << event->globalPos().y() << ","
+            << (int)event->button() << ","
+            << (int)event->buttons() << ","
+            << (int)event->modifiers();
+
+    } else if (eventType == QEvent::ContextMenu) {
+
+        const QContextMenuEvent* event = (const QContextMenuEvent*)m_event.data();
+
+        out << (int)event->reason() << ","
+            << event->pos().x() << ","
+            << event->pos().y() << ","
+            << event->globalPos().x() << ","
+            << event->globalPos().y() << ","
+            << (int)event->modifiers();
+
+    } else if (eventType == QEvent::Wheel) {
+
+        const QWheelEvent* event = (const QWheelEvent*)m_event.data();
+
+        out << event->pos().x() << ","
+            << event->pos().y() << ","
+            << event->globalPos().x() << ","
+            << event->globalPos().y() << ","
+            << event->delta() << ","
+            << (int)event->buttons() << ","
+            << (int)event->modifiers() << ","
+            << (int)event->orientation();
+
+    } else if (eventType == QEvent::KeyPress ||
+               eventType == QEvent::KeyRelease) {
+
+        // TODO(WebERA) we should escape the "," character in the keyboard data
+
+        const QKeyEvent* event = (const QKeyEvent*)m_event.data();
+
+        out << event->key() << ","
+            << (int)event->modifiers() << ","
+            << event->text().toStdString() << ","
+            << (int)event->isAutoRepeat() << ","
+            << event->count();
+
+    } else if (eventType == QEvent::FocusIn ||
+               eventType == QEvent::FocusOut) {
+
+        const QFocusEvent* event = (const QFocusEvent*)m_event.data();
+
+        out << (int)event->reason();
+
+    } else if (eventType == QEvent::Leave) {
+
+        // nothing to do
+
+    } else {
+        CRASH();
+    }
+
+    return out.str();
+
+}
+
+DeferredQEvent DeferredQEvent::deserialize(const std::string& raw)
+{
+
+    std::istringstream in(raw);
+
+    // deserialize event type
+
+    std::string eventTypeRaw;
+    getline(in, eventTypeRaw, ',');
+
+    QEvent::Type eventType = (QEvent::Type)atoi(eventTypeRaw.data());
+
+    // deserialize event
+
+    if (eventType == QEvent::MouseMove ||
+        eventType == QEvent::MouseButtonPress ||
+        eventType == QEvent::MouseButtonDblClick ||
+        eventType == QEvent::MouseButtonRelease) {
+
+        std::string positionX;
+        getline(in, positionX, ',');
+
+        std::string positionY;
+        getline(in, positionY, ',');
+
+        std::string gPositionX;
+        getline(in, gPositionX, ',');
+
+        std::string gPositionY;
+        getline(in, gPositionY, ',');
+
+        std::string button;
+        getline(in, button, ',');
+
+        std::string buttons;
+        getline(in, buttons, ',');
+
+        std::string modifiers;
+        getline(in, modifiers);
+
+        QSharedPointer<QEvent> event = QSharedPointer<QEvent>(
+                    new QMouseEvent((QEvent::Type)eventType,
+                                    IntPoint(atoi(positionX.c_str()), atoi(positionY.c_str())),
+                                    IntPoint(atoi(gPositionX.c_str()), atoi(gPositionY.c_str())),
+                                    (Qt::MouseButton)atoi(button.c_str()),
+                                    (Qt::MouseButtons)atoi(buttons.c_str()),
+                                    (Qt::KeyboardModifiers)atoi(modifiers.c_str())
+                    ));
+
+        return DeferredQEvent(event);
+
+    } else if (eventType == QEvent::ContextMenu) {
+
+        std::string reason;
+        getline(in, reason, ',');
+
+        std::string positionX;
+        getline(in, positionX, ',');
+
+        std::string positionY;
+        getline(in, positionY, ',');
+
+        std::string gPositionX;
+        getline(in, gPositionX, ',');
+
+        std::string gPositionY;
+        getline(in, gPositionY, ',');
+
+        std::string modifiers;
+        getline(in, modifiers);
+
+        QSharedPointer<QContextMenuEvent> event = QSharedPointer<QContextMenuEvent>(
+                    new QContextMenuEvent((QContextMenuEvent::Reason)atoi(reason.c_str()),
+                                          IntPoint(atoi(positionX.c_str()), atoi(positionY.c_str())),
+                                          IntPoint(atoi(gPositionX.c_str()), atoi(gPositionY.c_str())),
+                                          (Qt::KeyboardModifiers)atoi(modifiers.c_str())
+                    ));
+
+        return DeferredQEvent(event);
+
+    } else if (eventType == QEvent::Wheel) {
+
+        std::string positionX;
+        getline(in, positionX, ',');
+
+        std::string positionY;
+        getline(in, positionY, ',');
+
+        std::string gPositionX;
+        getline(in, gPositionX, ',');
+
+        std::string gPositionY;
+        getline(in, gPositionY, ',');
+
+        std::string delta;
+        getline(in, delta, ',');
+
+        std::string buttons;
+        getline(in, buttons, ',');
+
+        std::string modifiers;
+        getline(in, modifiers, ',');
+
+        std::string orientation;
+        getline(in, orientation);
+
+        QSharedPointer<QWheelEvent> event = QSharedPointer<QWheelEvent>(
+                    new QWheelEvent(
+                        IntPoint(atoi(positionX.c_str()), atoi(positionY.c_str())),
+                        IntPoint(atoi(gPositionX.c_str()), atoi(gPositionY.c_str())),
+                        atoi(delta.c_str()),
+                        (Qt::MouseButtons)atoi(buttons.c_str()),
+                        (Qt::KeyboardModifiers)atoi(modifiers.c_str()),
+                        (Qt::Orientation)atoi(orientation.c_str())
+                   ));
+
+        return DeferredQEvent(event);
+
+
+    } else if (eventType == QEvent::KeyPress ||
+               eventType == QEvent::KeyRelease) {
+
+        std::string key;
+        getline(in, key, ',');
+
+        std::string modifiers;
+        getline(in, modifiers, ',');
+
+        std::string text;
+        getline(in, text, ',');
+
+        std::string isAutoRepeat;
+        getline(in, isAutoRepeat, ',');
+
+        std::string count;
+        getline(in, count);
+
+        QSharedPointer<QKeyEvent> event = QSharedPointer<QKeyEvent>(
+                    new QKeyEvent((QEvent::Type)eventType,
+                                  (int)atoi(key.c_str()),
+                                  (Qt::KeyboardModifiers)atoi(modifiers.c_str()),
+                                  QString::fromStdString(text),
+                                  (bool)atoi(isAutoRepeat.c_str()),
+                                  (int)atoi(count.c_str())
+                    ));
+
+        return DeferredQEvent(event);
+
+    } else if (eventType == QEvent::FocusIn ||
+               eventType == QEvent::FocusOut) {
+
+        std::string reason;
+        getline(in, reason);
+
+        QSharedPointer<QFocusEvent> event = QSharedPointer<QFocusEvent>(
+                    new QFocusEvent((QEvent::Type)eventType,
+                                    (Qt::FocusReason)atoi(reason.c_str())
+                    ));
+
+        return DeferredQEvent(event);
+
+    } else if (eventType == QEvent::Leave) {
+
+        QSharedPointer<QEvent> event = QSharedPointer<QEvent>(new QEvent(QEvent::Leave));
+        return DeferredQEvent(event);
+
+    }
+
+    CRASH();
+    throw "Unknown user event type";
+}
+
+bool QWebPagePrivate::userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor)
+{
+    QWebPagePrivate* ths = (QWebPagePrivate*)object;
+    DeferredQEvent event = DeferredQEvent::deserialize(descriptor.getParams());
+
+    ths->q->eventDeferred(event.event());
+
+    return true;
+}
+
+void QWebPagePrivate::deferEvent(QEvent* event)
+{
+    m_deferredEventQueue.append(DeferredQEvent(event));
+    rescheduleDeferredEventTimerIfStopped();
+}
+
+void QWebPagePrivate::deferredEventTimerFired(WebCore::Timer<QWebPagePrivate>*)
+{
+    DeferredQEvent currentEvent = m_deferredEventQueue.first();
+    m_deferredEventQueue.remove(0);
+
+    q->eventDeferred(currentEvent.event());
+
+    rescheduleDeferredEventTimerIfStopped();
+}
+
+void QWebPagePrivate::rescheduleDeferredEventTimerIfStopped()
+{
+    if (!m_deferredEventTimer.isActive() && m_deferredEventQueue.size() > 0) {
+        DeferredQEvent event = m_deferredEventQueue.first();
+
+        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "UserEvent", event.serialize());
+        m_deferredEventTimer.setEventActionDescriptor(descriptor);
+        m_deferredEventTimer.startOneShot(0);
+    }
+}
+
+// WebERA STOP
+
 
 // from text/qfont.cpp
 QT_BEGIN_NAMESPACE
@@ -318,7 +707,7 @@ QWebPagePrivate::QWebPagePrivate(QWebPage *qq)
     , inspector(0)
     , inspectorIsInternalOnly(false)
     , m_lastDropAction(Qt::IgnoreAction)
-    , m_changeFocusTimer(this, &QWebPagePrivate::changeFocusTimerFired)
+    , m_deferredEventTimer(this, &QWebPagePrivate::deferredEventTimerFired)
 {
 #if ENABLE(GEOLOCATION) || ENABLE(DEVICE_ORIENTATION)
     bool useMock = QWebPagePrivate::drtRun;
@@ -398,6 +787,10 @@ QWebPagePrivate::~QWebPagePrivate()
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     NotificationPresenterClientQt::notificationPresenter()->removeClient();
 #endif
+
+    if (m_deferredEventTimer.isActive()) {
+        m_deferredEventTimer.stop();
+    }
 }
 
 WebCore::ViewportArguments QWebPagePrivate::viewportArguments()
@@ -976,61 +1369,22 @@ void QWebPagePrivate::keyReleaseEvent(QKeyEvent *ev)
 
 void QWebPagePrivate::focusInEvent(QFocusEvent*)
 {
-    m_queuedFocuses.append(FOCUS_IN);
-    updateChangeFocusTimer();
+    FocusController *focusController = page->focusController();
+    focusController->setActive(true);
+    focusController->setFocused(true);
+    if (!focusController->focusedFrame())
+        focusController->setFocusedFrame(QWebFramePrivate::core(mainFrame.data()));
 }
 
 void QWebPagePrivate::focusOutEvent(QFocusEvent*)
-{
-    m_queuedFocuses.append(FOCUS_OUT);
-    updateChangeFocusTimer();
-}
-
-void QWebPagePrivate::changeFocusTimerFired(WebCore::Timer<QWebPagePrivate>*)
-{
-    FOCUS focus = m_queuedFocuses.takeFirst();
-
-    if (focus == FOCUS_IN) {
-        FocusController *focusController = page->focusController();
-        focusController->setActive(true);
-        focusController->setFocused(true);
-        if (!focusController->focusedFrame())
-            focusController->setFocusedFrame(QWebFramePrivate::core(mainFrame.data()));
-
-    } else {
-        // only set the focused frame inactive so that we stop painting the caret
-        // and the focus frame. But don't tell the focus controller so that upon
-        // focusInEvent() we can re-activate the frame.
-        FocusController *focusController = page->focusController();
-        // Call setFocused first so that window.onblur doesn't get called twice
-        focusController->setFocused(false);
-        focusController->setActive(false);
-    }
-
-    updateChangeFocusTimer();
-}
-
-unsigned int QWebPagePrivate::m_seqNumber = 0;
-
-void QWebPagePrivate::updateChangeFocusTimer()
-{
-    if (m_queuedFocuses.empty()) {
-        return;
-    }
-
-    if (!m_changeFocusTimer.isActive()) {
-
-        FOCUS focus = m_queuedFocuses.first();
-
-        std::stringstream params;
-        params << QWebPagePrivate::getSeqNumber();
-
-        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, focus == FOCUS_IN ? "FocusInEvent" : "FocusOutEvent", params.str());
-        m_changeFocusTimer.setEventActionDescriptor(descriptor);
-        m_changeFocusTimer.startOneShot(0);
-
-        ActionLogTriggerEvent(&m_changeFocusTimer);
-    }
+{   
+    // only set the focused frame inactive so that we stop painting the caret
+    // and the focus frame. But don't tell the focus controller so that upon
+    // focusInEvent() we can re-activate the frame.
+    FocusController *focusController = page->focusController();
+    // Call setFocused first so that window.onblur doesn't get called twice
+    focusController->setFocused(false);
+    focusController->setActive(false);
 }
 
 template<class T>
@@ -3059,25 +3413,39 @@ QUndoStack *QWebPage::undoStack() const
 }
 #endif // QT_NO_UNDOSTACK
 
+void QWebPage::enableReplayUserEventMode() {
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->registerEventActionProvider(
+                "UserEvent",
+                &QWebPagePrivate::userEventProvider,
+                d);
+}
+
 /*! \reimp
 */
-bool QWebPage::event(QEvent *ev)
-{
+bool QWebPage::event(QEvent *ev) {
+
     switch (ev->type()) {
+
+    // WebERA controlled events
+    case QEvent::MouseMove:
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonDblClick:
+    case QEvent::MouseButtonRelease:
+#ifndef QT_NO_CONTEXTMENU
+    case QEvent::ContextMenu:
+#endif
+#ifndef QT_NO_WHEELEVENT
+    case QEvent::Wheel:
+#endif
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+    case QEvent::FocusIn:
+    case QEvent::FocusOut:
+    case QEvent::Leave:
+        d->deferEvent(ev);
+        break;
     case QEvent::Timer:
         d->timerEvent(static_cast<QTimerEvent*>(ev));
-        break;
-    case QEvent::MouseMove:
-        d->mouseMoveEvent(static_cast<QMouseEvent*>(ev));
-        break;
-    case QEvent::MouseButtonPress:
-        d->mousePressEvent(static_cast<QMouseEvent*>(ev));
-        break;
-    case QEvent::MouseButtonDblClick:
-        d->mouseDoubleClickEvent(static_cast<QMouseEvent*>(ev));
-        break;
-    case QEvent::MouseButtonRelease:
-        d->mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
         break;
 #if !defined(QT_NO_GRAPHICSVIEW)
     case QEvent::GraphicsSceneMouseMove:
@@ -3094,9 +3462,6 @@ bool QWebPage::event(QEvent *ev)
         break;
 #endif
 #ifndef QT_NO_CONTEXTMENU
-    case QEvent::ContextMenu:
-        d->contextMenuEvent(static_cast<QContextMenuEvent*>(ev)->globalPos());
-        break;
 #if !defined(QT_NO_GRAPHICSVIEW)
     case QEvent::GraphicsSceneContextMenu:
         d->contextMenuEvent(static_cast<QGraphicsSceneContextMenuEvent*>(ev)->screenPos());
@@ -3104,27 +3469,12 @@ bool QWebPage::event(QEvent *ev)
 #endif
 #endif
 #ifndef QT_NO_WHEELEVENT
-    case QEvent::Wheel:
-        d->wheelEvent(static_cast<QWheelEvent*>(ev));
-        break;
 #if !defined(QT_NO_GRAPHICSVIEW)
     case QEvent::GraphicsSceneWheel:
         d->wheelEvent(static_cast<QGraphicsSceneWheelEvent*>(ev));
         break;
 #endif
 #endif
-    case QEvent::KeyPress:
-        d->keyPressEvent(static_cast<QKeyEvent*>(ev));
-        break;
-    case QEvent::KeyRelease:
-        d->keyReleaseEvent(static_cast<QKeyEvent*>(ev));
-        break;
-    case QEvent::FocusIn:
-        d->focusInEvent(static_cast<QFocusEvent*>(ev));
-        break;
-    case QEvent::FocusOut:
-        d->focusOutEvent(static_cast<QFocusEvent*>(ev));
-        break;
 #ifndef QT_NO_DRAGANDDROP
     case QEvent::DragEnter:
         d->dragEnterEvent(static_cast<QDragEnterEvent*>(ev));
@@ -3160,9 +3510,6 @@ bool QWebPage::event(QEvent *ev)
     case QEvent::ShortcutOverride:
         d->shortcutOverrideEvent(static_cast<QKeyEvent*>(ev));
         break;
-    case QEvent::Leave:
-        d->leaveEvent(ev);
-        break;
     case QEvent::TouchBegin:
     case QEvent::TouchUpdate:
     case QEvent::TouchEnd:
@@ -3181,6 +3528,52 @@ bool QWebPage::event(QEvent *ev)
     }
 
     return true;
+}
+
+void QWebPage::eventDeferred(QEvent *ev)
+{
+    switch (ev->type()) {
+    case QEvent::MouseMove:
+        d->mouseMoveEvent(static_cast<QMouseEvent*>(ev));
+        break;
+    case QEvent::MouseButtonPress:
+        d->mousePressEvent(static_cast<QMouseEvent*>(ev));
+        break;
+    case QEvent::MouseButtonDblClick:
+        d->mouseDoubleClickEvent(static_cast<QMouseEvent*>(ev));
+        break;
+    case QEvent::MouseButtonRelease:
+        d->mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
+        break;
+#ifndef QT_NO_CONTEXTMENU
+    case QEvent::ContextMenu:
+        d->contextMenuEvent(static_cast<QContextMenuEvent*>(ev)->globalPos());
+        break;
+#endif
+#ifndef QT_NO_WHEELEVENT
+    case QEvent::Wheel:
+        d->wheelEvent(static_cast<QWheelEvent*>(ev));
+        break;
+#endif
+    case QEvent::KeyPress:
+        d->keyPressEvent(static_cast<QKeyEvent*>(ev));
+        break;
+    case QEvent::KeyRelease:
+        d->keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+        break;
+    case QEvent::FocusIn:
+        d->focusInEvent(static_cast<QFocusEvent*>(ev));
+        break;
+    case QEvent::FocusOut:
+        d->focusOutEvent(static_cast<QFocusEvent*>(ev));
+        break;
+    case QEvent::Leave:
+        d->leaveEvent(ev);
+        break;
+
+    default:
+        ASSERT_NOT_REACHED();
+    }
 }
 
 /*!

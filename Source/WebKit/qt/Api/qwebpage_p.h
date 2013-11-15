@@ -23,6 +23,7 @@
 
 #include <QWeakPointer>
 #include <QList>
+#include <QSharedDataPointer>
 
 #include <qbasictimer.h>
 #include <qnetworkproxy.h>
@@ -76,6 +77,24 @@ public:
     { }
 
     QWebPage::ViewportAttributes* q;
+};
+
+// WebERA:
+
+class DeferredQEvent {
+public:
+    DeferredQEvent(const QEvent*);
+    DeferredQEvent(QSharedPointer<QEvent>);
+
+    QEvent* event() {
+        m_event.data();
+    }
+
+    std::string serialize() const;
+    static DeferredQEvent deserialize(const std::string& raw);
+
+private:
+    QSharedPointer<QEvent> m_event;
 };
 
 class QWebPagePrivate {
@@ -217,25 +236,18 @@ public:
     static bool drtRun;
 
     // WebERA
+
+    static bool userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
+
+    void deferEvent(QEvent*);
+
 private:
 
-    enum FOCUS {
-        FOCUS_IN, FOCUS_OUT
-    };
+    WTF::Vector<DeferredQEvent> m_deferredEventQueue;
 
-    QList<FOCUS> m_queuedFocuses;
-
-    void changeFocusTimerFired(WebCore::Timer<QWebPagePrivate>*);
-    void updateChangeFocusTimer();
-
-    WebCore::Timer<QWebPagePrivate> m_changeFocusTimer;
-
-    static unsigned int getSeqNumber() {
-        return m_seqNumber++;
-    }
-
-    static unsigned int m_seqNumber;
-
+    WebCore::Timer<QWebPagePrivate> m_deferredEventTimer;
+    void deferredEventTimerFired(WebCore::Timer<QWebPagePrivate>*);
+    void rescheduleDeferredEventTimerIfStopped();
 };
 
 #endif

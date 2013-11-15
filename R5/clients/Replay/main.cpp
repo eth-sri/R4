@@ -85,7 +85,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     WebCore::ThreadTimers::setScheduler(scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
 
-    m_window->page()->currentFrame()->enableReplayUserEventMode();
+    m_window->page()->enableReplayUserEventMode();
 
     loadWebsite(m_url);
 }
