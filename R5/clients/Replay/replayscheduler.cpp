@@ -82,8 +82,6 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
         // Try to do a fuzzy match (only networking at the moment)
 
-        // TODO(WebERA) We could also move the fuzzy matching into EventActionRegister...
-
         /**
           * Fuzzy match the URL part of various event actions
           * (Currently Network and HTMLDocumentParser)
@@ -170,10 +168,10 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
     // timer not registered yet
 
-    if (m_scheduleWaits > 500) { // TODO(WebERA) 500 is an arbitrary magic number, reason about a good number
+    if (m_scheduleWaits > 500) { // 500 is an arbitrary magic number
         std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
         std::cerr << "This is the current queue of events" << std::endl;
-        debugPrintTimers(eventActionRegister); // TODO(WebERA): DEBUG
+        debugPrintTimers(eventActionRegister);
 
         std::exit(1);
     }

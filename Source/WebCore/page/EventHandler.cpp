@@ -1311,8 +1311,8 @@ DragSourceAction EventHandler::updateDragSourceActionsAllowed() const
     
 HitTestResult EventHandler::hitTestResultAtPoint(const LayoutPoint& point, bool allowShadowContent, bool ignoreClipping, HitTestScrollbars testScrollbars, HitTestRequest::HitTestRequestType hitType, const LayoutSize& padding)
 {
-    // TODO(WebERA-HB-REVIEW): Removed InstrumentedUIAction, I can't see which user initiated event this is a reaction to
-	ActionLogScope log_scope("eh:hittest");
+    // TODO(WebERA-HB-REVIEW): Removed InstrumentedUIAction, I can't seem to figure out which user initiated action, not already covered, triggers this function
+    ActionLogScope log_scope("eh:hittest");
 
     enum ShadowContentFilterPolicy shadowContentFilterPolicy = allowShadowContent ? AllowShadowContent : DoNotAllowShadowContent;
     HitTestResult result(point, padding.height(), padding.width(), padding.height(), padding.width(), shadowContentFilterPolicy);

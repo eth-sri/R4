@@ -90,7 +90,7 @@ unsigned int FuzzyUrlMatcher::score(const QUrl& other)
 
     unsigned int scorePath = m_url.queryItems().size() + 1;
 
-    // TODO(WebERA) should we have some lower limit on the number of mismatches in the path we allow? E.g. for scheduling.
+    // WebERA: should we have some lower limit on the number of mismatches in the path we allow? E.g. for scheduling.
     while (!pathFragments.empty()) {
         if (pathFragments.takeFirst() == otherPathFragments.takeFirst()) {
             score += scorePath;

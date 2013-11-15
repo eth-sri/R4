@@ -93,8 +93,6 @@ void XMLHttpRequestProgressEventThrottle::dispatchProgressEvent(bool lengthCompu
         // WebERA: Happens before (chaining implicit)
         startRepeating(minimumProgressEventDispatchingIntervalInSeconds);
 
-        // TODO(WebERA) Did we change this? Document.
-
         return;
 
     }

@@ -73,8 +73,7 @@ PassOwnPtr<ScheduledAction> ScheduledAction::create(ExecState* exec, DOMWrapperW
         return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, url, calledLine));
     }
 
-    // TODO(WebERA) Should we give some good names for native functions?
-    return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, "", -1));
+    return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, "<native-function>", -1));
 }
 
 ScheduledAction::ScheduledAction(ExecState* exec, JSValue function, DOMWrapperWorld* isolatedWorld, std::string calledUrl, uint calledLine)

@@ -2023,7 +2023,7 @@ void FrameView::endDisableRepaints()
 
 void FrameView::layoutTimerFired(Timer<FrameView>*)
 {
-    // TODO(WebERA-HB-REVIEW): Will this ever trigger any JavaScript?
+    // TODO(WebERA-HB-REVIEW): Not we cant add a scope here, since we don't execute layout timers in event actions
     //ActionLogScope log_scope("layout timer");
 #ifdef INSTRUMENT_LAYOUT_SCHEDULING
     if (!m_frame->document()->ownerElement())

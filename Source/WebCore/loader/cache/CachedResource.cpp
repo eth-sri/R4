@@ -399,7 +399,7 @@ void CachedResource::didAddClient(CachedResourceClient* c)
     		ActionLogFormat(ActionLog::WRITE_MEMORY, "CachedResource-%p-%p", this, c);
     	}
 
-        // TODO(WebERA-HB-REVIEW): Should we add an explicit HB relation here? Document this HB relation.
+        // TODO(WebERA-HB-REVIEW): Explain to (Casper) what an ad-hoc synchonization exactly is, could we not add a real HB relation here?
 
         m_clients.add(c);
         m_clientsAwaitingCallback.remove(c);
@@ -440,7 +440,7 @@ bool CachedResource::addClientToSet(CachedResourceClient* client)
     	ActionLogFormat(ActionLog::WRITE_MEMORY, "CachedResource-%p-%p", this, client);
     }
 
-    // TODO(WebERA-HB-REVIEW): Should we add an explicit HB relation here? Document this HB relation.
+    // TODO(WebERA-HB-REVIEW): Explain to (Casper) what an ad-hoc synchonization exactly is, could we not add a real HB relation here?
 
     m_clients.add(client);
     return true;

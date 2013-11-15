@@ -5166,7 +5166,6 @@ void Document::didReceiveTask(void* untypedContext)
     Page* page = document->page();
     if ((page && page->defersLoading()) || !document->m_pendingTasks.isEmpty()) {
 
-        // TODO(WebERA-HB-REVIEW): Are these tasks ever created in one event action and executed by another?
         if (context->startEventActionId != 0) {
             HBAddExplicitArc(context->startEventActionId, HBCurrentEventAction());
         }
@@ -5177,7 +5176,6 @@ void Document::didReceiveTask(void* untypedContext)
         return;
     }
 
-    // TODO(WebERA-HB-REVIEW): Are these tasks ever created in one event action and executed by another?
     if (context->startEventActionId != 0) {
         HBAddExplicitArc(context->startEventActionId, HBCurrentEventAction());
     }
