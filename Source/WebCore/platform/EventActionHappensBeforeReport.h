@@ -40,6 +40,7 @@ void HBEnterEventAction(WTF::EventActionId id, ActionLog::EventActionType type);
 void HBExitEventAction();
 
 bool HBIsCurrentEventActionValid();
+bool HBIsLastUIEventActionValid();
 
 // ONLY ADD ARCS BETWEEN EVENT ACTIONS THAT HAVE BEEN ENTERED!
 void HBAddExplicitArc(WTF::EventActionId earlier, WTF::EventActionId later);

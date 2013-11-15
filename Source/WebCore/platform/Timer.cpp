@@ -197,6 +197,7 @@ TimerBase::TimerBase()
     , m_repeatInterval(0)
     , m_heapIndex(-1)
     , m_lastFireEventAction(0)
+    , m_starterEventAction(0)
     , m_ignoreFireIntervalForHappensBefore(false)
     , m_inEventActionRegister(false)
 #ifndef NDEBUG
@@ -340,12 +341,16 @@ void TimerBase::setNextFireTime(double newTime, double interval)
     		m_nextFireInterval = interval;
             if (HBIsCurrentEventActionValid()) {
    				m_starterEventAction = HBCurrentEventAction();
-    		} else {
+
+            } else if (HBIsLastUIEventActionValid()) {
     			// Unfortunately, there are bad cases in WebKit that start load timers during OnPaint events.
     			// We attribute them to the last UI action.
-    			// WTFReportBacktrace();
                 m_starterEventAction = HBLastUIEventAction();
-    		}
+
+            } else {
+                // Ignore HB relations if we have not triggered any UI events yet
+                m_starterEventAction = 0;
+            }
 
     		ActionLogTriggerEvent(this);
     	}

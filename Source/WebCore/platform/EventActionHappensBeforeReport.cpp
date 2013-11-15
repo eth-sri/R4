@@ -54,6 +54,11 @@ bool HBIsCurrentEventActionValid()
     return threadGlobalData().threadTimers().happensBefore().isCurrentEventActionValid();
 }
 
+bool HBIsLastUIEventActionValid()
+{
+    return threadGlobalData().threadTimers().happensBefore().isLastUIEventActionValid();
+}
+
 void HBAddExplicitArc(WTF::EventActionId earlier, WTF::EventActionId later)
 {
     if (earlier != later) { // filter out self loops

@@ -78,10 +78,9 @@ void EventActionsHB::setCurrentEventAction(WTF::EventActionId newEventActionId, 
 
     if (type == ActionLog::USER_INTERFACE) {
         if (m_lastUIEventAction != 0) {
-
             addExplicitArc(m_lastUIEventAction, newEventActionId);
-            m_lastUIEventAction = newEventActionId;
         }
+        m_lastUIEventAction = newEventActionId;
     }
 }
 

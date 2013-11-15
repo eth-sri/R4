@@ -72,6 +72,10 @@ public:
         return m_lastUIEventAction;
     }
 
+    bool isLastUIEventActionValid() const {
+        return m_lastUIEventAction != 0;
+    }
+
     void checkInValidEventAction();
 
     void addDisableInstrumentationRequest() {
