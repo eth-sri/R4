@@ -127,7 +127,6 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
 
     eventActionDispatchStart(id, descriptor);
 
-    // TODO(WebERA): Add proper event types
     HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
     ActionLogEventTriggered(l[0].object);
 
@@ -137,7 +136,7 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
         std::cerr << "Warning: multiple targets may fire with signature " << descriptorString << std::endl;
     }
 
-    std::cout << "Running " << id << " : " << descriptor.toString() << std::endl; // TODO(WebERA): DEBUG
+    std::cout << "Running " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
 
     bool done = (l[0].function)(l[0].object, descriptor); // don't use the descriptor from this point on, it could be deleted
     ASSERT(done);

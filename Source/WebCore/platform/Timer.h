@@ -51,7 +51,6 @@ public:
 
     void start(double nextFireInterval, double repeatInterval);
 
-    // TODO(WebERA): Repeating timers should be split up into multiple descriptors or?
     void startRepeating(double repeatInterval) { start(repeatInterval, repeatInterval); }
     void startOneShot(double interval) { start(interval, 0); }
 
