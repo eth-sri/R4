@@ -43,9 +43,6 @@ void EventActionSchedule::serialize(std::ostream& stream) const
 
 EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
 {
-    // TODO(WebERA): This function does very little input validation,
-    // we should add a bit just to give the user useful feedback if something is illformed
-
     EventActionSchedule* schedule = new EventActionSchedule();
 
     while (stream.good()) {

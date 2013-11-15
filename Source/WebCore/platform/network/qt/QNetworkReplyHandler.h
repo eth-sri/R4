@@ -83,9 +83,6 @@ class QNetworkReplyWrapper;
  *
  * Happens before relations are added between each of these atomic blocks.
  *
- * TODO(WebERA): Should upload events be allowed to be triggered out of sequence?
- * TODO(WebERA): Add the snapshotting functionality to the snapshots
- *
  */
 
 class QNetworkReplySnapshot;
