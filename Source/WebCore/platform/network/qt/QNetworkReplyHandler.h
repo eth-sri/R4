@@ -258,7 +258,7 @@ protected:
 
     QNetworkReply* m_reply;
 
-    WebCore::EventActionId m_lastNetworkEventAction;
+    WTF::EventActionId m_lastNetworkEventAction;
 
 protected slots:
     void scheduleNextSnapshotUpdate();

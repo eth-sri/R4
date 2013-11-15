@@ -95,11 +95,11 @@ private:
 
     // BASE
     MultiJoinHappensBefore m_progressEventActionJoin;
-    EventActionId m_lastFireDispatchEventAction;
+    WTF::EventActionId m_lastFireDispatchEventAction;
 
     // DEFERRED
     MultiJoinHappensBefore m_suspendingEventActionJoin;
-    EventActionId m_lastFireDeferEventAction;
+    WTF::EventActionId m_lastFireDeferEventAction;
 
 };
 

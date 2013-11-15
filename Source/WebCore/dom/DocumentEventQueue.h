@@ -69,7 +69,7 @@ private:
 
     OwnPtr<DocumentEventQueueTimer> m_pendingEventTimer;
     ListHashSet<RefPtr<Event> > m_queuedEvents;
-    std::list<EventActionId> m_queuedSources; // WebERA
+    std::list<WTF::EventActionId> m_queuedSources; // WebERA
     HashSet<Node*> m_nodesWithQueuedScrollEvents;
     bool m_isClosed;
 
@@ -83,7 +83,7 @@ private:
 
     void tryUpdateAndStartTimer();
 
-    EventActionId m_lastFireEventAction;
+    WTF::EventActionId m_lastFireEventAction;
 };
 
 }

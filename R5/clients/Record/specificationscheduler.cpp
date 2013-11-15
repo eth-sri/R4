@@ -43,7 +43,7 @@ SpecificationScheduler::~SpecificationScheduler()
 {
 }
 
-void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDescriptor& descriptor,
+void SpecificationScheduler::eventActionScheduled(const WTF::EventActionDescriptor& descriptor,
                                                   WebCore::EventActionRegister*)
 {
     if (strcmp(descriptor.getType(), "HTMLDocumentParser") == 0) {
@@ -63,10 +63,10 @@ void SpecificationScheduler::eventActionScheduled(const WebCore::EventActionDesc
     }
 }
 
-void dequeueSpecificElement(const WebCore::EventActionDescriptor& descriptor,
-                            std::queue<WebCore::EventActionDescriptor>* queue)
+void dequeueSpecificElement(const WTF::EventActionDescriptor& descriptor,
+                            std::queue<WTF::EventActionDescriptor>* queue)
 {
-    std::queue<WebCore::EventActionDescriptor> old;
+    std::queue<WTF::EventActionDescriptor> old;
     queue->swap(old);
 
     while (!old.empty()) {
@@ -78,7 +78,7 @@ void dequeueSpecificElement(const WebCore::EventActionDescriptor& descriptor,
     }
 }
 
-void SpecificationScheduler::eventActionDescheduled(const WebCore::EventActionDescriptor& descriptor,
+void SpecificationScheduler::eventActionDescheduled(const WTF::EventActionDescriptor& descriptor,
                                                     WebCore::EventActionRegister*)
 {
 
@@ -113,7 +113,7 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
 
         if (!m_activeNetworkQueue.empty()) {
 
-            WebCore::EventActionDescriptor descriptor = m_activeNetworkQueue.front();
+            WTF::EventActionDescriptor descriptor = m_activeNetworkQueue.front();
             unsigned int currentFinishedNetworkJobs = m_network->doneCounter();
 
             if (eventActionRegister->runEventAction(descriptor)) {
@@ -141,7 +141,7 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
 
     } else if (!m_networkQueue.empty()) {
 
-        WebCore::EventActionDescriptor descriptor = m_networkQueue.front();
+        WTF::EventActionDescriptor descriptor = m_networkQueue.front();
         unsigned int currentFinishedNetworkJobs = m_network->doneCounter();
 
         if (eventActionRegister->runEventAction(descriptor)) {
@@ -158,11 +158,11 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
                 m_activeNetworkEvents.insert(id);
 
                 // split the exiting network event queue into active and non-active events
-                std::queue<WebCore::EventActionDescriptor> currentQueue;
+                std::queue<WTF::EventActionDescriptor> currentQueue;
                 currentQueue.swap(m_networkQueue);
 
                 while (!currentQueue.empty()) {
-                    WebCore::EventActionDescriptor existingEvent = currentQueue.front();
+                    WTF::EventActionDescriptor existingEvent = currentQueue.front();
                     currentQueue.pop();
 
                     std::string existingEventId = getNetworkSequenceId(existingEvent); // url,url-sequence-number

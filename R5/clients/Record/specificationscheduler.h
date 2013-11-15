@@ -48,8 +48,8 @@ public:
     SpecificationScheduler(QNetworkReplyControllableFactoryRecord* network);
     ~SpecificationScheduler();
 
-    void eventActionScheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
-    void eventActionDescheduled(const WebCore::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    void eventActionScheduled(const WTF::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
+    void eventActionDescheduled(const WTF::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
     void stop() {
@@ -57,16 +57,16 @@ public:
     }
 
 private:
-    std::string getNetworkSequenceId(const WebCore::EventActionDescriptor& descriptor) const {
+    std::string getNetworkSequenceId(const WTF::EventActionDescriptor& descriptor) const {
         return descriptor.getParameter(0) + "," + descriptor.getParameter(1);
     }
 
     std::set<std::string> m_activeNetworkEvents;
 
-    std::queue<WebCore::EventActionDescriptor> m_activeNetworkQueue;
-    std::queue<WebCore::EventActionDescriptor> m_parsingQueue;
-    std::queue<WebCore::EventActionDescriptor> m_networkQueue;
-    std::queue<WebCore::EventActionDescriptor> m_otherQueue;
+    std::queue<WTF::EventActionDescriptor> m_activeNetworkQueue;
+    std::queue<WTF::EventActionDescriptor> m_parsingQueue;
+    std::queue<WTF::EventActionDescriptor> m_networkQueue;
+    std::queue<WTF::EventActionDescriptor> m_otherQueue;
 
     QNetworkReplyControllableFactoryRecord* m_network;
 

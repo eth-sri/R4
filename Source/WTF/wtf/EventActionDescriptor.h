@@ -26,8 +26,7 @@
 
 #include <string>
 
-namespace WebCore {
-// TODO(WebERA) Move this to the WTF namespace
+namespace WTF {
 
     enum EventActionCategory {
         OTHER = 0,

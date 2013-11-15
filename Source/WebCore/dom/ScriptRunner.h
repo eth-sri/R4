@@ -108,7 +108,7 @@ private:
 
     Timer<ScriptRunner> m_inOrderTimer;
     unsigned int m_inOrderExecuted;
-    EventActionId m_inOrderLastEventAction;
+    WTF::EventActionId m_inOrderLastEventAction;
 
 };
 

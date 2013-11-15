@@ -1025,7 +1025,7 @@ void QWebPagePrivate::updateChangeFocusTimer()
         std::stringstream params;
         params << QWebPagePrivate::getSeqNumber();
 
-        EventActionDescriptor descriptor(USER_INTERFACE, focus == FOCUS_IN ? "FocusInEvent" : "FocusOutEvent", params.str());
+        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, focus == FOCUS_IN ? "FocusInEvent" : "FocusOutEvent", params.str());
         m_changeFocusTimer.setEventActionDescriptor(descriptor);
         m_changeFocusTimer.startOneShot(0);
 

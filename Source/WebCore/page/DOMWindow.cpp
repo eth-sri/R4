@@ -129,7 +129,7 @@ public:
         std::stringstream params;
         params << PostMessageTimer::getSeqNumber();
 
-        EventActionDescriptor descriptor(OTHER, "PostMessage", params.str());
+        WTF::EventActionDescriptor descriptor(WTF::OTHER, "PostMessage", params.str());
         setEventActionDescriptor(descriptor);
     }
 

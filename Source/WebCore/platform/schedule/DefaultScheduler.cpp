@@ -35,13 +35,13 @@ DefaultScheduler::~DefaultScheduler()
 {
 }
 
-void DefaultScheduler::eventActionScheduled(const EventActionDescriptor& descriptor,
+void DefaultScheduler::eventActionScheduled(const WTF::EventActionDescriptor& descriptor,
                                             EventActionRegister* eventActionRegister)
 {
     eventActionRegister->runEventAction(descriptor);
 }
 
-void DefaultScheduler::eventActionDescheduled(const EventActionDescriptor&, EventActionRegister*)
+void DefaultScheduler::eventActionDescheduled(const WTF::EventActionDescriptor&, EventActionRegister*)
 {
 }
 

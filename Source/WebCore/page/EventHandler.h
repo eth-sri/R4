@@ -146,7 +146,7 @@ public:
 
     // WebERA:
     void enableReplayUserEventMode();
-    static bool userEventProvider(void* object, const EventActionDescriptor& descriptor);
+    static bool userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
 
     void clear();
     void nodeWillBeRemoved(Node*);

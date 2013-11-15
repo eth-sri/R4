@@ -59,19 +59,19 @@ void EventActionRegister::registerEventActionProvider(const std::string& type, E
     m_maps->m_typeToProvider[type].push_back(target);
 }
 
-void EventActionRegister::registerEventActionHandler(const EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object)
+void EventActionRegister::registerEventActionHandler(const WTF::EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object)
 {
     EventActionHandler target(f, object);
     m_maps->m_descriptorToHandler[descriptor.toString()].push_back(target);
 }
 
-void EventActionRegister::deregisterEventActionHandler(const EventActionDescriptor& descriptor)
+void EventActionRegister::deregisterEventActionHandler(const WTF::EventActionDescriptor& descriptor)
 {
     ASSERT(!descriptor.isNull());
     m_maps->m_descriptorToHandler.erase(descriptor.toString());
 }
 
-bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor) {
+bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descriptor) {
 
     std::string descriptorString = descriptor.toString();
 
@@ -91,7 +91,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
             // Note, it is a bit undefined how well the happens before relations are applied if we
             // abort an event action. Thus, HB relations should not be used if event action providers are used.
 
-            EventActionId id = HBAllocateEventActionId();
+            WTF::EventActionId id = HBAllocateEventActionId();
 
             eventActionDispatchStart(id, descriptor);
 
@@ -123,7 +123,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
 
     // Pre-Execution
 
-    EventActionId id = HBAllocateEventActionId();
+    WTF::EventActionId id = HBAllocateEventActionId();
 
     eventActionDispatchStart(id, descriptor);
 
@@ -157,7 +157,7 @@ bool EventActionRegister::runEventAction(const EventActionDescriptor& descriptor
     return true;
 }
 
-void EventActionRegister::enterGhostEventAction(EventActionId id, ActionLog::EventActionType type)
+void EventActionRegister::enterGhostEventAction(WTF::EventActionId id, ActionLog::EventActionType type)
 {
     HBEnterEventAction(id, type);
 }

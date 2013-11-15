@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-    typedef std::pair<EventActionId, EventActionDescriptor> EventActionScheduleItem;
+    typedef std::pair<WTF::EventActionId, WTF::EventActionDescriptor> EventActionScheduleItem;
 
     class EventActionSchedule : public WTF::Vector<EventActionScheduleItem> {
 

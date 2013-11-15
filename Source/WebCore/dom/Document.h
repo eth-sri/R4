@@ -1518,7 +1518,7 @@ private:
     static unsigned int m_seqNumber;
 
     MultiJoinHappensBefore m_addedPendingTaskJoin;
-    EventActionId m_lastPendingTasksEventAction;
+    WTF::EventActionId m_lastPendingTasksEventAction;
 };
 
 // Put these methods here, because they require the Document definition, but we really want to inline them.

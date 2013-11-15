@@ -201,7 +201,7 @@ FrameLoader::FrameLoader(Frame* frame, FrameLoaderClient* client)
 {
     // TODO(WebERA): Put name that identifies the document loaded.
 
-    EventActionDescriptor descriptor(PARSING, "DocumentLoaded", "");
+    WTF::EventActionDescriptor descriptor(WTF::PARSING, "DocumentLoaded", "");
     m_documentLoadedTimer.setEventActionDescriptor(descriptor);
 
 }

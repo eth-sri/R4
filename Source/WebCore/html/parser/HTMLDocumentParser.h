@@ -202,8 +202,8 @@ private:
     unsigned m_pumpSessionNestingLevel;
 
     // WebERA:
-    EventActionId m_lastParseEventAction;
-    EventActionId m_lastNonInsertedParseEventAction;
+    WTF::EventActionId m_lastParseEventAction;
+    WTF::EventActionId m_lastNonInsertedParseEventAction;
     MultiJoinHappensBefore m_modifiedInputJoin;
 
     // WebERA: We could also use textPosition, however this has a bit lower overhead

@@ -54,7 +54,7 @@ ReplayScheduler::~ReplayScheduler()
     delete m_schedule;
 }
 
-void ReplayScheduler::eventActionScheduled(const WebCore::EventActionDescriptor&,
+void ReplayScheduler::eventActionScheduled(const WTF::EventActionDescriptor&,
                                            WebCore::EventActionRegister*)
 {
 }
@@ -67,7 +67,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
         return;
     }
 
-    WebCore::EventActionDescriptor nextToSchedule = m_schedule->first().second;
+    WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
     std::string eventActionType = nextToSchedule.getType();
 
     // try to execute this directly
@@ -119,11 +119,11 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
             std::vector<std::string>::const_iterator iter;
 
             unsigned int bestScore = 0;
-            WebCore::EventActionDescriptor bestDescriptor;
+            WTF::EventActionDescriptor bestDescriptor;
 
             for (iter = names.begin(); iter != names.end(); iter++) {
 
-                WebCore::EventActionDescriptor candidate = WebCore::EventActionDescriptor::deserialize((*iter));
+                WTF::EventActionDescriptor candidate = WTF::EventActionDescriptor::deserialize((*iter));
 
                 if (candidate.getType() != eventActionType) {
                     continue;

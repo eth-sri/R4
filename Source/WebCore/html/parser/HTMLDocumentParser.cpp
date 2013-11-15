@@ -288,7 +288,7 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
     // triggered by events that do not participate in the same parsing order.
     // We recognize them by the insertion point and in this case, we omit the
     // happens before arc.
-    EventActionId currentEventAction = HBCurrentEventAction();
+    WTF::EventActionId currentEventAction = HBCurrentEventAction();
 
     if (!m_input.hasInsertionPoint()) {
 

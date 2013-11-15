@@ -33,19 +33,19 @@
 
 namespace WebCore {
 
-EventActionId HBCurrentEventAction();
-EventActionId HBAllocateEventActionId();
+WTF::EventActionId HBCurrentEventAction();
+WTF::EventActionId HBAllocateEventActionId();
 
-void HBEnterEventAction(EventActionId id, ActionLog::EventActionType type);
+void HBEnterEventAction(WTF::EventActionId id, ActionLog::EventActionType type);
 void HBExitEventAction();
 
 bool HBIsCurrentEventActionValid();
 
 // ONLY ADD ARCS BETWEEN EVENT ACTIONS THAT HAVE BEEN ENTERED!
-void HBAddExplicitArc(EventActionId earlier, EventActionId later);
-void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration);
+void HBAddExplicitArc(WTF::EventActionId earlier, WTF::EventActionId later);
+void HBAddTimedArc(WTF::EventActionId earlier, WTF::EventActionId later, double duration);
 
-EventActionId HBLastUIEventAction();
+WTF::EventActionId HBLastUIEventAction();
 
 // Class to instrument ad-hoc synchronization in WebKit and obtain happens-before.
 class MultiJoinHappensBefore {
@@ -67,7 +67,7 @@ public:
 private:
     struct LList {
         LList(int id, LList* next) : m_id(id), m_next(next) {}
-        EventActionId m_id;
+        WTF::EventActionId m_id;
         LList* m_next;
     };
 

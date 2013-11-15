@@ -406,12 +406,12 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
     QNetworkReplyInitialSnapshot::NetworkSignal signal = m_snapshotQueue.first().first;
 
     std::stringstream params;
-    params << EventActionDescriptor::escapeParam(m_reply->url().toString().toStdString())
+    params << WTF::EventActionDescriptor::escapeParam(m_reply->url().toString().toStdString())
            << "," << m_initialSnapshot->getSameUrlSequenceNumber()
            << "," << (signal == QNetworkReplyInitialSnapshot::FINISHED ? ULONG_MAX : m_sequenceNumber++);
     // use ULONG_MAX to indicate the last network event in this sequence
 
-    EventActionDescriptor descriptor(NETWORK, "Network", params.str());
+    WTF::EventActionDescriptor descriptor(WTF::NETWORK, "Network", params.str());
     m_nextSnapshotUpdateTimer.setEventActionDescriptor(descriptor);
     m_nextSnapshotUpdateTimer.startOneShot(0);
 }

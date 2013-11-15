@@ -69,7 +69,7 @@ CSSFontSelector::CSSFontSelector(Document* document)
     // because "we are guaranteed to be destroyed before the document". But there does not
     // seem to be any such guarantee.
 
-    m_beginLoadingTimer.setEventActionDescriptor(EventActionDescriptor(PARSING, "CSSFontSelector", ""));
+    m_beginLoadingTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::PARSING, "CSSFontSelector", ""));
 
     ASSERT(m_document);
     fontCache()->addClient(this);

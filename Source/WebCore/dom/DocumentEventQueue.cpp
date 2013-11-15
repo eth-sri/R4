@@ -124,7 +124,7 @@ bool DocumentEventQueue::cancelEvent(Event* event)
     // WebERA: Remove the source from the queue
     unsigned int index = 0;
     ListHashSet<RefPtr<Event> >::const_iterator it = m_queuedEvents.begin();
-    std::list<EventActionId>::iterator it2 = m_queuedSources.begin();
+    std::list<WTF::EventActionId>::iterator it2 = m_queuedSources.begin();
     while ((*it) != event) {
         index++;
         ++it;
@@ -154,7 +154,7 @@ void DocumentEventQueue::tryUpdateAndStartTimer()
         std::stringstream params;
         params << DocumentEventQueue::getSeqNumber();
 
-        EventActionDescriptor descriptor(OTHER, "DocumentEventQueue", params.str());
+        WTF::EventActionDescriptor descriptor(WTF::OTHER, "DocumentEventQueue", params.str());
 
         m_pendingEventTimer->setEventActionDescriptor(descriptor);
         m_pendingEventTimer->startOneShot(0);

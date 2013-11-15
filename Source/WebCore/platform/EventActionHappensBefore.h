@@ -46,26 +46,26 @@ public:
     ~EventActionsHB();
 
     // Allocates a new id for an event action.
-    EventActionId allocateEventActionId();
+    WTF::EventActionId allocateEventActionId();
 
-    EventActionId currentEventAction() const {
+    WTF::EventActionId currentEventAction() const {
         if (m_currentEventActionId == 0) {
             CRASH();
         }
         return m_currentEventActionId;
     }
 
-    void setCurrentEventAction(EventActionId newId, ActionLog::EventActionType type);
+    void setCurrentEventAction(WTF::EventActionId newId, ActionLog::EventActionType type);
     void setCurrentEventActionInvalid();
 
     bool isCurrentEventActionValid() const {
         return m_currentEventActionId != 0;
     }
 
-    void addExplicitArc(EventActionId earlier, EventActionId later);
-    void addTimedArc(EventActionId earlier, EventActionId later, double duration);
+    void addExplicitArc(WTF::EventActionId earlier, WTF::EventActionId later);
+    void addTimedArc(WTF::EventActionId earlier, WTF::EventActionId later, double duration);
 
-    EventActionId lastUIEventAction() const {
+    WTF::EventActionId lastUIEventAction() const {
          return m_lastUIEventAction;
     }
 
@@ -84,10 +84,10 @@ public:
     }
 
 private:
-    EventActionId m_currentEventActionId;
-    EventActionId m_nextEventActionId;
+    WTF::EventActionId m_currentEventActionId;
+    WTF::EventActionId m_nextEventActionId;
 
-    EventActionId m_lastUIEventAction;
+    WTF::EventActionId m_lastUIEventAction;
 
     int m_numDisabledInstrumentationRequests;
 };

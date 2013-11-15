@@ -3949,7 +3949,7 @@ void EventHandler::enableReplayUserEventMode()
                 this);
 }
 
-bool EventHandler::userEventProvider(void* object, const EventActionDescriptor& descriptor)
+bool EventHandler::userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor)
 {
     EventHandler* eventHandler = (EventHandler*)object;
     DeferredPlatformEvent event = DeferredPlatformEvent::deserialize(descriptor.getParams());
@@ -4002,7 +4002,7 @@ void EventHandler::rescheduleTimer()
     if (!m_deferredEventTimer.isActive() && m_deferredEventQueue.size() > 0) {
         DeferredPlatformEvent event = m_deferredEventQueue.first();
 
-        EventActionDescriptor descriptor(USER_INTERFACE, "UserEvent", event.serialize());
+        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "UserEvent", event.serialize());
         m_deferredEventTimer.setEventActionDescriptor(descriptor);
         m_deferredEventTimer.startOneShot(0);
     }

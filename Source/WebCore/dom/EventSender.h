@@ -77,7 +77,7 @@ private:
     Vector<T*> m_dispatchingList;
 
     MultiJoinHappensBefore m_sendJoin;
-    EventActionId m_lastEventAction;
+    WTF::EventActionId m_lastEventAction;
 };
 
 template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
@@ -99,7 +99,7 @@ template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
         params << m_eventType.string().ascii().data() << ",";
         params << EventSenderSeqNumber::getSeqNumber();
 
-        EventActionDescriptor descriptor(OTHER, "EventSender", params.str());
+        WTF::EventActionDescriptor descriptor(WTF::OTHER, "EventSender", params.str());
 
         m_timer.setEventActionDescriptor(descriptor);
         m_timer.startOneShot(0);

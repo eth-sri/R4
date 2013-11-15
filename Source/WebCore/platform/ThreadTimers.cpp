@@ -120,7 +120,7 @@ void ThreadTimers::sharedTimerFired()
     threadGlobalData().threadTimers().sharedTimerFiredInternal();
 }
 
-bool ThreadTimers::fireTimerCallback(void* object, const EventActionDescriptor&) {
+bool ThreadTimers::fireTimerCallback(void* object, const WTF::EventActionDescriptor&) {
 	TimerBase* timer = (TimerBase*)object;
     timer->inEventActionRegister(false);
 

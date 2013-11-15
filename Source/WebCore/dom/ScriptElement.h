@@ -61,7 +61,7 @@ public:
     bool willExecuteWhenDocumentFinishedParsing() const { return m_willExecuteWhenDocumentFinishedParsing; }
     CachedResourceHandle<CachedScript> cachedScript() { return m_cachedScript; }
 
-    EventActionId eventActionToFinish() {
+    WTF::EventActionId eventActionToFinish() {
         return m_eventActionToFinish;
     }
 
@@ -112,7 +112,7 @@ private:
     String m_fallbackCharacterEncoding;
 
     // WebERA:
-    EventActionId m_eventActionToFinish;
+    WTF::EventActionId m_eventActionToFinish;
 };
 
 ScriptElement* toScriptElement(Element*);

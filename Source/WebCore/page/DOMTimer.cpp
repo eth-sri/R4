@@ -97,7 +97,7 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
 
     // WebERA: We need to access action before it is given to the DOMTimer, afterwards it will be NULL
 
-    std::string url = action->getCalledUrl().empty() ? std::string("-") : EventActionDescriptor::escapeParam(action->getCalledUrl());
+    std::string url = action->getCalledUrl().empty() ? std::string("-") : WTF::EventActionDescriptor::escapeParam(action->getCalledUrl());
 
     std::stringstream params;
     params << url << ","
@@ -115,7 +115,7 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     ActionLogFormat(ActionLog::WRITE_MEMORY, "Timer:%d", timer->m_timeoutId);
     ActionLogFormat(ActionLog::MEMORY_VALUE, "DOMTimer[%p]", static_cast<void*>(timer));
 
-    EventActionDescriptor descriptor(TIMER, "DOMTimer", params.str());
+    WTF::EventActionDescriptor descriptor(WTF::TIMER, "DOMTimer", params.str());
     timer->setEventActionDescriptor(descriptor);
 
     timer->suspendIfNeeded();

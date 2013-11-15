@@ -49,11 +49,11 @@ EventActionsHB::EventActionsHB()
 EventActionsHB::~EventActionsHB() {
 }
 
-EventActionId EventActionsHB::allocateEventActionId() {
+WTF::EventActionId EventActionsHB::allocateEventActionId() {
     return m_nextEventActionId++;
 }
 
-void EventActionsHB::addExplicitArc(EventActionId earlier, EventActionId later) {
+void EventActionsHB::addExplicitArc(WTF::EventActionId earlier, WTF::EventActionId later) {
     if (earlier <= 0 || later <= 0 || earlier == later) {
         if (ActionLogInStrictMode()) {
             CRASH();
@@ -62,7 +62,7 @@ void EventActionsHB::addExplicitArc(EventActionId earlier, EventActionId later) 
     ActionLogAddArc(earlier, later, -1);
 }
 
-void EventActionsHB::addTimedArc(EventActionId earlier, EventActionId later, double duration) {
+void EventActionsHB::addTimedArc(WTF::EventActionId earlier, WTF::EventActionId later, double duration) {
     if (earlier <= 0 || later <= 0) {
         if (ActionLogInStrictMode()) {
             CRASH();
@@ -71,7 +71,7 @@ void EventActionsHB::addTimedArc(EventActionId earlier, EventActionId later, dou
     ActionLogAddArc(earlier, later, duration * 1000);
 }
 
-void EventActionsHB::setCurrentEventAction(EventActionId newEventActionId, ActionLog::EventActionType type) {
+void EventActionsHB::setCurrentEventAction(WTF::EventActionId newEventActionId, ActionLog::EventActionType type) {
     m_currentEventActionId = newEventActionId;
 
     ActionLogEnterOperation(newEventActionId, type);

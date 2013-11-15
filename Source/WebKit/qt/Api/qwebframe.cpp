@@ -936,10 +936,10 @@ void QWebFrame::load(const QUrl &url)
     // WebERA:
     m_loadUrl = url;
 
-    d->m_loadTimer.setEventActionDescriptor(WebCore::EventActionDescriptor(
-                    WebCore::USER_INTERFACE,
+    d->m_loadTimer.setEventActionDescriptor(WTF::EventActionDescriptor(
+                    WTF::USER_INTERFACE,
                     "BrowserLoadUrl",
-                    WebCore::EventActionDescriptor::escapeParam(url.toString().toStdString())
+                    WTF::EventActionDescriptor::escapeParam(url.toString().toStdString())
     ));
     d->m_loadTimer.startOneShot(0);
 }

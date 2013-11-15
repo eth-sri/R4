@@ -93,7 +93,7 @@ namespace WebCore {
     private:
         static void sharedTimerFired();
 
-        static bool fireTimerCallback(void* object, const EventActionDescriptor& descriptor);
+        static bool fireTimerCallback(void* object, const WTF::EventActionDescriptor& descriptor);
 
         void sharedTimerFiredInternal();
         void fireTimersInNestedEventLoopInternal();

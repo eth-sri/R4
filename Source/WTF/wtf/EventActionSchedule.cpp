@@ -64,9 +64,9 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
         std::string description;
         std::getline(eventactionStream, description);
 
-        EventActionDescriptor descriptor = EventActionDescriptor::deserialize(description);
+        WTF::EventActionDescriptor descriptor = WTF::EventActionDescriptor::deserialize(description);
 
-        schedule->append(std::pair<EventActionId, EventActionDescriptor>(atoi(id.c_str()), descriptor));
+        schedule->append(std::pair<WTF::EventActionId, WTF::EventActionDescriptor>(atoi(id.c_str()), descriptor));
     }
 
     return schedule;

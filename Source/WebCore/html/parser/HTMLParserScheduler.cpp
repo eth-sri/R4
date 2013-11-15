@@ -123,11 +123,11 @@ void HTMLParserScheduler::scheduleForResume()
 
     // Convert an unsigned long into a string
     std::stringstream params;
-    params << EventActionDescriptor::escapeParam(m_parser->getDocumentUrl());
+    params << WTF::EventActionDescriptor::escapeParam(m_parser->getDocumentUrl());
     params << ",";
     params << m_parser->getTokensSeen();
 
-    EventActionDescriptor descriptor(PARSING, "HTMLDocumentParser", params.str());
+    WTF::EventActionDescriptor descriptor(WTF::PARSING, "HTMLDocumentParser", params.str());
     m_continueNextChunkTimer.setEventActionDescriptor(descriptor);
     m_continueNextChunkTimer.startOneShot(0);
 }

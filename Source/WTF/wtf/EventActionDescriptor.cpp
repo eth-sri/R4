@@ -28,7 +28,7 @@
 
 #include "EventActionDescriptor.h"
 
-namespace WebCore {
+namespace WTF {
 
 EventActionDescriptor EventActionDescriptor::null;
 

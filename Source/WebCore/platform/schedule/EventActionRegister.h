@@ -17,7 +17,7 @@
 
 namespace WebCore {
 
-typedef bool (*EventActionHandlerFunction)(void* object, const EventActionDescriptor& descriptor);
+typedef bool (*EventActionHandlerFunction)(void* object, const WTF::EventActionDescriptor& descriptor);
 
 class EventActionRegisterMaps;
 
@@ -45,24 +45,24 @@ public:
 
     // Registration of event action providers and handlers
     void registerEventActionProvider(const std::string& type, EventActionHandlerFunction f, void* object);
-    void registerEventActionHandler(const EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object);
-    void deregisterEventActionHandler(const EventActionDescriptor& descriptor);
+    void registerEventActionHandler(const WTF::EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object);
+    void deregisterEventActionHandler(const WTF::EventActionDescriptor& descriptor);
 
     // Attempts to execute an event action. Returns true on success.
-    bool runEventAction(const EventActionDescriptor& descriptor);
+    bool runEventAction(const WTF::EventActionDescriptor& descriptor);
 
     // Ghost operations, used to simulate the execution of certain un-schedulable event actions
-    void enterGhostEventAction(EventActionId id, ActionLog::EventActionType type);
+    void enterGhostEventAction(WTF::EventActionId id, ActionLog::EventActionType type);
     void exitGhostEventAction();
 
     // Used to inspect the currently executed event action globally
-    const EventActionDescriptor& currentEventActionDispatching() const
+    const WTF::EventActionDescriptor& currentEventActionDispatching() const
     {
         if (m_isDispatching) {
-            return m_dispatchHistory->isEmpty() ? EventActionDescriptor::null : m_dispatchHistory->last().second;
+            return m_dispatchHistory->isEmpty() ? WTF::EventActionDescriptor::null : m_dispatchHistory->last().second;
         }
 
-        return EventActionDescriptor::null;
+        return WTF::EventActionDescriptor::null;
     }
 
     EventActionSchedule* dispatchHistory() { return m_dispatchHistory; }
@@ -71,22 +71,22 @@ public:
 
     void debugPrintNames() const;
 
-    ActionLog::EventActionType toActionLogType(EventActionCategory category) {
+    ActionLog::EventActionType toActionLogType(WTF::EventActionCategory category) {
 
         // TODO(WebERA-HB-REVIEW): I have retained the old ActionLog types, but I don't know if we can just add in our slightly different types (or if these types are correct).
 
         switch (category) {
-        case OTHER:
-        case PARSING:
+        case WTF::OTHER:
+        case WTF::PARSING:
             return ActionLog::UNKNOWN;
             break;
-        case TIMER:
+        case WTF::TIMER:
             return ActionLog::TIMER;
             break;
-        case USER_INTERFACE:
+        case WTF::USER_INTERFACE:
             return ActionLog::USER_INTERFACE;
             break;
-        case NETWORK:
+        case WTF::NETWORK:
             return ActionLog::NETWORK;
             break;
 
@@ -98,7 +98,7 @@ public:
 
 private:
 
-    void eventActionDispatchStart(EventActionId id, const EventActionDescriptor& descriptor)
+    void eventActionDispatchStart(WTF::EventActionId id, const WTF::EventActionDescriptor& descriptor)
     {
         ASSERT(!m_isDispatching);
 

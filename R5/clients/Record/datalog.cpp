@@ -38,7 +38,7 @@ double TimeProviderRecord::currentTime()
 {
     double time = JSC::TimeProviderDefault::currentTime();
 
-    const WebCore::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    const WTF::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
     if (descriptor.isNull()) {
         return time;
@@ -82,7 +82,7 @@ double RandomProviderRecord::get()
 {
     double random = JSC::RandomProviderDefault::get();
 
-    const WebCore::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    const WTF::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
     if (descriptor.isNull()) {
         return random;
@@ -108,7 +108,7 @@ unsigned RandomProviderRecord::getUint32()
 {
     unsigned random = JSC::RandomProviderDefault::getUint32();
 
-    const WebCore::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
+    const WTF::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
 
     if (descriptor.isNull()) {
         return random;

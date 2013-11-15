@@ -69,8 +69,8 @@ public:
     // WebERA: Mark this timer as a representative for an event action.
     // The WebERA system may delay a tiemr depending on the event action.
     // Note: once a timer fires, changing the descriptor will only affect future timer fires.
-    void setEventActionDescriptor(const EventActionDescriptor& descriptor) { m_eventActionDescriptor = descriptor; }
-    const EventActionDescriptor& eventActionDescriptor() const { return m_eventActionDescriptor; }
+    void setEventActionDescriptor(const WTF::EventActionDescriptor& descriptor) { m_eventActionDescriptor = descriptor; }
+    const WTF::EventActionDescriptor& eventActionDescriptor() const { return m_eventActionDescriptor; }
 
     // WebERA: This is used to overwrite the active bit even though the timer has been pulled out of the timer
     // heap. This is used as part of the event action registry
@@ -101,14 +101,14 @@ private:
     int m_heapIndex; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
 
-    EventActionId m_lastFireEventAction;
-    EventActionId m_starterEventAction;
+    WTF::EventActionId m_lastFireEventAction;
+    WTF::EventActionId m_starterEventAction;
 
 private:
     double m_nextFireInterval;  // The interval for which the next file was set to.
     bool m_ignoreFireIntervalForHappensBefore;
 
-    EventActionDescriptor m_eventActionDescriptor;
+    WTF::EventActionDescriptor m_eventActionDescriptor;
     bool m_inEventActionRegister;
 
 #ifndef NDEBUG

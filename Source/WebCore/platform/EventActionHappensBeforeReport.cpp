@@ -28,18 +28,18 @@
 
 namespace WebCore {
 
-EventActionId HBCurrentEventAction()
+WTF::EventActionId HBCurrentEventAction()
 {
     threadGlobalData().threadTimers().happensBefore().checkInValidEventAction();
     return threadGlobalData().threadTimers().happensBefore().currentEventAction();
 }
 
-EventActionId HBAllocateEventActionId()
+WTF::EventActionId HBAllocateEventActionId()
 {
     return threadGlobalData().threadTimers().happensBefore().allocateEventActionId();
 }
 
-void HBEnterEventAction(EventActionId id, ActionLog::EventActionType type)
+void HBEnterEventAction(WTF::EventActionId id, ActionLog::EventActionType type)
 {
     threadGlobalData().threadTimers().happensBefore().setCurrentEventAction(id, type);
 }
@@ -54,14 +54,14 @@ bool HBIsCurrentEventActionValid()
     return threadGlobalData().threadTimers().happensBefore().isCurrentEventActionValid();
 }
 
-void HBAddExplicitArc(EventActionId earlier, EventActionId later)
+void HBAddExplicitArc(WTF::EventActionId earlier, WTF::EventActionId later)
 {
     if (earlier != later) { // filter out self loops
         threadGlobalData().threadTimers().happensBefore().addExplicitArc(earlier, later);
     }
 }
 
-void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration)
+void HBAddTimedArc(WTF::EventActionId earlier, WTF::EventActionId later, double duration)
 {
     if (earlier != later) { // filter out self loops
         threadGlobalData().threadTimers().happensBefore().addTimedArc(earlier, later, duration);
@@ -69,7 +69,7 @@ void HBAddTimedArc(EventActionId earlier, EventActionId later, double duration)
 
 }
 
-EventActionId HBLastUIEventAction()
+WTF::EventActionId HBLastUIEventAction()
 {
     return threadGlobalData().threadTimers().happensBefore().lastUIEventAction();
 }
@@ -113,7 +113,7 @@ void MultiJoinHappensBefore::joinAction() {
     // threadGlobalData().threadTimers().happensBefore().setCurrentTimeSlice(joinSlice);
 
     threadGlobalData().threadTimers().happensBefore().checkInValidEventAction();
-    EventActionId joinSlice = threadGlobalData().threadTimers().happensBefore().currentEventAction();
+    WTF::EventActionId joinSlice = threadGlobalData().threadTimers().happensBefore().currentEventAction();
     LList* curr = m_endThreads;
     while (curr != NULL) {
         if (curr->m_id != joinSlice) {
