@@ -21,6 +21,8 @@
 #include <wtf/ExportMacros.h>
 #include <wtf/StdLibExtras.h>
 
+#include <wtf/ActionLogReport.h>
+
 #ifndef RANDOMPROVIDER_H
 #define RANDOMPROVIDER_H
 
@@ -59,12 +61,16 @@ public:
 
     virtual double get()
     {
+        ActionLogScopeStart("random_get"); // WebERA: fail if we get a random number outside an event action
         return advance() / (UINT_MAX + 1.0);
+        ActionLogScopeEnd();
     }
 
     virtual unsigned getUint32()
     {
+        ActionLogScopeStart("random_get"); // WebERA: fail if we get a random number outside an event action
         return advance();
+        ActionLogScopeEnd();
     }
 
 private:
