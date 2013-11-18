@@ -19,7 +19,6 @@
 
 #include <wtf/ExportMacros.h>
 #include <wtf/DateMath.h>
-#include <wtf/ActionLogReport.h>
 
 #include "timeprovider.h"
 
@@ -27,9 +26,7 @@ namespace JSC {
 
 double TimeProviderDefault::currentTime()
 {
-    ActionLogScopeStart("time_currentTime"); // WebERA: fail if we access the current time outside an event action
     return WTF::jsCurrentTime();
-    ActionLogScopeEnd();
 }
 
 TimeProvider* TimeProvider::m_instance = new TimeProviderDefault();
