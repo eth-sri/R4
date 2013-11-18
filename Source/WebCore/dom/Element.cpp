@@ -938,7 +938,7 @@ Node::InsertionNotificationRequest Element::insertedInto(Node* insertionPoint)
         }
     }
 
-    // TODO(WebERA-HB): User interface modification, add happens before?
+    // TODO(WebERA-HB-REVIEW): User interface modification, add happens before?
 
     return InsertionDone;
 }
@@ -964,7 +964,7 @@ void Element::removedFrom(Node* insertionPoint)
 
     ContainerNode::removedFrom(insertionPoint);
 
-    // TODO(WebERA-HB): User interface modification, add happens before?
+    // TODO(WebERA-HB-REVIEW): User interface modification, add happens before?
 }
 
 void Element::attach()
@@ -2059,7 +2059,7 @@ void Element::didAddAttribute(Attribute* attr)
     // SRL: Updating an attribute is recorded as a write to the corresponding field of the object.
     ActionLogFormat(ActionLog::WRITE_MEMORY, "DOMNode[%p].%s",
     		static_cast<void*>(this), attr->name().localName().string().ascii().data());
-    // TODO(WebERA-HB): User interface modification, add happens before?
+    // TODO(WebERA-HB-REVIEW): User interface modification, add happens before?
     dispatchSubtreeModifiedEvent();
 }
 
@@ -2070,7 +2070,7 @@ void Element::didModifyAttribute(Attribute* attr)
     // SRL: Updating an attribute is recorded as a write to the corresponding field of the object.
     ActionLogFormat(ActionLog::WRITE_MEMORY, "DOMNode[%p].%s",
     		static_cast<void*>(this), attr->name().localName().string().ascii().data());
-    // TODO(WebERA-HB): User interface modification, add happens before?
+    // TODO(WebERA-HB-REVIEW): User interface modification, add happens before?
     // Do not dispatch a DOMSubtreeModified event here; see bug 81141.
 }
 
@@ -2081,7 +2081,7 @@ void Element::didRemoveAttribute(const QualifiedName& name)
     // SRL: Updating an attribute is recorded as a write to the corresponding field of the object.
     ActionLogFormat(ActionLog::WRITE_MEMORY, "DOMNode[%p].%s",
     		static_cast<void*>(this), name.localName().string().ascii().data());
-    // TODO(WebERA-HB): User interface modification, add happens before?
+    // TODO(WebERA-HB-REVIEW): User interface modification, add happens before?
     InspectorInstrumentation::didRemoveDOMAttr(document(), this, name.localName());
     dispatchSubtreeModifiedEvent();
 }
