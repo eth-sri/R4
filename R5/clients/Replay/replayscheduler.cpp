@@ -80,7 +80,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     if (!found)
 
 
-        // Try to do a fuzzy match (only networking at the moment)
+        // Try to do a fuzzy match
 
         /**
           * Fuzzy match the URL part of various event actions
@@ -115,8 +115,8 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
             FuzzyUrlMatcher* matcher = new FuzzyUrlMatcher(QUrl(url));
 
-            std::vector<std::string> names = eventActionRegister->getWaitingNames();
-            std::vector<std::string>::const_iterator iter;
+            std::set<std::string> names = eventActionRegister->getWaitingNames();
+            std::set<std::string>::const_iterator iter;
 
             unsigned int bestScore = 0;
             WTF::EventActionDescriptor bestDescriptor;
