@@ -11,8 +11,10 @@
 #include <iostream>
 #include <stdio.h>
 #include <stddef.h>
-#include <map>
 #include <string>
+#include <map>
+#include <set>
+#include <queue>
 #include <vector>
 
 #include <WebCore/platform/EventActionHappensBeforeReport.h>
@@ -32,13 +34,17 @@ struct EventActionHandler {
 
 class EventActionRegisterMaps {
 public:
-    typedef std::vector<EventActionHandler> HandlerList;
 
-    typedef std::map<std::string, HandlerList> TypeToProvider; // the key is the descriptors getType()
+    typedef std::vector<EventActionHandler> ProviderVector;
+    typedef std::map<std::string, ProviderVector> TypeToProvider; // the key is the descriptors getType()
     TypeToProvider m_typeToProvider;
 
-    typedef std::map<std::string, HandlerList> DescriptorToHandler; // the key is the descriptors toString()
-    TypeToProvider m_descriptorToHandler;
+    typedef std::queue<EventActionHandler> HandlerQueue;
+    typedef std::map<std::string, HandlerQueue> DescriptorToHandler; // the key is the descriptors toString()
+    DescriptorToHandler m_descriptorToHandler;
+
+    typedef std::set<std::string> DescriptorSet;
+    DescriptorSet m_currentDescriptors; // keys in m_descriptorToHandler
 };
 
 EventActionRegister::EventActionRegister()
@@ -61,14 +67,23 @@ void EventActionRegister::registerEventActionProvider(const std::string& type, E
 
 void EventActionRegister::registerEventActionHandler(const WTF::EventActionDescriptor& descriptor, EventActionHandlerFunction f, void* object)
 {
+    std::string key = descriptor.toString();
+
     EventActionHandler target(f, object);
-    m_maps->m_descriptorToHandler[descriptor.toString()].push_back(target);
+    m_maps->m_descriptorToHandler[key].push(target);
+    m_maps->m_currentDescriptors.insert(key);
 }
 
 void EventActionRegister::deregisterEventActionHandler(const WTF::EventActionDescriptor& descriptor)
 {
+    // TODO(WebERA): This causes an error if there are more than one event action handler with this descriptor, since both will be removed.
+    // One solution would be to enforce the "descriptors must be unique" rule.
+
     ASSERT(!descriptor.isNull());
-    m_maps->m_descriptorToHandler.erase(descriptor.toString());
+
+    std::string key = descriptor.toString();
+    m_maps->m_descriptorToHandler.erase(key);
+    m_maps->m_currentDescriptors.erase(key);
 }
 
 bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descriptor) {
@@ -82,9 +97,9 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
 
     for (; it != m_maps->m_typeToProvider.end(); it++) {
 
-        const EventActionRegisterMaps::HandlerList& l = it->second;
+        const EventActionRegisterMaps::ProviderVector& l = it->second;
 
-        EventActionRegisterMaps::HandlerList::const_iterator it2 = l.begin();
+        EventActionRegisterMaps::ProviderVector::const_iterator it2 = l.begin();
 
         for (; it2 != l.end(); it2++) {
 
@@ -118,7 +133,7 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
         return false;  // Target with the given name not found.
     }
 
-    EventActionRegisterMaps::HandlerList& l = iter->second;
+    EventActionRegisterMaps::HandlerQueue& l = iter->second;
     assert(!l.empty()); // empty HandlerLists should be removed
 
     // Pre-Execution
@@ -128,7 +143,7 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
     eventActionDispatchStart(id, descriptor);
 
     HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
-    ActionLogEventTriggered(l[0].object);
+    ActionLogEventTriggered(l.front().object);
 
 	// Execute the function.
 
@@ -138,14 +153,15 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
 
     std::cout << "Running " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
 
-    bool done = (l[0].function)(l[0].object, descriptor); // don't use the descriptor from this point on, it could be deleted
+    bool done = (l.front().function)(l.front().object, descriptor); // don't use the descriptor from this point on, it could be deleted
     ASSERT(done);
 
     // Cleanup lookup tables
 
-    l.erase(l.begin());
+    l.pop();
     if (l.empty()) {
         m_maps->m_descriptorToHandler.erase(descriptorString);
+        m_maps->m_currentDescriptors.erase(descriptorString);
     }
 
     // Post-Execution
@@ -183,16 +199,9 @@ void EventActionRegister::debugPrintNames() const
     std::cout << "--" << std::endl;
 }
 
-std::vector<std::string> EventActionRegister::getWaitingNames()
+std::set<std::string> EventActionRegister::getWaitingNames()
 {
-    // TODO(WebERA): This has very poor performance, we should maintain a list of keys
-
-    std::vector<std::string> v;
-    for(EventActionRegisterMaps::DescriptorToHandler::iterator it = m_maps->m_descriptorToHandler.begin(); it != m_maps->m_descriptorToHandler.end(); ++it) {
-      v.push_back(it->first);
-    }
-
-    return v;
+    return m_maps->m_currentDescriptors;
 }
 
 }  // namespace WebCore

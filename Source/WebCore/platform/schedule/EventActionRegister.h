@@ -67,7 +67,7 @@ public:
 
     EventActionSchedule* dispatchHistory() { return m_dispatchHistory; }
 
-    std::vector<std::string> getWaitingNames();
+    std::set<std::string> getWaitingNames();
 
     void debugPrintNames() const;
 
