@@ -34,6 +34,8 @@
 #include "StdLibExtras.h"
 #include "ThreadingPrimitives.h"
 
+#include "JavaScriptCore/runtime/randomprovider.h"
+
 namespace WTF {
 
 #if USE(OS_RANDOMNESS)
@@ -137,15 +139,21 @@ uint32_t ARC4RandomNumberGenerator::getWord()
 
 uint32_t ARC4RandomNumberGenerator::randomNumber()
 {
+    /*
     MutexLocker locker(m_mutex);
 
     m_count -= 4;
     stirIfNeeded();
     return getWord();
+    */
+
+    // WebERA
+    return JSC::RandomProvider::getInstance()->getUint32();
 }
 
 void ARC4RandomNumberGenerator::randomValues(void* buffer, size_t length)
 {
+    /*
     MutexLocker locker(m_mutex);
 
     unsigned char* result = reinterpret_cast<unsigned char*>(buffer);
@@ -154,6 +162,13 @@ void ARC4RandomNumberGenerator::randomValues(void* buffer, size_t length)
         m_count--;
         stirIfNeeded();
         result[length] = getByte();
+    }
+    */
+
+    // WebERA
+    unsigned char* result = reinterpret_cast<unsigned char*>(buffer);
+    while (length--) {
+        result[length] = (unsigned char)JSC::RandomProvider::getInstance()->getUint32();
     }
 }
 

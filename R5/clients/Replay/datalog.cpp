@@ -99,7 +99,7 @@ double RandomProviderReplay::get()
     }
 
     if (m_currentDescriptorString.isNull()) {
-        ASSERT(false); // dont allow non-deterministic input to uncontrolled event actions
+        CRASH(); // don't allow non-deterministic input to uncontrolled event actions
         return random;
     }
 
