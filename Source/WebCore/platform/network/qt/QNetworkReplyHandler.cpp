@@ -73,8 +73,19 @@ bool QNetworkSnapshotCookieJar::setCookiesFromUrl(const QList<QNetworkCookie>& c
 
 QList<QNetworkCookie> QNetworkSnapshotCookieJar::cookiesForUrl(const QUrl& url) const
 {
-    // TODO(WebERA-HB-REVIEW): Check if this is proper usage
-    ActionLogFormat(ActionLog::READ_MEMORY, "Cookie");
+    if (HBIsCurrentEventActionValid()) {
+        // TODO(WebERA-HB-REVIEW): Some requests are sent outside of event actions
+        // (when painting). Thus, we can't just record a read here if we want to
+        // include reads for network requests (and not only JavaScript usage).
+        //
+        // Specifically, this only happens for network requests that are suspended/resumed.
+        //
+        // Discuss what we want to do here.
+
+        // TODO(WebERA-HB-REVIEW): Check if this is proper usage
+        ActionLogFormat(ActionLog::READ_MEMORY, "Cookie");
+    }
+
     return QNetworkCookieJar::cookiesForUrl(url);
 }
 
