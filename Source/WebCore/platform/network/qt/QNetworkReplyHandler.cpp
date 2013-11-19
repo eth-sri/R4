@@ -55,6 +55,29 @@ static const int gMaxRedirections = 10;
 
 namespace WebCore {
 
+QNetworkSnapshotCookieJar::QNetworkSnapshotCookieJar(QObject* parent)
+    : QNetworkCookieJar(parent)
+{
+}
+
+bool QNetworkSnapshotCookieJar::setCookiesFromUrl(const QList<QNetworkCookie>& cookieList, const QUrl& url)
+{
+    if (HBIsCurrentEventActionValid()) { // only set cookies for schedulable elements
+        // TODO(WebERA-HB-REVIEW): Check if this is proper usage
+        ActionLogFormat(ActionLog::WRITE_MEMORY, "Cookie");
+        return QNetworkCookieJar::setCookiesFromUrl(cookieList, url);
+    } else {
+        return false;
+    }
+}
+
+QList<QNetworkCookie> QNetworkSnapshotCookieJar::cookiesForUrl(const QUrl& url) const
+{
+    // TODO(WebERA-HB-REVIEW): Check if this is proper usage
+    ActionLogFormat(ActionLog::READ_MEMORY, "Cookie");
+    return QNetworkCookieJar::cookiesForUrl(url);
+}
+
 // Take a deep copy of the FormDataElement
 FormDataIODevice::FormDataIODevice(FormData* data)
     : m_formElements(data ? data->elements() : Vector<FormDataElement>())
@@ -165,6 +188,11 @@ QNetworkReplyInitialSnapshot::QNetworkReplyInitialSnapshot(QNetworkReply* reply)
 {
     m_stream.append(reply->readAll());
     takeSnapshot(QNetworkReplyInitialSnapshot::INITIAL, reply);
+
+    QVariant cookieVar = reply->header(QNetworkRequest::CookieHeader);
+    if (cookieVar.isValid()) {
+        m_cookies = cookieVar;
+    }
 }
 
 QNetworkReplyInitialSnapshot::QNetworkReplyInitialSnapshot()
@@ -216,6 +244,7 @@ void QNetworkReplyInitialSnapshot::serialize(QIODevice* stream) const
     out << m_sameUrlSequenceNumber;
     out << m_url;
     out << m_stream;
+    out << m_cookies;
 
     foreach (const QNetworkReplySnapshotEntry& entry, m_snapshots) {
         out << (int)entry.first;
@@ -237,7 +266,8 @@ QNetworkReplyInitialSnapshot* QNetworkReplyInitialSnapshot::deserialize(QIODevic
     in >> initial->m_headers
        >> initial->m_sameUrlSequenceNumber
        >> initial->m_url
-       >> initial->m_stream;
+       >> initial->m_stream
+       >> initial->m_cookies;
 
     while (true) {
         int signal;
@@ -279,6 +309,15 @@ unsigned int QNetworkReplyInitialSnapshot::getNextSameUrlSequenceNumber(const QU
     QNetworkReplyInitialSnapshot::m_nextSameUrlSequenceNumber.insert(urlString, id+1);
 
     return id;
+}
+
+QList<QNetworkCookie> QNetworkReplyInitialSnapshot::getCookies() {
+
+    if (m_cookies.isValid()) {
+        return m_cookies.value<QList<QNetworkCookie> >();
+    }
+
+    return QList<QNetworkCookie>();
 }
 
 QNetworkReplySnapshot::QNetworkReplySnapshot(QNetworkReply* reply, QNetworkReplyInitialSnapshot* base)
@@ -359,6 +398,11 @@ QNetworkReply* QNetworkReplyControllable::release()
 
 void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*)
 {
+    if (m_lastNetworkEventAction == 0) {
+        // This is the first network event, so write any cookies to the cookie store
+        m_reply->manager()->cookieJar()->setCookiesFromUrl(m_initialSnapshot->getCookies(), m_initialSnapshot->getUrl());
+    }
+
     // HB - Force HB relations between subsequent network events in the same request
     if (m_lastNetworkEventAction != 0) {
         HBAddExplicitArc(m_lastNetworkEventAction, HBCurrentEventAction());

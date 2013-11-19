@@ -27,6 +27,8 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QNetworkCookie>
+#include <QNetworkCookieJar>
 
 #include "wtf/ExportMacros.h"
 #include "WebCore/platform/Timer.h"
@@ -49,6 +51,26 @@ class ResourceRequest;
 class ResourceResponse;
 class QNetworkReplyHandler;
 class QNetworkReplyWrapper;
+
+
+/**
+ * WebERA
+ *
+ * By default, each QNetworkReply injects cookies as soon as they are available, regardless of when they are processed by
+ * WebKit (which is a problem when we have deferred their processing or want to replay them at a later stage).
+ *
+ * We use this cookie jar to disable all conventional writes to the cookie store from non-schedulable sources.
+ */
+class QNetworkSnapshotCookieJar : public QNetworkCookieJar {
+    Q_OBJECT
+
+public:
+    QNetworkSnapshotCookieJar(QObject* parent = 0);
+
+    virtual bool setCookiesFromUrl(const QList<QNetworkCookie>&, const QUrl&);
+    virtual QList<QNetworkCookie> cookiesForUrl(const QUrl&) const;
+};
+
 
 /**
  * WebERA:
@@ -84,7 +106,6 @@ class QNetworkReplyWrapper;
  * Happens before relations are added between each of these atomic blocks.
  *
  */
-
 class QNetworkReplySnapshot;
 
 class QNetworkReplyInitialSnapshot
@@ -113,6 +134,8 @@ public:
         return m_url;
     }
 
+    QList<QNetworkCookie> getCookies();
+
     typedef QPair<NetworkSignal, QNetworkReplySnapshot*> QNetworkReplySnapshotEntry;
     QList<QNetworkReplySnapshotEntry>* getSnapshots() {
         return &m_snapshots;
@@ -134,6 +157,8 @@ protected:
     QByteArray peek(qint64 maxlen);
 
     QList<QNetworkReply::RawHeaderPair> m_headers;
+    QVariant m_cookies;
+
     unsigned int m_sameUrlSequenceNumber;
     QUrl m_url;
 

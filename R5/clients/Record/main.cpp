@@ -37,6 +37,8 @@
 
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/platform/ThreadGlobalData.h>
+#include <JavaScriptCore/runtime/JSExportMacros.h>
+#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
 #include "utils.h"
 #include "clientapplication.h"
@@ -89,6 +91,8 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
 
     WebCore::ThreadTimers::setScheduler(m_scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
+
+    m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
 
     loadWebsite(m_url);
 }

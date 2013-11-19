@@ -40,6 +40,8 @@
 
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/platform/ThreadGlobalData.h>
+#include <JavaScriptCore/runtime/JSExportMacros.h>
+#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
 #include "clientapplication.h"
 #include "replayscheduler.h"
@@ -86,6 +88,8 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
 
     m_window->page()->enableReplayUserEventMode();
+
+    m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
 
     loadWebsite(m_url);
 }
