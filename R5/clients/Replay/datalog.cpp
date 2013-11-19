@@ -105,8 +105,19 @@ double RandomProviderReplay::get()
 
     DLog::iterator iter = m_double_log.find(m_currentDescriptorString);
 
-    ASSERT(iter != m_double_log.end());
-    ASSERT(!iter->isEmpty());
+    if (iter == m_double_log.end() || iter->isEmpty()) {
+
+        std::cout << "Remaining random numbers" << std::endl;
+
+        DLog::iterator it = m_double_log.begin();
+        while (it != m_double_log.end()) {
+            std::cout << it.key().toStdString() << " contains " << it->size() << std::endl;
+            it++;
+        }
+
+        std::cerr << "Error, accessing random number when no recorded random number is available." << std::endl;
+        CRASH();
+    }
 
     return iter->takeFirst();
 }
