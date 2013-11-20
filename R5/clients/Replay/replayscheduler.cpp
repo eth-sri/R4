@@ -42,7 +42,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderRe
     , m_scheduleWaits(0)
 {
     std::ifstream fp;
-    fp.open(schedulePath);
+    fp.open(schedulePath.c_str());
     m_schedule = WebCore::EventActionSchedule::deserialize(fp);
     fp.close();
 

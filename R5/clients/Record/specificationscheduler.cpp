@@ -67,7 +67,7 @@ void dequeueSpecificElement(const WTF::EventActionDescriptor& descriptor,
                             std::queue<WTF::EventActionDescriptor>* queue)
 {
     std::queue<WTF::EventActionDescriptor> old;
-    queue->swap(old);
+    std::swap(*queue, old);
 
     while (!old.empty()) {
         if (old.front() != descriptor) {
@@ -119,7 +119,7 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
             if (eventActionRegister->runEventAction(descriptor)) {
                 m_activeNetworkQueue.pop();
 
-                if (std::stoul(descriptor.getParameter(2)) == ULONG_MAX ||
+                if (strtoul(descriptor.getParameter(2).c_str(), NULL, 0) == ULONG_MAX ||
                         m_network->doneCounter() > currentFinishedNetworkJobs) {
                     // this was the last element in the sequence, remove it from the active events
 
@@ -148,7 +148,7 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
 
             m_networkQueue.pop();
 
-            if (std::stoul(descriptor.getParameter(2)) != ULONG_MAX &&
+            if (strtoul(descriptor.getParameter(2).c_str(), NULL, 0) != ULONG_MAX &&
                     currentFinishedNetworkJobs == m_network->doneCounter()) {
                 // this is not the last element in the sequence
 
@@ -159,7 +159,7 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
 
                 // split the exiting network event queue into active and non-active events
                 std::queue<WTF::EventActionDescriptor> currentQueue;
-                currentQueue.swap(m_networkQueue);
+                std::swap(currentQueue, m_networkQueue);
 
                 while (!currentQueue.empty()) {
                     WTF::EventActionDescriptor existingEvent = currentQueue.front();
