@@ -139,6 +139,8 @@ public:
     QString toPlainText() const;
     QString renderTreeDump() const;
 
+    bool runAutomaticExploration();
+
     QString title() const;
     void setUrl(const QUrl &url);
     QUrl url() const;

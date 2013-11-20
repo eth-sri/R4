@@ -49,4 +49,38 @@ void ActionLogEventTriggered(void* eventId);
 
 int ActionLogRegisterSource(const char* src);
 
+class EventAttachLog {
+public:
+	EventAttachLog();
+	virtual ~EventAttachLog();
+
+	enum EventType {
+		EV_KEYDOWN = 0,
+		EV_KEYUP,
+		EV_KEYPRESS,
+		EV_CHANGE,
+		EV_RESIZE,
+		EV_FOCUS,
+		EV_BLUR,
+		EV_MOUSEOVER,
+		EV_MOUSEOUT,
+		EV_MOUSEUP,
+		EV_MOUSEDOWN,
+		EV_MOUSEMOVE,
+		EV_DBLCLICK,
+		EV_CLICK,
+		EV_NUM_EVENTS
+	};
+
+	static const char* EventTypeStr(EventType t);
+
+	void addEventStr(void* eventTarget, const char* str);
+
+	virtual void removeEventTarget(void* eventTarget) = 0;
+	virtual void addEvent(void* eventTarget, EventType eventType) = 0;
+	virtual bool pullEvent(void** eventTarget, EventType* eventType) = 0;
+};
+
+EventAttachLog* getEventAttachLog();
+
 #endif /* ACTIONLOGREPORT_H_ */

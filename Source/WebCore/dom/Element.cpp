@@ -939,6 +939,14 @@ Node::InsertionNotificationRequest Element::insertedInto(Node* insertionPoint)
     }
 
     // TODO(WebERA-HB-REVIEW): User interface modification, add happens before?
+    // SRL: Say that a new element was added (for eventual future happens before).
+    if (m_attributeData) {
+    	 Attribute* href = getAttributeItem(HTMLNames::hrefAttr);
+    	 if (href && !href->value().isNull() && href->value().startsWith("javascript:")) {
+    		 // SRL: Auto-trigger an onclick event.
+    		 getEventAttachLog()->addEvent(static_cast<void*>(toNode()), EventAttachLog::EV_CLICK);
+    	 }
+    }
 
     return InsertionDone;
 }

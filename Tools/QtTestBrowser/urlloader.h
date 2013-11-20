@@ -31,6 +31,7 @@
 
 #include "qwebframe.h"
 
+#include <QMainWindow>
 #include <QTextStream>
 #include <QTimer>
 #include <QVector>
@@ -39,7 +40,9 @@ class UrlLoader : public QObject {
     Q_OBJECT
 
 public:
-    UrlLoader(QWebFrame* frame, const QString& inputFileName, int timeoutSeconds, int extraTimeSeconds);
+    UrlLoader(QWebFrame* frame, const QString& inputFileName, int timeoutSeconds, int extraTimeSeconds, QMainWindow* window);
+
+    void enableAutoExploration() { m_remainingActions = 128; }
 
 public slots:
     void loadNext();
@@ -48,6 +51,7 @@ private slots:
     void checkIfFinished();
     void frameLoadStarted();
     void frameLoadFinished();
+    void differentPage();
 
 signals:
     void pageLoadFinished();
@@ -66,6 +70,9 @@ private:
     QTimer m_extraTimeTimer;
     QTimer m_checkIfFinishedTimer;
     int m_numFramesLoading;
+    QMainWindow* m_window;
+    int m_remainingActions;
+    bool m_pageChanged;
 };
 
 #endif

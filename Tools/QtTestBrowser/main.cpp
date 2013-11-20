@@ -64,6 +64,8 @@ public:
     bool isRobotized() const { return m_isRobotized; }
     int robotTimeout() const { return m_robotTimeoutSeconds; }
     int robotExtraTime() const { return m_robotExtraTimeSeconds; }
+    bool autoExplore() const { return m_autoExplore; }
+    bool hiddenWindow() const { return m_hiddenWindow; }
 
 private:
     void handleUserOptions();
@@ -71,6 +73,8 @@ private:
 
 private:
     bool m_isRobotized;
+    bool m_autoExplore;
+    bool m_hiddenWindow;
     int m_robotTimeoutSeconds;
     int m_robotExtraTimeSeconds;
     QStringList m_urls;
@@ -90,6 +94,8 @@ void LauncherApplication::applyDefaultSettings()
 LauncherApplication::LauncherApplication(int& argc, char** argv)
     : QApplication(argc, argv, QApplication::GuiServer)
     , m_isRobotized(false)
+	, m_autoExplore(false)
+    , m_hiddenWindow(false)
     , m_robotTimeoutSeconds(0)
     , m_robotExtraTimeSeconds(0)
 {
@@ -136,6 +142,8 @@ void LauncherApplication::handleUserOptions()
              << "[-cache-webview]"
              << "[-maximize]"
              << "[-show-fps]"
+             << "[-auto-explore]"
+             << "[-hidden-window]"
              << "[-r list]"
              << "[-robot-timeout seconds]"
              << "[-robot-extra-time seconds]"
@@ -165,6 +173,14 @@ void LauncherApplication::handleUserOptions()
     if (args.contains("-show-fps")) {
         requiresGraphicsView("-show-fps");
         windowOptions.showFrameRate = true;
+    }
+
+    if (args.contains("-auto-explore")) {
+    	m_autoExplore = true;
+    }
+
+    if (args.contains("-hidden-window")) {
+    	m_hiddenWindow = true;
     }
 
     if (args.contains("-disk-cache")) {
@@ -286,10 +302,11 @@ int main(int argc, char **argv)
     LauncherApplication app(argc, argv);
 
     if (app.isRobotized()) {
-        LauncherWindow* window = new LauncherWindow();
-        UrlLoader loader(window->page()->mainFrame(), app.urls().at(0), app.robotTimeout(), app.robotExtraTime());
+        LauncherWindow* window = new LauncherWindow(&windowOptions);
+        UrlLoader loader(window->page()->mainFrame(), app.urls().at(0), app.robotTimeout(), app.robotExtraTime(), window);
+        if (app.autoExplore()) loader.enableAutoExploration();
         loader.loadNext();
-        window->show();
+        if (!app.hiddenWindow()) window->show();
         return launcherMain(app);
     }
 
@@ -314,7 +331,7 @@ int main(int argc, char **argv)
         newWindow->load(url);
     }
 
-    window->show();
+    if (!app.hiddenWindow()) window->show();
     return launcherMain(app);
 }
 

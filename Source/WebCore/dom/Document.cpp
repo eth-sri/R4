@@ -170,6 +170,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
 #include <wtf/EventActionDescriptor.h>
+#include <JavaScriptCore/runtime/timeprovider.h>
 
 #if ENABLE(SHARED_WORKERS)
 #include "SharedWorkerRepository.h"
@@ -4148,7 +4149,7 @@ String Document::lastModified() const
     // specificiation tells us to read the last modification date from the file
     // system.
     if (!foundDate)
-        date.setMillisecondsSinceEpochForDateTime(currentTimeMS());
+        date.setMillisecondsSinceEpochForDateTime(JSC::TimeProvider::getInstance()->currentTime()); // currentTimeMS()
     return String::format("%02d/%02d/%04d %02d:%02d:%02d", date.month() + 1, date.monthDay(), date.fullYear(), date.hour(), date.minute(), date.second());
 }
 

@@ -131,7 +131,8 @@ QString WebPage::userAgentForUrl(const QUrl& url) const
 {
     if (!m_userAgent.isEmpty())
         return m_userAgent;
-    return QWebPage::userAgentForUrl(url);
+    return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24";
+    //return QWebPage::userAgentForUrl(url);
 }
 
 bool WebPage::shouldInterruptJavaScript()

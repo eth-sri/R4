@@ -5,9 +5,6 @@
  *      Author: veselin
  */
 
-#include "ExportMacros.h"
-#include "Assertions.h"
-
 #include "ActionLog.h"
 
 const char* ActionLog::CommandType_AsString(CommandType ctype) {
@@ -65,11 +62,11 @@ void ActionLog::startEventAction(int operation) {
 }
 
 bool ActionLog::endEventAction() {
-    bool wasInOp = m_currentEventActionId != -1;
-    m_currentEventActionId = -1;
-    m_cmdsInCurrentEvent.clear();
-    m_scopeDepth = 0;
-    return wasInOp;
+	bool wasInOp = m_currentEventActionId != -1;
+	m_currentEventActionId = -1;
+	m_cmdsInCurrentEvent.clear();
+	m_scopeDepth = 0;
+	return wasInOp;
 }
 
 bool ActionLog::setEventActionType(EventActionType op_type) {

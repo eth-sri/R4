@@ -80,6 +80,8 @@ EventTargetData::~EventTargetData()
 
 EventTarget::~EventTarget()
 {
+	// SRL: Tell the auto-exploration that no more events can be accepted.
+	getEventAttachLog()->removeEventTarget(static_cast<void*>(toNode()));
 }
 
 Node* EventTarget::toNode()
@@ -110,7 +112,8 @@ bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<Eve
 	ActionLogScope scope("addEventListener");
 	EventTargetAccess(ActionLog::WRITE_MEMORY, this, eventType.string().ascii().data());
 	ActionLogFormat(ActionLog::MEMORY_VALUE, "Event[%p]", static_cast<void*>(listener.get()));
-
+	// SRL: Note that an event listener was added for the auto-exploration to run it later.
+	getEventAttachLog()->addEventStr(static_cast<void*>(toNode()), eventType.string().ascii().data());
     EventTargetData* d = ensureEventTargetData();
     return d->eventListenerMap.add(eventType, listener, useCapture);
 }

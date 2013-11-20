@@ -32,18 +32,22 @@
 #include <QDebug>
 #include <QWebPage>
 
-UrlLoader::UrlLoader(QWebFrame* frame, const QString& inputFileName, int timeoutSeconds, int extraTimeSeconds)
+UrlLoader::UrlLoader(QWebFrame* frame, const QString& inputFileName, int timeoutSeconds, int extraTimeSeconds, QMainWindow* window)
     : m_frame(frame)
     , m_stdOut(stdout)
     , m_loaded(0)
     , m_numFramesLoading(0)
+    , m_window(window)
+    , m_remainingActions(0)
+    , m_pageChanged(false)
 {
-    m_checkIfFinishedTimer.setInterval(200);
+    m_checkIfFinishedTimer.setInterval(10);
     m_checkIfFinishedTimer.setSingleShot(true);
     connect(&m_checkIfFinishedTimer, SIGNAL(timeout()), this, SLOT(checkIfFinished()));
     // loadStarted and loadFinished on QWebPage is emitted for each frame/sub-frame
     connect(m_frame->page(), SIGNAL(loadStarted()), this, SLOT(frameLoadStarted()));
     connect(m_frame->page(), SIGNAL(loadFinished(bool)), this, SLOT(frameLoadFinished()));
+    connect(m_frame, SIGNAL(pageChanged()), this, SLOT(differentPage()));
 
     if (timeoutSeconds) {
         m_timeoutTimer.setInterval(timeoutSeconds * 1000);
@@ -75,14 +79,26 @@ void UrlLoader::loadNext()
             m_frame->load(url);
         } else
             loadNext();
-    } else
+    } else {
         disconnect(m_frame, 0, this, 0);
+        m_stdOut << "Exiting ";
+        m_window->close();
+    }
 }
 
 void UrlLoader::checkIfFinished()
 {
-    if (!m_numFramesLoading)
-        emit pageLoadFinished();
+    if (!m_numFramesLoading) {
+    	if (!m_pageChanged && m_remainingActions > 0) {
+    		--m_remainingActions;
+    		if (m_frame->runAutomaticExploration()) {
+    			m_checkIfFinishedTimer.start();
+    			return;
+    		}
+    	}
+
+    	emit pageLoadFinished();
+    }
 }
 
 void UrlLoader::frameLoadStarted()
@@ -93,11 +109,21 @@ void UrlLoader::frameLoadStarted()
 
 void UrlLoader::frameLoadFinished()
 {
-    Q_ASSERT(m_numFramesLoading > 0);
-    --m_numFramesLoading;
+    //Q_ASSERT(m_numFramesLoading > 0);
+    //--m_numFramesLoading;
+	if (m_numFramesLoading > 0) {
+		--m_numFramesLoading;
+	}
+
     // Once our frame has finished loading, wait a moment to call loadNext for cases
     // where a sub-frame starts loading or another frame is loaded through JavaScript.
     m_checkIfFinishedTimer.start();
+}
+
+void UrlLoader::differentPage()
+{
+	fprintf(stderr, "Page changed. Stopping automation.\n");
+	m_pageChanged = true;
 }
 
 void UrlLoader::loadUrlList(const QString& inputFileName)

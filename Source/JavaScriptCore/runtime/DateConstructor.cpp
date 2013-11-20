@@ -169,7 +169,7 @@ ConstructType DateConstructor::getConstructData(JSCell*, ConstructData& construc
 static EncodedJSValue JSC_HOST_CALL callDate(ExecState* exec)
 {
     GregorianDateTime ts;
-    msToGregorianDateTime(exec, currentTimeMS(), false, ts);
+    msToGregorianDateTime(exec, JSC::TimeProvider::getInstance()->currentTime(), false, ts); // currentTimeMS()
     DateConversionBuffer date;
     DateConversionBuffer time;
     formatDate(ts, date);

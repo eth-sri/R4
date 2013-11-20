@@ -135,6 +135,13 @@ public:
     	return m_actionLog;
     }
 
+    EventAttachLog* eventAttachLog() {
+    	return m_eventAttachLog;
+    }
+
+    void setEventAttachLog(EventAttachLog* l) {
+    	m_eventAttachLog = l;
+    }
 #endif
 
 private:
@@ -150,6 +157,7 @@ private:
     StringSet* m_jsSet;
     StringSet* m_dataSet;
     ActionLog* m_actionLog;
+    EventAttachLog* m_eventAttachLog;
 #endif
 
     static WTF_EXPORTDATA ThreadSpecific<WTFThreadData>* staticData;

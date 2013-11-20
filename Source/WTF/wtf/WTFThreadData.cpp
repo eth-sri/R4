@@ -46,6 +46,7 @@ WTFThreadData::WTFThreadData()
     , m_jsSet(new StringSet())
     , m_dataSet(new StringSet())
     , m_actionLog(new ActionLog())
+    , m_eventAttachLog(NULL)
 #endif
 {
 }
@@ -61,6 +62,7 @@ WTFThreadData::~WTFThreadData()
     delete m_jsSet;
     delete m_dataSet;
     delete m_actionLog;
+    delete m_eventAttachLog;
 #endif
 }
 

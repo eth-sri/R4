@@ -83,7 +83,6 @@ public:
 	// Loads from log from a file.
 	bool loadFromFile(FILE* f);
 
-
 	struct Command {
 		CommandType m_cmdType;
 		// Memory location for reads/writes and scope id for scopes. Should be -1 if the location is unused.

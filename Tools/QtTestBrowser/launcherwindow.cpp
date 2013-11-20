@@ -1009,7 +1009,7 @@ void LauncherWindow::loadURLListFromFile()
     if (selectedFile.isEmpty())
        return;
 
-    m_urlLoader = new UrlLoader(this->page()->mainFrame(), selectedFile, 0, 0);
+    m_urlLoader = new UrlLoader(this->page()->mainFrame(), selectedFile, 0, 0, this);
     m_urlLoader->loadNext();
 }
 
