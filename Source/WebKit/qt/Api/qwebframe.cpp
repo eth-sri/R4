@@ -945,8 +945,133 @@ void QWebFrame::load(const QUrl &url)
     d->m_loadTimer.startOneShot(0);
 }
 
-void QWebFramePrivate::loadAsync(WebCore::Timer<QWebFramePrivate>* timer) {
+void QWebFramePrivate::loadAsync(WebCore::Timer<QWebFramePrivate>* timer)
+{
     m_parent->loadAsync();
+}
+
+// TODO(WebERA) add auto provider
+
+void QWebFramePrivate::updateAutoExplorationTimer()
+{
+    if (!m_autoExplorationTimer.isActive() && !isAutoExplorationFinished()) {
+
+        m_autoExplorationRemainingActions--;
+
+        if (getEventAttachLog()->pullEvent(&m_nextAutoExplorationNode, &m_nextAutoExplorationType)) {
+
+            // TODO(WebERA) serialize node location
+
+            m_autoExplorationTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::USER_INTERFACE, "AUTO", EventAttachLog::EventTypeStr(m_nextAutoExplorationType)));
+            m_autoExplorationTimer.startOneShot(0);
+        }
+    }
+}
+
+void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer)
+{
+    void* node = m_nextAutoExplorationNode;
+    EventAttachLog::EventType type = m_nextAutoExplorationType;
+
+    ActionLogScope scope("auto:explore");
+    ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%p]:%s", node, EventAttachLog::EventTypeStr(type));
+
+    QWebElementCollection allEls = q->findAllElements("*");
+    fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
+    QWebElement el;
+    for (int i = 0; i < allEls.count(); ++i) {
+        QWebElement el1 = allEls.at(i);
+        if (!el1.isNull() && el1.webkitNodePtr() == node) {
+            el = el1;
+            break;
+        }
+    }
+
+    if (el.isNull()) {
+        updateAutoExplorationTimer();
+        return; // skip
+    }
+
+    QByteArray elURI = el.namespaceUri().toLatin1();
+    fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
+    int event_action_id = HBCurrentEventAction();
+    if (type == EventAttachLog::EV_MOUSEDOWN ||
+            type == EventAttachLog::EV_MOUSEUP ||
+            type == EventAttachLog::EV_MOUSEMOVE ||
+            type == EventAttachLog::EV_MOUSEOVER ||
+            type == EventAttachLog::EV_MOUSEOUT ||
+            type == EventAttachLog::EV_CLICK ||
+            type == EventAttachLog::EV_DBLCLICK) {
+        char js[512];
+        sprintf(js, "{var x_x%d = document.createEvent(\"MouseEvents\");"
+                "x_x%d.initMouseEvent(\"%s\",true,true,window,0,0,0,0,0,0,0,0,0,0,null);"
+                "this.dispatchEvent(x_x%d);}",
+                event_action_id, event_action_id,
+                EventAttachLog::EventTypeStr(type),
+                event_action_id);
+        fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
+        el.evaluateJavaScript(QString::fromUtf8(js));
+    } else if (type == EventAttachLog::EV_FOCUS || type == EventAttachLog::EV_BLUR) {
+        char js[512];
+        sprintf(js, "{var x_x%d = document.createEvent(\"Event\");"
+                "x_x%d.initEvent(\"%s\",true,true);"
+                "this.dispatchEvent(x_x%d);}",
+                event_action_id, event_action_id,
+                EventAttachLog::EventTypeStr(type),
+                event_action_id);
+        fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
+        el.evaluateJavaScript(QString::fromUtf8(js));
+    } else if (type == EventAttachLog::EV_CHANGE ||
+               type == EventAttachLog::EV_RESIZE) {
+        if (el.localName() == "input") {
+            // We change the attribute in JavaScript to see if this conflicts with some other JavaScript.
+            if (el.attribute("type") == "text" || el.attribute("type") == "password") {
+                char js[512];
+                sprintf(js, "{this.value=\"explore\";}");
+                el.evaluateJavaScript(QString::fromUtf8(js));
+                fprintf(stderr, "Auto explore text %s...\n", EventAttachLog::EventTypeStr(type));
+            } else if (el.attribute("type") == "checkbox" || el.attribute("type") == "radio") {
+                char js[512];
+                sprintf(js, "{this.checked=!this.checked;}");
+                el.evaluateJavaScript(QString::fromUtf8(js));
+                fprintf(stderr, "Auto explore radio %s...\n", EventAttachLog::EventTypeStr(type));
+            } else {
+                fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
+            }
+        } else {
+            fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
+        }
+        // We trigger a change/resize event.
+        char js[512];
+        sprintf(js, "{var x_x%d = document.createEvent(\"Event\");"
+                "x_x%d.initEvent(\"%s\", true, true);"
+                "this.dispatchEvent(x_x%d);}",
+                event_action_id, event_action_id,
+                EventAttachLog::EventTypeStr(type),
+                event_action_id);
+        el.evaluateJavaScript(QString::fromUtf8(js));
+    } else if (type == EventAttachLog::EV_KEYDOWN ||
+            type == EventAttachLog::EV_KEYPRESS ||
+            type == EventAttachLog::EV_KEYUP) {
+        char js[1024];
+        sprintf(js, "{var x_x%d = document.createEvent('Events');"
+                "x_x%d.ctrlKey = x_x%d.shiftKey = x_x%d.altKey = x_x%d.metaKey = false;"
+                "x_x%d.initEvent(\"%s\", true, true);"
+                "x_x%d.keyCode = 65;"
+                "x_x%d.charCode = 0;"
+                "this.dispatchEvent(x_x%d);}",
+                event_action_id, event_action_id, event_action_id, event_action_id, event_action_id,  event_action_id,
+                EventAttachLog::EventTypeStr(type),
+                event_action_id, event_action_id, event_action_id);
+        fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
+        el.evaluateJavaScript(QString::fromUtf8(js));
+    }
+    fprintf(stderr, "Event QWE\n");
+
+    ActionLogScopeEnd();
+
+    updateAutoExplorationTimer();
+    return;
 }
 
 void QWebFrame::loadAsync()
@@ -1441,107 +1566,8 @@ QSize QWebFrame::contentsSize() const
 // SRL: A helper method for performing automatic exploration of a web page:
 //  - automatic generation of mouse events, clicking, focus events, filling forms.
 bool QWebFrame::runAutomaticExploration() {
-	void* node;
-	EventAttachLog::EventType type;
-	if (!getEventAttachLog()->pullEvent(&node, &type)) return false;
-
-    int event_action_id = HBAllocateEventActionId();
-    threadGlobalData().threadTimers().eventActionRegister()->enterGhostEventAction(event_action_id, ActionLog::USER_INTERFACE);
-
-    //ActionLogScope scope("auto:explore");
-    //ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%p]:%s", node, EventAttachLog::EventTypeStr(type));
-
-	QWebElementCollection allEls = findAllElements("*");
-	fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
-	QWebElement el;
-	for (int i = 0; i < allEls.count(); ++i) {
-		QWebElement el1 = allEls.at(i);
-		if (!el1.isNull() && el1.webkitNodePtr() == node) {
-			el = el1;
-			break;
-		}
-	}
-	if (el.isNull()) return true;
-	QByteArray elURI = el.namespaceUri().toLatin1();
-	fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
-    //int event_action_id = HBAllocateEventActionId();
-	if (type == EventAttachLog::EV_MOUSEDOWN ||
-			type == EventAttachLog::EV_MOUSEUP ||
-			type == EventAttachLog::EV_MOUSEMOVE ||
-			type == EventAttachLog::EV_MOUSEOVER ||
-			type == EventAttachLog::EV_MOUSEOUT ||
-			type == EventAttachLog::EV_CLICK ||
-			type == EventAttachLog::EV_DBLCLICK) {
-		char js[512];
-		sprintf(js, "{var x_x%d = document.createEvent(\"MouseEvents\");"
-				"x_x%d.initMouseEvent(\"%s\",true,true,window,0,0,0,0,0,0,0,0,0,0,null);"
-				"this.dispatchEvent(x_x%d);}",
-				event_action_id, event_action_id,
-				EventAttachLog::EventTypeStr(type),
-				event_action_id);
-		fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
-		el.evaluateJavaScript(QString::fromUtf8(js));
-	} else if (type == EventAttachLog::EV_FOCUS || type == EventAttachLog::EV_BLUR) {
-		char js[512];
-		sprintf(js, "{var x_x%d = document.createEvent(\"Event\");"
-				"x_x%d.initEvent(\"%s\",true,true);"
-				"this.dispatchEvent(x_x%d);}",
-				event_action_id, event_action_id,
-				EventAttachLog::EventTypeStr(type),
-				event_action_id);
-		fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
-		el.evaluateJavaScript(QString::fromUtf8(js));
-	} else if (type == EventAttachLog::EV_CHANGE ||
-			   type == EventAttachLog::EV_RESIZE) {
-		if (el.localName() == "input") {
-			// We change the attribute in JavaScript to see if this conflicts with some other JavaScript.
-			if (el.attribute("type") == "text" || el.attribute("type") == "password") {
-				char js[512];
-				sprintf(js, "{this.value=\"explore\";}");
-				el.evaluateJavaScript(QString::fromUtf8(js));
-				fprintf(stderr, "Auto explore text %s...\n", EventAttachLog::EventTypeStr(type));
-			} else if (el.attribute("type") == "checkbox" || el.attribute("type") == "radio") {
-				char js[512];
-				sprintf(js, "{this.checked=!this.checked;}");
-				el.evaluateJavaScript(QString::fromUtf8(js));
-				fprintf(stderr, "Auto explore radio %s...\n", EventAttachLog::EventTypeStr(type));
-			} else {
-				fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
-			}
-		} else {
-			fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
-		}
-		// We trigger a change/resize event.
-		char js[512];
-		sprintf(js, "{var x_x%d = document.createEvent(\"Event\");"
-				"x_x%d.initEvent(\"%s\", true, true);"
-				"this.dispatchEvent(x_x%d);}",
-				event_action_id, event_action_id,
-				EventAttachLog::EventTypeStr(type),
-				event_action_id);
-		el.evaluateJavaScript(QString::fromUtf8(js));
-	} else if (type == EventAttachLog::EV_KEYDOWN ||
-			type == EventAttachLog::EV_KEYPRESS ||
-			type == EventAttachLog::EV_KEYUP) {
-		char js[1024];
-		sprintf(js, "{var x_x%d = document.createEvent('Events');"
-				"x_x%d.ctrlKey = x_x%d.shiftKey = x_x%d.altKey = x_x%d.metaKey = false;"
-				"x_x%d.initEvent(\"%s\", true, true);"
-				"x_x%d.keyCode = 65;"
-				"x_x%d.charCode = 0;"
-				"this.dispatchEvent(x_x%d);}",
-				event_action_id, event_action_id, event_action_id, event_action_id, event_action_id,  event_action_id,
-				EventAttachLog::EventTypeStr(type),
-				event_action_id, event_action_id, event_action_id);
-		fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
-		el.evaluateJavaScript(QString::fromUtf8(js));
-	}
-	fprintf(stderr, "Event QWE\n");
-
-    //ActionLogScopeEnd();
-     threadGlobalData().threadTimers().eventActionRegister()->exitGhostEventAction();
-
-    return true;
+    d->updateAutoExplorationTimer();
+    return !d->isAutoExplorationFinished();
 }
 
 /*!

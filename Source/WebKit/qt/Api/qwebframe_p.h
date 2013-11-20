@@ -45,6 +45,7 @@ using QTM_NAMESPACE::QOrientationSensor;
 
 #include <WebCore/platform/Timer.h>
 #include <wtf/EventActionDescriptor.h>
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
     class FrameLoaderClientQt;
@@ -91,6 +92,8 @@ public:
 #endif
         , m_loadTimer(this, &QWebFramePrivate::loadAsync)
         , m_parent(parent)
+        , m_autoExplorationRemainingActions(128)
+        , m_autoExplorationTimer(this, &QWebFramePrivate::autoExplorationTimerFired)
         {}
     void init(QWebFrame* qframe, QWebFrameData* frameData);
     void setPage(QWebPage*);
@@ -143,10 +146,26 @@ private:
 #endif
 
 public:
+
     // WebERA:
     WebCore::Timer<QWebFramePrivate> m_loadTimer;
     void loadAsync(WebCore::Timer<QWebFramePrivate>* timer);
+
     QWebFrame* m_parent;
+
+    void updateAutoExplorationTimer();
+
+    bool isAutoExplorationFinished() {
+        return m_autoExplorationRemainingActions == 0;
+    }
+
+private:
+    unsigned int m_autoExplorationRemainingActions;
+    WebCore::Timer<QWebFramePrivate> m_autoExplorationTimer;
+    void autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer);
+
+    void* m_nextAutoExplorationNode;
+    EventAttachLog::EventType m_nextAutoExplorationType;
 };
 
 class QWebHitTestResultPrivate {

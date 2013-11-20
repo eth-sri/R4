@@ -264,12 +264,12 @@ public:
 		m_queues[eventType].push_back(eventTarget);
 	}
 
-	virtual bool pullEvent(void** eventTarget, EventType* eventType) {
+    virtual bool pullEvent(void** eventTarget, EventType* eventType) {
 		for (int i = 0; i < EV_NUM_EVENTS; ++i) {
 			if (!m_queues[i].empty()) {
-				*eventType = static_cast<EventType>(i);
+                *eventType = static_cast<EventType>(i);
 				*eventTarget = m_queues[i].front();
-				m_queues[i].pop_front();
+                m_queues[i].pop_front();
 				return true;
 			}
 		}

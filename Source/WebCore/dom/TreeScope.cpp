@@ -98,10 +98,14 @@ void TreeScope::addElementById(const AtomicString& elementId, Element* element)
 
 void TreeScope::removeElementById(const AtomicString& elementId, Element* element)
 {
-	// SRL: The id of the element is a memory location. This is a write.
-    ActionLogFormat(ActionLog::WRITE_MEMORY,
-    		"Tree[%p]:%s", static_cast<const void*>(this), elementId.string().ascii().data());
-    ActionLogFormat(ActionLog::MEMORY_VALUE, "undefined");
+    // TODO(WebERA-HB-REVIEW) This is called by the garbage collector
+    // this should be forced at the point of deletion and not at GC
+    if (HBIsCurrentEventActionValid()) {
+        // SRL: The id of the element is a memory location. This is a write.
+        ActionLogFormat(ActionLog::WRITE_MEMORY,
+                "Tree[%p]:%s", static_cast<const void*>(this), elementId.string().ascii().data());
+        ActionLogFormat(ActionLog::MEMORY_VALUE, "undefined");
+    }
 
     m_elementsById.remove(elementId.impl(), element);
 }

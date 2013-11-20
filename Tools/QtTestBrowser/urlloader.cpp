@@ -89,12 +89,10 @@ void UrlLoader::loadNext()
 void UrlLoader::checkIfFinished()
 {
     if (!m_numFramesLoading) {
-    	if (!m_pageChanged && m_remainingActions > 0) {
-    		--m_remainingActions;
-    		if (m_frame->runAutomaticExploration()) {
-    			m_checkIfFinishedTimer.start();
-    			return;
-    		}
+        if (!m_pageChanged && m_frame->runAutomaticExploration()) {
+            // continue waiting for auto exploration to finish
+            m_checkIfFinishedTimer.start();
+            return;
     	}
 
     	emit pageLoadFinished();
