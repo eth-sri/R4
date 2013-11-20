@@ -508,6 +508,7 @@ DeferredQEvent DeferredQEvent::deserialize(const std::string& raw)
 
 bool QWebPagePrivate::userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor)
 {
+
     QWebPagePrivate* ths = (QWebPagePrivate*)object;
     DeferredQEvent event = DeferredQEvent::deserialize(descriptor.getParams());
 

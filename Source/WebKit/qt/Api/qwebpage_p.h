@@ -87,7 +87,7 @@ public:
     DeferredQEvent(QSharedPointer<QEvent>);
 
     QEvent* event() {
-        m_event.data();
+        return m_event.data();
     }
 
     std::string serialize() const;
