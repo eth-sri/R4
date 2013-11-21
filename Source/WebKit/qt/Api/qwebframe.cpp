@@ -985,7 +985,7 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
     ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%p]:%s", node, EventAttachLog::EventTypeStr(type));
 
     QWebElementCollection allEls = q->findAllElements("*");
-    fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
+    //fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
     QWebElement el;
     for (int i = 0; i < allEls.count(); ++i) {
         QWebElement el1 = allEls.at(i);
@@ -1001,7 +1001,7 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
     }
 
     QByteArray elURI = el.namespaceUri().toLatin1();
-    fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
+    //fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
     int event_action_id = HBCurrentEventAction();
     if (type == EventAttachLog::EV_MOUSEDOWN ||
             type == EventAttachLog::EV_MOUSEUP ||
@@ -1017,7 +1017,7 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 event_action_id, event_action_id,
                 EventAttachLog::EventTypeStr(type),
                 event_action_id);
-        fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
+        //fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
         el.evaluateJavaScript(QString::fromUtf8(js));
     } else if (type == EventAttachLog::EV_FOCUS || type == EventAttachLog::EV_BLUR) {
         char js[512];
@@ -1027,7 +1027,7 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 event_action_id, event_action_id,
                 EventAttachLog::EventTypeStr(type),
                 event_action_id);
-        fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
+        //fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
         el.evaluateJavaScript(QString::fromUtf8(js));
     } else if (type == EventAttachLog::EV_CHANGE ||
                type == EventAttachLog::EV_RESIZE) {
@@ -1037,17 +1037,17 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 char js[512];
                 sprintf(js, "{this.value=\"explore\";}");
                 el.evaluateJavaScript(QString::fromUtf8(js));
-                fprintf(stderr, "Auto explore text %s...\n", EventAttachLog::EventTypeStr(type));
+                //fprintf(stderr, "Auto explore text %s...\n", EventAttachLog::EventTypeStr(type));
             } else if (el.attribute("type") == "checkbox" || el.attribute("type") == "radio") {
                 char js[512];
                 sprintf(js, "{this.checked=!this.checked;}");
                 el.evaluateJavaScript(QString::fromUtf8(js));
-                fprintf(stderr, "Auto explore radio %s...\n", EventAttachLog::EventTypeStr(type));
+                //fprintf(stderr, "Auto explore radio %s...\n", EventAttachLog::EventTypeStr(type));
             } else {
-                fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
+                //fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
             }
         } else {
-            fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
+            //fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
         }
         // We trigger a change/resize event.
         char js[512];
@@ -1071,10 +1071,10 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 event_action_id, event_action_id, event_action_id, event_action_id, event_action_id,  event_action_id,
                 EventAttachLog::EventTypeStr(type),
                 event_action_id, event_action_id, event_action_id);
-        fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
+        //fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
         el.evaluateJavaScript(QString::fromUtf8(js));
     }
-    fprintf(stderr, "Event QWE\n");
+    //fprintf(stderr, "Event QWE\n");
 
     ActionLogScopeEnd();
 
