@@ -974,9 +974,7 @@ void QWebFramePrivate::updateAutoExplorationTimer()
 {
     if (!isAutoExplorationFinished()) {
 
-        void* node;
-        if (getEventAttachLog()->pullEvent(&node, &m_nextAutoExplorationType)) {
-            m_nextAutoExplorationNodeIdentifier = static_cast<Node*>(node)->getNodeReplayIdentifier();
+        if (getEventAttachLog()->pullEvent(&m_nextAutoExplorationNodeIdentifier, &m_nextAutoExplorationType)) {
 
             m_autoExplorationRemainingActions--;
 

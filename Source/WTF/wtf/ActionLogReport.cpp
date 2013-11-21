@@ -241,7 +241,7 @@ EventAttachLog::EventType EventAttachLog::StrEventType(const char* str) {
     return EV_NUM_EVENTS; // unknown/unsupported event
 }
 
-void EventAttachLog::addEventStr(void* eventTarget, const char* str) {
+void EventAttachLog::addEventStr(const WTF::String& eventTarget, const char* str) {
 
     EventAttachLog::EventType type = EventAttachLog::StrEventType(str);
 
@@ -263,8 +263,7 @@ public:
 	EventAttachLogImpl() {}
 	virtual ~EventAttachLogImpl() {}
 
-	virtual void removeEventTarget(void* eventTarget) {
-		if (eventTarget == NULL) return;
+    virtual void removeEventTarget(const WTF::String& eventTarget) {
 		for (int i = 0; i < EV_NUM_EVENTS; ++i) {
 			int l = m_queues[i].size();
 			for (int j = 0; j < l; ++j) {
@@ -277,12 +276,11 @@ public:
 		}
 	}
 
-	virtual void addEvent(void* eventTarget, EventType eventType) {
-		if (eventTarget == NULL) return;
+    virtual void addEvent(const WTF::String& eventTarget, EventType eventType) {
 		m_queues[eventType].push_back(eventTarget);
 	}
 
-    virtual bool pullEvent(void** eventTarget, EventType* eventType) {
+    virtual bool pullEvent(WTF::String* eventTarget, EventType* eventType) {
 		for (int i = 0; i < EV_NUM_EVENTS; ++i) {
 			if (!m_queues[i].empty()) {
                 *eventType = static_cast<EventType>(i);
@@ -295,7 +293,7 @@ public:
 	}
 
 private:
-	std::deque<void*> m_queues[EV_NUM_EVENTS];
+    std::deque<WTF::String> m_queues[EV_NUM_EVENTS];
 };
 
 EventAttachLog* getEventAttachLog() {

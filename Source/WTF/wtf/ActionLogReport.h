@@ -10,6 +10,9 @@
 
 #include "ActionLog.h"
 
+#include <wtf/ExportMacros.h>
+#include <wtf/text/WTFString.h>
+
 class ActionLogScope {
 public:
 	ActionLogScope(const char* name);
@@ -75,11 +78,11 @@ public:
 	static const char* EventTypeStr(EventType t);
     static EventAttachLog::EventType StrEventType(const char* t);
 
-	void addEventStr(void* eventTarget, const char* str);
+    void addEventStr(const WTF::String& eventTarget, const char* str);
 
-	virtual void removeEventTarget(void* eventTarget) = 0;
-	virtual void addEvent(void* eventTarget, EventType eventType) = 0;
-	virtual bool pullEvent(void** eventTarget, EventType* eventType) = 0;
+    virtual void removeEventTarget(const WTF::String& eventTarget) = 0;
+    virtual void addEvent(const WTF::String& eventTarget, EventType eventType) = 0;
+    virtual bool pullEvent(WTF::String* eventTarget, EventType* eventType) = 0;
 };
 
 EventAttachLog* getEventAttachLog();

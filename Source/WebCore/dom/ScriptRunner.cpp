@@ -136,6 +136,8 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
 void ScriptRunner::suspend()
 {
     // TODO(WebERA): extend suspend/resume to include async scripts
+
+    std::cerr << "Warning, ScriptRunner::suspend not supported." << std::endl;
     ASSERT_NOT_REACHED();
 
     m_inOrderTimer.stop();

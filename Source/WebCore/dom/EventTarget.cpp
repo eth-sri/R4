@@ -29,6 +29,7 @@
  *
  */
 
+#include <iostream>
 #include "config.h"
 #include "EventTarget.h"
 
@@ -81,7 +82,9 @@ EventTargetData::~EventTargetData()
 EventTarget::~EventTarget()
 {
 	// SRL: Tell the auto-exploration that no more events can be accepted.
-	getEventAttachLog()->removeEventTarget(static_cast<void*>(toNode()));
+    if (toNode() != 0) {
+        getEventAttachLog()->removeEventTarget(toNode()->getNodeReplayIdentifier());
+    }
 }
 
 Node* EventTarget::toNode()
@@ -112,14 +115,25 @@ bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<Eve
 	ActionLogScope scope("addEventListener");
 	EventTargetAccess(ActionLog::WRITE_MEMORY, this, eventType.string().ascii().data());
 	ActionLogFormat(ActionLog::MEMORY_VALUE, "Event[%p]", static_cast<void*>(listener.get()));
-	// SRL: Note that an event listener was added for the auto-exploration to run it later.
-    getEventAttachLog()->addEventStr(static_cast<void*>(toNode()), eventType.string().ascii().data());
+
+    // SRL: Note that an event listener was added for the auto-exploration to run it later.
+    if (toNode() == 0) {
+        std::cerr << "Warning: Event listener added to NULL node" << std::endl;
+    } else {
+        getEventAttachLog()->addEventStr(toNode()->getNodeReplayIdentifier(), eventType.string().ascii().data());
+    }
+
     EventTargetData* d = ensureEventTargetData();
     return d->eventListenerMap.add(eventType, listener, useCapture);
 }
 
 bool EventTarget::removeEventListener(const AtomicString& eventType, EventListener* listener, bool useCapture)
 {
+    // SRL: Tell the auto-exploration that no more events can be accepted.
+    if (toNode() != 0) {
+        getEventAttachLog()->removeEventTarget(toNode()->getNodeReplayIdentifier());
+    }
+
     EventTargetData* d = eventTargetData();
     if (!d)
         return false;
