@@ -163,12 +163,15 @@ public:
         return m_autoExplorationTimer.isActive();
     }
 
+    static bool autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
+
 private:
     unsigned int m_autoExplorationRemainingActions;
     WebCore::Timer<QWebFramePrivate> m_autoExplorationTimer;
     void autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer);
+    void triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier);
 
-    void* m_nextAutoExplorationNode;
+    WTF::String m_nextAutoExplorationNodeIdentifier;
     EventAttachLog::EventType m_nextAutoExplorationType;
 };
 

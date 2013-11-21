@@ -205,39 +205,57 @@ const char* EventAttachLog::EventTypeStr(EventType t) {
 	}
 	return "";
 }
+
+EventAttachLog::EventType EventAttachLog::StrEventType(const char* str) {
+
+    if (strcmp(str, "keydown") == 0) {
+        return EV_KEYDOWN;
+    } else if (strcmp(str, "keyup") == 0) {
+        return EV_KEYUP;
+    } else if (strcmp(str, "keypress") == 0) {
+        return EV_KEYPRESS;
+    } else if (strcmp(str, "resize") == 0) {
+        return EV_RESIZE;
+    } else if (strcmp(str, "mousemove") == 0) {
+        return EV_MOUSEMOVE;
+    } else if (strcmp(str, "mouseout") == 0) {
+        return EV_MOUSEOUT;
+    } else if (strcmp(str, "mouseover") == 0) {
+        return EV_MOUSEOVER;
+    } else if (strcmp(str, "mousedown") == 0) {
+        return EV_MOUSEDOWN;
+    } else if (strcmp(str, "mouseup") == 0) {
+        return EV_MOUSEUP;
+    } else if (strcmp(str, "click") == 0) {
+        return EV_CLICK;
+    } else if (strcmp(str, "dblclick") == 0) {
+        return EV_DBLCLICK;
+    } else if (strcmp(str, "focus") == 0) {
+        return EV_FOCUS;
+    } else if (strcmp(str, "blur") == 0) {
+        return EV_BLUR;
+    } else if (strcmp(str, "change") == 0) {
+        return EV_CHANGE;
+    }
+
+    return EV_NUM_EVENTS; // unknown/unsupported event
+}
+
 void EventAttachLog::addEventStr(void* eventTarget, const char* str) {
-	if (strcmp(str, "keydown") == 0) {
-		addEvent(eventTarget, EV_KEYDOWN);
-	} else if (strcmp(str, "keyup") == 0) {
-		addEvent(eventTarget, EV_KEYUP);
-	} else if (strcmp(str, "keypress") == 0) {
-		addEvent(eventTarget, EV_KEYPRESS);
-	} else if (strcmp(str, "resize") == 0) {
-		addEvent(eventTarget, EV_RESIZE);
-	} else if (strcmp(str, "mousemove") == 0) {
-		addEvent(eventTarget, EV_MOUSEMOVE);
-	} else if (strcmp(str, "mouseout") == 0) {
-		addEvent(eventTarget, EV_MOUSEOUT);
-	} else if (strcmp(str, "mouseover") == 0) {
-		addEvent(eventTarget, EV_MOUSEOVER);
-	} else if (strcmp(str, "mousedown") == 0) {
-		addEvent(eventTarget, EV_MOUSEDOWN);
-	} else if (strcmp(str, "mouseup") == 0) {
-		addEvent(eventTarget, EV_MOUSEUP);
-	} else if (strcmp(str, "click") == 0) {
-		// Note(veselin): Currently we will not auto-trigger event when a click handler is attached.
-		//addEvent(eventTarget, EV_CLICK);
-	} else if (strcmp(str, "dblclick") == 0) {
-		addEvent(eventTarget, EV_DBLCLICK);
-	} else if (strcmp(str, "focus") == 0) {
-		addEvent(eventTarget, EV_FOCUS);
-	} else if (strcmp(str, "blur") == 0) {
-		addEvent(eventTarget, EV_BLUR);
-	} else if (strcmp(str, "change") == 0) {
-		addEvent(eventTarget, EV_CHANGE);
-	} else {
-//		printf("Attach event %s\n", str);
-	}
+
+    EventAttachLog::EventType type = EventAttachLog::StrEventType(str);
+
+    if (type == EV_CLICK) {
+        // Note(veselin): Currently we will not auto-trigger event when a click handler is attached.
+        return;
+    }
+
+    if (type == EV_NUM_EVENTS) {
+        // Unknown event
+        return;
+    }
+
+    addEvent(eventTarget, type);
 }
 
 class EventAttachLogImpl : public EventAttachLog {

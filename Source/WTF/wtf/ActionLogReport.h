@@ -73,6 +73,7 @@ public:
 	};
 
 	static const char* EventTypeStr(EventType t);
+    static EventAttachLog::EventType StrEventType(const char* t);
 
 	void addEventStr(void* eventTarget, const char* str);
 

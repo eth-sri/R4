@@ -140,6 +140,8 @@ public:
     QString renderTreeDump() const;
 
     bool runAutomaticExploration();
+    bool isAutomaticExplorationDone();
+    void enableReplayUserEventMode();
 
     QString title() const;
     void setUrl(const QUrl &url);

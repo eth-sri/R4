@@ -28,6 +28,7 @@
 
 #include "autoexplorer.h"
 
+#include <iostream>
 #include <QDebug>
 #include <QWebPage>
 
@@ -90,6 +91,10 @@ void AutoExplorer::explorationKeepAlive()
 }
 
 void AutoExplorer::stop() {
+    if (!m_frame->isAutomaticExplorationDone()) {
+        std::cerr << "Warning: Auto exploration not finished before stopping." << std::endl;
+    }
+
     disconnect(m_frame, 0, this, 0);
     emit done();
 }

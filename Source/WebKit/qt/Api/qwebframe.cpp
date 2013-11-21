@@ -18,6 +18,7 @@
     Boston, MA 02110-1301, USA.
 */
 
+#include <sstream>
 #include "config.h"
 #include "qwebframe.h"
 
@@ -950,19 +951,40 @@ void QWebFramePrivate::loadAsync(WebCore::Timer<QWebFramePrivate>* timer)
     m_parent->loadAsync();
 }
 
-// TODO(WebERA) add auto provider
+void QWebFrame::enableReplayUserEventMode() {
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->registerEventActionProvider(
+                "AUTO",
+                &QWebFramePrivate::autoEventProvider,
+                d);
+}
+
+bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor)
+{
+    QWebFramePrivate* ths = (QWebFramePrivate*)object;
+
+    EventAttachLog::EventType type = EventAttachLog::StrEventType(descriptor.getParameter(0).c_str());
+    WTF::String nodeIdentifier = WTF::String(descriptor.getParameter(1).c_str());
+
+    ths->triggerEventOnNode(type, nodeIdentifier);
+
+    return true;
+}
 
 void QWebFramePrivate::updateAutoExplorationTimer()
 {
     if (!isAutoExplorationFinished()) {
 
-        if (getEventAttachLog()->pullEvent(&m_nextAutoExplorationNode, &m_nextAutoExplorationType)) {
+        void* node;
+        if (getEventAttachLog()->pullEvent(&node, &m_nextAutoExplorationType)) {
+            m_nextAutoExplorationNodeIdentifier = static_cast<Node*>(node)->getNodeReplayIdentifier();
 
             m_autoExplorationRemainingActions--;
 
-            // TODO(WebERA) serialize node location
+            std::stringstream params;
+            params << EventAttachLog::EventTypeStr(m_nextAutoExplorationType) << ",";
+            params << m_nextAutoExplorationNodeIdentifier.ascii().data();
 
-            m_autoExplorationTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::USER_INTERFACE, "AUTO", EventAttachLog::EventTypeStr(m_nextAutoExplorationType)));
+            m_autoExplorationTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::USER_INTERFACE, "AUTO", params.str()));
             m_autoExplorationTimer.startOneShot(0);
 
         }
@@ -978,29 +1000,46 @@ void QWebFramePrivate::updateAutoExplorationTimer()
 
 void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer)
 {
-    void* node = m_nextAutoExplorationNode;
-    EventAttachLog::EventType type = m_nextAutoExplorationType;
+    triggerEventOnNode(m_nextAutoExplorationType, m_nextAutoExplorationNodeIdentifier);
 
+    updateAutoExplorationTimer();
+    return;
+}
+
+void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier)
+{
     ActionLogScope scope("auto:explore");
-    ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%p]:%s", node, EventAttachLog::EventTypeStr(type));
+    ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
 
-    QWebElementCollection allEls = q->findAllElements("*");
+    // TODO(WebERA): I'm not sure about all of this Node*<->void* casting we are doing. Could we avoid it?
+
+    QList<QWebElement> allEls = q->findAllElements(QString::fromAscii("*")).toList();
+    allEls.append(q->documentElement().parent());
+
     //fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
-    QWebElement el;
-    for (int i = 0; i < allEls.count(); ++i) {
-        QWebElement el1 = allEls.at(i);
-        if (!el1.isNull() && el1.webkitNodePtr() == node) {
-            el = el1;
+    QWebElement target;
+    foreach (QWebElement el, allEls) {
+        if (!el.isNull() && static_cast<Node*>(el.webkitNodePtr())->getNodeReplayIdentifier() == nodeIdentifier) {
+            target = el;
             break;
         }
     }
 
-    if (el.isNull()) {
+    if (target.isNull()) {
+        Node* root = static_cast<Node*>(q->documentElement().webkitNodePtr())->parentNode();
+
+        if (root->getNodeReplayIdentifier() == nodeIdentifier) {
+            target = q->documentElement(); //  the node pointed to by document element is the HTML node, it cant point to the "real" root Node*
+        }
+    }
+
+    if (target.isNull()) {
+        std::cerr << "Warning: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
         updateAutoExplorationTimer();
         return; // skip
     }
 
-    QByteArray elURI = el.namespaceUri().toLatin1();
+    //QByteArray elURI = target.namespaceUri().toLatin1();
     //fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
     int event_action_id = HBCurrentEventAction();
     if (type == EventAttachLog::EV_MOUSEDOWN ||
@@ -1018,7 +1057,7 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 EventAttachLog::EventTypeStr(type),
                 event_action_id);
         //fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
-        el.evaluateJavaScript(QString::fromUtf8(js));
+        target.evaluateJavaScript(QString::fromUtf8(js));
     } else if (type == EventAttachLog::EV_FOCUS || type == EventAttachLog::EV_BLUR) {
         char js[512];
         sprintf(js, "{var x_x%d = document.createEvent(\"Event\");"
@@ -1028,20 +1067,22 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 EventAttachLog::EventTypeStr(type),
                 event_action_id);
         //fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
-        el.evaluateJavaScript(QString::fromUtf8(js));
+        target.evaluateJavaScript(QString::fromUtf8(js));
     } else if (type == EventAttachLog::EV_CHANGE ||
                type == EventAttachLog::EV_RESIZE) {
-        if (el.localName() == "input") {
+        if (target.localName() == QString::fromAscii("input")) {
             // We change the attribute in JavaScript to see if this conflicts with some other JavaScript.
-            if (el.attribute("type") == "text" || el.attribute("type") == "password") {
+            if (target.attribute(QString::fromAscii("type")) == QString::fromAscii("text") ||
+                    target.attribute(QString::fromAscii("type")) == QString::fromAscii("password")) {
                 char js[512];
                 sprintf(js, "{this.value=\"explore\";}");
-                el.evaluateJavaScript(QString::fromUtf8(js));
+                target.evaluateJavaScript(QString::fromUtf8(js));
                 //fprintf(stderr, "Auto explore text %s...\n", EventAttachLog::EventTypeStr(type));
-            } else if (el.attribute("type") == "checkbox" || el.attribute("type") == "radio") {
+            } else if (target.attribute(QString::fromAscii("type")) == QString::fromAscii("checkbox") ||
+                       target.attribute(QString::fromAscii("type")) == QString::fromAscii("radio")) {
                 char js[512];
                 sprintf(js, "{this.checked=!this.checked;}");
-                el.evaluateJavaScript(QString::fromUtf8(js));
+                target.evaluateJavaScript(QString::fromUtf8(js));
                 //fprintf(stderr, "Auto explore radio %s...\n", EventAttachLog::EventTypeStr(type));
             } else {
                 //fprintf(stderr, "Auto explore %s...\n", EventAttachLog::EventTypeStr(type));
@@ -1057,7 +1098,7 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 event_action_id, event_action_id,
                 EventAttachLog::EventTypeStr(type),
                 event_action_id);
-        el.evaluateJavaScript(QString::fromUtf8(js));
+        target.evaluateJavaScript(QString::fromUtf8(js));
     } else if (type == EventAttachLog::EV_KEYDOWN ||
             type == EventAttachLog::EV_KEYPRESS ||
             type == EventAttachLog::EV_KEYUP) {
@@ -1072,14 +1113,11 @@ void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate
                 EventAttachLog::EventTypeStr(type),
                 event_action_id, event_action_id, event_action_id);
         //fprintf(stderr, "Auto explore event %s...\n", EventAttachLog::EventTypeStr(type));
-        el.evaluateJavaScript(QString::fromUtf8(js));
+        target.evaluateJavaScript(QString::fromUtf8(js));
     }
     //fprintf(stderr, "Event QWE\n");
 
     ActionLogScopeEnd();
-
-    updateAutoExplorationTimer();
-    return;
 }
 
 void QWebFrame::loadAsync()
@@ -1579,6 +1617,10 @@ bool QWebFrame::runAutomaticExploration() {
     }
 
     return !d->isAutoExplorationFinished();
+}
+
+bool QWebFrame::isAutomaticExplorationDone() {
+    return d->isAutoExplorationFinished();
 }
 
 /*!

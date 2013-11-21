@@ -1323,12 +1323,11 @@ bool Node::containsIncludingShadowDOM(Node* node)
 }
 
 // WebERA: The node identifier should be usable for finding the node again.
-// WebERA(TODO): Delete? - Are we going to use these identifiers?
 String Node::getNodeReplayIdentifier() const {
 	if (isElementNode()) {
 		const Element* el = toElement(this);
 		if (el->hasID()) {
-			String uri = baseURI().string();
+            String uri = baseURI().string();
 			String id = el->getIdAttribute().string();
 			return String::format("%s @ ID=%s",
 					uri.isNull() ? "" : uri.utf8().data(),
