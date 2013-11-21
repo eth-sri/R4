@@ -954,17 +954,25 @@ void QWebFramePrivate::loadAsync(WebCore::Timer<QWebFramePrivate>* timer)
 
 void QWebFramePrivate::updateAutoExplorationTimer()
 {
-    if (!m_autoExplorationTimer.isActive() && !isAutoExplorationFinished()) {
-
-        m_autoExplorationRemainingActions--;
+    if (!isAutoExplorationFinished()) {
 
         if (getEventAttachLog()->pullEvent(&m_nextAutoExplorationNode, &m_nextAutoExplorationType)) {
+
+            m_autoExplorationRemainingActions--;
 
             // TODO(WebERA) serialize node location
 
             m_autoExplorationTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::USER_INTERFACE, "AUTO", EventAttachLog::EventTypeStr(m_nextAutoExplorationType)));
             m_autoExplorationTimer.startOneShot(0);
+
         }
+
+        // notice, auto exploration will stop if it can't do anything, but not emit the done signal
+        // we don't know if auto explorer can do something if the page loads/runs a bit longer - so the user
+        // of this api should wait and try again, and at some point stop.
+
+    } else {
+        q->emitAutomaticExplorationDone();
     }
 }
 
@@ -1566,7 +1574,10 @@ QSize QWebFrame::contentsSize() const
 // SRL: A helper method for performing automatic exploration of a web page:
 //  - automatic generation of mouse events, clicking, focus events, filling forms.
 bool QWebFrame::runAutomaticExploration() {
-    d->updateAutoExplorationTimer();
+    if (!d->isAutoExplorationRunning()) {
+        d->updateAutoExplorationTimer();
+    }
+
     return !d->isAutoExplorationFinished();
 }
 

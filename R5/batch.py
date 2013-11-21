@@ -141,13 +141,13 @@ if __name__ == '__main__':
         
             print(' recording...')
             record_log = subprocess.check_output(
-                [abs_path('clients/Record/bin/record'), "-timeout", str(45 * 1000), site], 
+                [abs_path('clients/Record/bin/record'), site], 
                 stderr=subprocess.STDOUT)
         
-            print(' replaying...')
-            replay_log = subprocess.check_output(
-                [abs_path('clients/Replay/bin/replay'), site, "/tmp/schedule.data"],
-                stderr=subprocess.STDOUT)
+#            print(' replaying...')
+#            replay_log = subprocess.check_output(
+#                [abs_path('clients/Replay/bin/replay'), site, "/tmp/schedule.data"],
+#                stderr=subprocess.STDOUT)
 
             success = True
             

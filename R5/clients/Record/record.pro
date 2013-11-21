@@ -10,10 +10,12 @@ SOURCES += \
     main.cpp \
     network.cpp \
     specificationscheduler.cpp \
-    datalog.cpp
+    datalog.cpp \
+    autoexplorer.cpp
 
 HEADERS += \
     network.h \
     specificationscheduler.h \
-    datalog.h
+    datalog.h \
+    autoexplorer.h
 

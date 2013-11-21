@@ -45,6 +45,7 @@
 #include "network.h"
 #include "specificationscheduler.h"
 #include "datalog.h"
+#include "autoexplorer.h"
 
 #include "wtf/ActionLogReport.h"
 
@@ -63,10 +64,14 @@ private:
     QString m_logTimePath;
     QString m_logRandomPath;
     QString m_url;
+    unsigned int m_autoExploreTimout;
+    bool m_autoExplore;
+    bool m_showWindow;
     QNetworkReplyControllableFactoryRecord* m_controllableFactory;
     TimeProviderRecord* m_timeProvider;
     RandomProviderRecord* m_randomProvider;
     SpecificationScheduler* m_scheduler;
+    AutoExplorer* m_autoExplorer;
 
 public slots:
     void slOnCloseEvent();
@@ -78,13 +83,19 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     , m_hbPath("/tmp/happensbefore.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
+    , m_autoExploreTimout(30)
+    , m_autoExplore(false)
+    , m_showWindow(true)
     , m_controllableFactory(new QNetworkReplyControllableFactoryRecord())
     , m_timeProvider(new TimeProviderRecord())
     , m_randomProvider(new RandomProviderRecord())
     , m_scheduler(new SpecificationScheduler(m_controllableFactory))
+    , m_autoExplorer(new AutoExplorer(m_window, m_window->page()->mainFrame(), m_autoExploreTimout))
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
+
+    // Recording specific setup
 
     m_timeProvider->attach();
     m_randomProvider->attach();
@@ -94,7 +105,20 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
 
     m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
 
-    loadWebsite(m_url);
+    // Load and explore the website
+
+    if (m_autoExplore) {
+        m_autoExplorer->explore(m_url);
+        QObject::connect(m_autoExplorer, SIGNAL(done()), this, SLOT(slOnCloseEvent()));
+    } else {
+        loadWebsite(m_url);
+    }
+
+    // Show window while running
+
+    if (m_showWindow) {
+        m_window->show();
+    }
 }
 
 void RecordClientApplication::handleUserOptions()
@@ -105,7 +129,9 @@ void RecordClientApplication::handleUserOptions()
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-schedule-path]"
                  << "[-happens-before-path]"
-                 << "[-timeout]"
+                 << "[-autoexplore]"
+                 << "[-autoexplore-timeout]"
+                 << "[-hidewindow]"
                  << "URL";
         exit(0);
     }
@@ -120,10 +146,19 @@ void RecordClientApplication::handleUserOptions()
         this->m_hbPath = takeOptionValue(&args, hbPathIndex);
     }
 
-    int timeoutIndex = args.indexOf("-timeout");
+    int timeoutIndex = args.indexOf("-autoexplore-timeout");
     if (timeoutIndex != -1) {
-        int timeout = takeOptionValue(&args, timeoutIndex).toInt();
-        QTimer::singleShot(timeout, this, SLOT(slOnCloseEvent()));
+        m_autoExploreTimout = takeOptionValue(&args, timeoutIndex).toInt();
+    }
+
+    int autoexploreIndex = args.indexOf("-autoexplore");
+    if (autoexploreIndex != -1) {
+        m_autoExplore = true;
+    }
+
+    int windowIndex = args.indexOf("-hidewindow");
+    if (windowIndex != -1) {
+        m_showWindow = false;
     }
 
     int lastArg = args.lastIndexOf(QRegExp("^-.*"));

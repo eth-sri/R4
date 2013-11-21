@@ -228,7 +228,13 @@ Q_SIGNALS:
 
     void pageChanged();
 
+    void automaticExplorationDone();
+
 private:
+    void emitAutomaticExplorationDone() {
+        emit automaticExplorationDone();
+    }
+
     friend class QGraphicsWebView;
     friend class QWebPage;
     friend class QWebPagePrivate;

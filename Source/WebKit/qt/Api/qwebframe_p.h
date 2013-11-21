@@ -159,6 +159,10 @@ public:
         return m_autoExplorationRemainingActions == 0;
     }
 
+    bool isAutoExplorationRunning() {
+        return m_autoExplorationTimer.isActive();
+    }
+
 private:
     unsigned int m_autoExplorationRemainingActions;
     WebCore::Timer<QWebFramePrivate> m_autoExplorationTimer;
