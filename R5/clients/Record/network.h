@@ -27,6 +27,7 @@
 #define NETWORK_H
 
 #include <QFile>
+#include <set>
 
 #include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
@@ -60,7 +61,9 @@ public:
     void writeNetworkFile();
 
     QNetworkReplyControllableRecord* construct(QNetworkReply* reply, QObject* parent=0) {
-        return new QNetworkReplyControllableRecord(reply, this, parent);
+        QNetworkReplyControllableRecord* session = new QNetworkReplyControllableRecord(reply, this, parent);
+        m_openNetworkSessions.insert(session);
+        return session;
     }
 
     unsigned int doneCounter() const {
@@ -70,6 +73,7 @@ public:
 private:
     QFile* m_fp;
     unsigned int m_doneCounter;
+    std::set<QNetworkReplyControllableRecord*> m_openNetworkSessions;
 };
 
 #endif // NETWORK_H

@@ -58,6 +58,13 @@ QNetworkReplyControllableFactoryRecord::~QNetworkReplyControllableFactoryRecord(
 void QNetworkReplyControllableFactoryRecord::writeNetworkFile()
 {
     if (m_fp->isOpen()) {
+
+        std::set<QNetworkReplyControllableRecord*>::iterator iter = m_openNetworkSessions.begin();
+        while (iter != m_openNetworkSessions.end()) {
+            (*iter)->getSnapshot()->serialize(m_fp);
+            iter++;
+        }
+
         m_fp->close();
     }
 }
@@ -68,5 +75,6 @@ void QNetworkReplyControllableFactoryRecord::controllableDone(QNetworkReplyContr
         controllable->getSnapshot()->serialize(m_fp);
     }
 
+    m_openNetworkSessions.erase(controllable);
     m_doneCounter++;
 }
