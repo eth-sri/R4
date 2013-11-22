@@ -40,6 +40,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderRe
     , m_timeProvider(timeProvider)
     , m_randomProvider(randomProvider)
     , m_scheduleWaits(0)
+    , m_relaxedReplayMode(false)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -68,16 +69,40 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     }
 
     WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
+
+    // Detect relax token
+
+    if (nextToSchedule.isNull()) {
+        std::cout << "Entered relaxed replay mode" << std::endl;
+
+        m_relaxedReplayMode = true;
+        emit sigEnteredRelaxedReplayMode();
+
+        m_schedule->remove(0);
+
+        if (m_schedule->isEmpty()) {
+            emit sigDone();
+            return;
+        }
+
+        nextToSchedule = m_schedule->first().second;
+    }
+
+    // Exact execution
+
     std::string eventActionType = nextToSchedule.getType();
 
-    // try to execute this directly
     m_timeProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
     m_randomProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
+
     bool found = eventActionRegister->runEventAction(nextToSchedule);
+
     m_timeProvider->unsetCurrentDescriptorString();
     m_randomProvider->unsetCurrentDescriptorString();
 
-    if (!found)
+    // Relaxed execution
+
+    if (!found && m_relaxedReplayMode)
 
 
         // Try to do a fuzzy match
@@ -149,11 +174,15 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
                 std::cout << "Fuzzy match of scheduler name, renaming " << nextToSchedule.toString() << " to " << bestDescriptor.toString() << std::endl;
                 m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
                 m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
+
                 found = eventActionRegister->runEventAction(bestDescriptor);
+
                 m_timeProvider->unsetCurrentDescriptorString();
                 m_randomProvider->unsetCurrentDescriptorString();
             }
     }
+
+
 
     if (found) {
         m_schedule->remove(0);

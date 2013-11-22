@@ -68,6 +68,7 @@ private:
 
 public slots:
     void slSchedulerDone();
+    void slEnteredRelaxedMode();
 };
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
@@ -85,6 +86,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
 
     ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_timeProvider, m_randomProvider);
     QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
+    QObject::connect(scheduler, SIGNAL(sigEnteredRelaxedReplayMode()), this, SLOT(slEnteredRelaxedMode()));
 
     WebCore::ThreadTimers::setScheduler(scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
@@ -101,6 +103,13 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     if (m_showWindow) {
         m_window->show();
     }
+}
+
+void ReplayClientApplication::slEnteredRelaxedMode()
+{
+    m_timeProvider->setRelaxedMode(true);
+    m_randomProvider->setRelaxedMode(true);
+    m_network->setRelaxedMode(true);
 }
 
 void ReplayClientApplication::handleUserOptions()

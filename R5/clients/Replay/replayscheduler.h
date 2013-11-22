@@ -66,7 +66,10 @@ private:
 
     unsigned int m_scheduleWaits;
 
+    bool m_relaxedReplayMode;
+
 signals:
+    void sigEnteredRelaxedReplayMode();
     void sigDone();
 };
 

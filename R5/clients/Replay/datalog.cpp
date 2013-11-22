@@ -37,6 +37,7 @@
 TimeProviderReplay::TimeProviderReplay(QString logPath)
     : JSC::TimeProviderDefault()
     , m_stopped(false)
+    , m_relaxedReplayMode(false)
 {
     deserialize(logPath);
 }
@@ -57,8 +58,15 @@ double TimeProviderReplay::currentTime()
 
     Log::iterator iter = m_log.find(m_currentDescriptorString);
 
-    ASSERT(iter != m_log.end());
-    ASSERT(!iter->isEmpty());
+    if (iter == m_log.end() || iter->isEmpty()) {
+
+        if (m_relaxedReplayMode) {
+            return time;
+        }
+
+        std::cerr << "Error, accessing time when no recorded time is available (exact mode)." << std::endl;
+        CRASH();
+    }
 
     return iter->takeFirst();
 }
@@ -85,6 +93,7 @@ void TimeProviderReplay::deserialize(QString path)
 RandomProviderReplay::RandomProviderReplay(QString logPath)
     : JSC::RandomProviderDefault()
     , m_stopped(false)
+    , m_relaxedReplayMode(false)
 {
     deserialize(logPath);
 }
@@ -107,15 +116,11 @@ double RandomProviderReplay::get()
 
     if (iter == m_double_log.end() || iter->isEmpty()) {
 
-        std::cout << "Remaining random numbers" << std::endl;
-
-        DLog::iterator it = m_double_log.begin();
-        while (it != m_double_log.end()) {
-            std::cout << it.key().toStdString() << " contains " << it->size() << std::endl;
-            it++;
+        if (m_relaxedReplayMode) {
+            return random;
         }
 
-        std::cerr << "Error, accessing random number when no recorded random number is available." << std::endl;
+        std::cerr << "Error, accessing random number when no recorded random number is available (exact mode)." << std::endl;
         CRASH();
     }
 
@@ -138,8 +143,15 @@ unsigned RandomProviderReplay::getUint32()
 
     ULog::iterator iter = m_unsigned_log.find(m_currentDescriptorString);
 
-    ASSERT(iter != m_unsigned_log.end());
-    ASSERT(!iter->isEmpty());
+    if (iter == m_unsigned_log.end() || iter->isEmpty()) {
+
+        if (m_relaxedReplayMode) {
+            return random;
+        }
+
+        std::cerr << "Error, accessing random number when no recorded random number is available (exact mode)." << std::endl;
+        CRASH();
+    }
 
     return iter->takeFirst();
 }

@@ -51,6 +51,10 @@ public:
 
     WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
 
+    void setRelaxedMode(bool value) {
+        m_relaxedReplayMode = value;
+    }
+
     void stop() {
         m_stopped = true;
     }
@@ -60,6 +64,7 @@ private:
     typedef QHash<QString, SnapshotList*> SnapshotMap;
     SnapshotMap m_snapshots;
     bool m_stopped;
+    bool m_relaxedReplayMode;
 };
 
 #endif // NETWORK_H

@@ -55,6 +55,7 @@ QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(QNetworkReply* 
 QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay()
     : QNetworkReplyControllableFactory()
     , m_stopped(false)
+    , m_relaxedReplayMode(false)
 {
     QFile fp(QString::fromAscii("/tmp/network.data"));
     fp.open(QIODevice::ReadOnly);
@@ -98,44 +99,48 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
 
     // Fuzzy matching
 
-    std::cout << "Warning: No exact match for URL (" << reply->url().toString().toStdString() << ") found, fuzzy matching" << std::endl;
+    if (m_relaxedReplayMode) {
 
-    FuzzyUrlMatcher matcher(reply->url());
+        std::cout << "Warning: No exact match for URL (" << reply->url().toString().toStdString() << ") found, fuzzy matching" << std::endl;
 
-    unsigned int bestScore = 0;
-    WebCore::QNetworkReplyInitialSnapshot* bestSnapshot = NULL;
-    SnapshotMap::const_iterator bestList;
+        FuzzyUrlMatcher matcher(reply->url());
 
-    iter = m_snapshots.begin();
-    for (; iter != m_snapshots.end(); iter++) {
+        unsigned int bestScore = 0;
+        WebCore::QNetworkReplyInitialSnapshot* bestSnapshot = NULL;
+        SnapshotMap::const_iterator bestList;
 
-        if ((*iter)->isEmpty()) {
-            continue; // skip emtpy lists
+        iter = m_snapshots.begin();
+        for (; iter != m_snapshots.end(); iter++) {
+
+            if ((*iter)->isEmpty()) {
+                continue; // skip emtpy lists
+            }
+
+            WebCore::QNetworkReplyInitialSnapshot* snapshot = (*iter)->first();
+
+            unsigned int score = matcher.score(snapshot->getUrl());
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestSnapshot = snapshot;
+                bestList = iter;
+            }
         }
 
-        WebCore::QNetworkReplyInitialSnapshot* snapshot = (*iter)->first();
+        if (bestSnapshot != NULL) {
+            // We found a fuzzy match
 
-        unsigned int score = matcher.score(snapshot->getUrl());
+            std::cout << "Fuzzy match found (" << bestSnapshot->getUrl().toString().toStdString() << ")" << std::endl;
 
-        if (score > bestScore) {
-            bestScore = score;
-            bestSnapshot = snapshot;
-            bestList = iter;
+            (*bestList)->pop_front();
+            return new QNetworkReplyControllableReplay(reply, bestSnapshot, parent);
         }
+
+        std::cout << "Fuzzy match not found, using a live connection (relaxed mode)" << std::endl;
+        return new WebCore::QNetworkReplyControllableLive(reply, parent);
     }
 
-    if (bestSnapshot != NULL) {
-        // We found a fuzzy match
-
-        std::cout << "Fuzzy match found (" << bestSnapshot->getUrl().toString().toStdString() << ")" << std::endl;
-
-        (*bestList)->pop_front();
-        return new QNetworkReplyControllableReplay(reply, bestSnapshot, parent);
-    }
-
-    std::cout << "Fuzzy match not found, using a live connection (best effort)" << std::endl;
-    return new WebCore::QNetworkReplyControllableLive(reply, parent);
-
-
+    std::cerr << "Error, unknown network request in exact mode." << std::endl;
+    CRASH();
 
 }

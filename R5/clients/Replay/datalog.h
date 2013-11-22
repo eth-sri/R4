@@ -51,12 +51,17 @@ public:
         m_currentDescriptorString = QString();
     }
 
+    void setRelaxedMode(bool value) {
+        m_relaxedReplayMode = value;
+    }
+
     void stop() {
         m_stopped = true;
     }
 
 private:
     bool m_stopped;
+    bool m_relaxedReplayMode;
 
     typedef QList<double> LogEntries;
     typedef QHash<QString, LogEntries> Log;
@@ -85,12 +90,17 @@ public:
         m_currentDescriptorString = QString();
     }
 
+    void setRelaxedMode(bool value) {
+        m_relaxedReplayMode = value;
+    }
+
     void stop() {
         m_stopped = true;
     }
 
 private:
     bool m_stopped;
+    bool m_relaxedReplayMode;
 
     typedef QList<double> DLogEntries;
     typedef QHash<QString, DLogEntries> DLog;

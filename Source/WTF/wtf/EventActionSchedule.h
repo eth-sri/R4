@@ -39,6 +39,7 @@ namespace WebCore {
 
     typedef std::pair<WTF::EventActionId, WTF::EventActionDescriptor> EventActionScheduleItem;
 
+    // TODO(WebERA): This should not be a vector, since we often remove the 0'th item when replaying.
     class EventActionSchedule : public WTF::Vector<EventActionScheduleItem> {
 
     public:
