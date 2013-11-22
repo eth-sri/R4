@@ -91,6 +91,7 @@ void AutoExplorer::explorationKeepAlive()
     if (m_numFramesLoading == 0) {
         m_frame->runAutomaticExploration();
     }
+
     m_explorationKeepAliveTimer.start();
 }
 

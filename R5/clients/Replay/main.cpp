@@ -35,6 +35,7 @@
 #include <QObject>
 #include <QHash>
 #include <QList>
+#include <QTimer>
 
 #include <config.h>
 
@@ -43,6 +44,7 @@
 #include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
+#include "utils.h"
 #include "clientapplication.h"
 #include "replayscheduler.h"
 #include "network.h"
@@ -69,6 +71,7 @@ private:
 public slots:
     void slSchedulerDone();
     void slEnteredRelaxedMode();
+    void slTimeout();
 };
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
@@ -119,6 +122,7 @@ void ReplayClientApplication::handleUserOptions()
     if (args.contains(QString::fromAscii("-help")) || args.size() == 1) {
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-hidewindow]"
+                 << "[-timeout]"
                  << "<URL> <schedule>";
         exit(0);
     }
@@ -128,8 +132,20 @@ void ReplayClientApplication::handleUserOptions()
         m_showWindow = false;
     }
 
-    m_url = args.at(1);
-    m_schedulePath = args.at(2);
+    int timeoutIndex = args.indexOf("-timeout");
+    if (timeoutIndex != -1) {
+        QTimer::singleShot(takeOptionValue(&args, timeoutIndex).toInt() * 1000, this, SLOT(slTimeout()));
+    }
+
+    int lastArg = args.lastIndexOf(QRegExp("^-.*"));
+
+    m_url = (lastArg != -1) ? args.at(++lastArg) : args.at(1);
+    m_schedulePath = args.at(++lastArg);
+}
+
+void ReplayClientApplication::slTimeout() {
+    std::cerr << "Error, replay timeout reached" << std::endl;
+    QApplication::exit(1);
 }
 
 void ReplayClientApplication::slSchedulerDone()

@@ -146,7 +146,7 @@ if __name__ == '__main__':
         
             print(' replaying...')
             replay_log = subprocess.check_output(
-                [abs_path('clients/Replay/bin/replay'), "-hidewindow", site, "/tmp/schedule.data"],
+                [abs_path('clients/Replay/bin/replay'), "-timeout", "180", "-hidewindow", site, "/tmp/schedule.data"],
                 stderr=subprocess.STDOUT)
 
             success = True
