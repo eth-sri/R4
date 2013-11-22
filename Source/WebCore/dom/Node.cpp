@@ -1330,7 +1330,7 @@ String Node::getNodeReplayIdentifier() const {
             String uri = baseURI().string();
 			String id = el->getIdAttribute().string();
 			return String::format("%s @ ID=%s",
-					uri.isNull() ? "" : uri.utf8().data(),
+                    uri.isNull() ? "-empty-" : uri.utf8().data(),
 					id.isNull() ? "" : id.utf8().data());
 		}
 	}
@@ -1346,7 +1346,7 @@ String Node::getNodeReplayIdentifier() const {
 
 	String uri = baseURI().string();
 	return String::format("%s @ %s[%d]",
-			uri.isNull() ? "" : uri.utf8().data(),
+            uri.isNull() ? "-empty-" : uri.utf8().data(),
 			name.isNull() ? "" : name.utf8().data(),
 			nodeIndex());
 }

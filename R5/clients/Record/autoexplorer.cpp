@@ -73,6 +73,8 @@ void AutoExplorer::explore(const QString& url, unsigned int preExploreTimeout, u
 
         connect(m_frame, SIGNAL(loadStarted()), &m_preExplorationTimer, SLOT(start()));
         connect(&m_preExplorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
+
+        m_preExplorationTimer.start();
     }
 
     // m_explorationTimer - limit the timeframe in which we do exploration

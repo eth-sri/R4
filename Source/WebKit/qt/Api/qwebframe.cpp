@@ -1034,8 +1034,9 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
         // Running 1921 : 2-AUTO(mousedown, @ ID=inlineTileContainer)
         // Warning: Node ( @ ID=inlineTileContainer) not found...
         // Notice, that when we kept a void pointer for this node, the pointer was invalid when we tried to use it at a later time.
+        // TODO(WebERA): This should result in a crash
+        std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
 
-        std::cerr << "Warning: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
         updateAutoExplorationTimer();
         return; // skip
     }
