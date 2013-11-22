@@ -140,7 +140,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
         return new WebCore::QNetworkReplyControllableLive(reply, parent);
     }
 
-    std::cerr << "Error, unknown network request in exact mode." << std::endl;
+    std::cerr << "Error, unknown network request (" << reply->url().toString().toStdString() << ") in exact mode." << std::endl;
     CRASH();
 
 }

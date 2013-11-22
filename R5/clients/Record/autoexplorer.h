@@ -33,10 +33,10 @@ class AutoExplorer : public QObject {
     Q_OBJECT
 
 public:
-    AutoExplorer(QMainWindow* window, QWebFrame* frame, unsigned int preExploreTimeout);
+    AutoExplorer(QMainWindow* window, QWebFrame* frame);
 
 public slots:
-    void explore(const QString& url);
+    void explore(const QString& url, unsigned int preExploreTimeout, unsigned int explorationTimeout);
 
 private slots:
     void frameLoadStarted();

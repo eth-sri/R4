@@ -32,22 +32,11 @@
 #include <QDebug>
 #include <QWebPage>
 
-AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame, unsigned int preExploreTimeout)
+AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame)
     : m_window(window)
     , m_frame(frame)
     , m_numFramesLoading(0)
 {
-
-    // preExploreTimeout - the time we will allow the analysis to run before the page is loaded and exploration starts
-    // if we can't reach this timeout then we will stop
-
-    if (preExploreTimeout > 0) {
-        m_preExplorationTimer.setInterval(preExploreTimeout * 1000);
-        m_preExplorationTimer.setSingleShot(true);
-
-        connect(m_frame, SIGNAL(loadStarted()), &m_preExplorationTimer, SLOT(start()));
-        connect(&m_preExplorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
-    }
 
     // Track the current number of frames being loaded
     // loadStarted and loadFinished on QWebPage is emitted for each frame/sub-frame
@@ -63,12 +52,6 @@ AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame, unsigned int p
 
     connect(m_frame, SIGNAL(automaticExplorationDone()), this, SLOT(stop()));
 
-    // m_explorationTimer - limit the timeframe in which we do exploration
-
-    m_explorationTimer.setInterval(120 * 1000);
-    m_explorationTimer.setSingleShot(true);
-    connect(&m_explorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
-
     // This timer is used to reactivate auto exploration, since auto exploration stops
     // if there are nothing to do (often happens when initializing a page)
 
@@ -77,9 +60,28 @@ AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame, unsigned int p
 
 }
 
-void AutoExplorer::explore(const QString& url)
+void AutoExplorer::explore(const QString& url, unsigned int preExploreTimeout, unsigned int explorationTimeout)
 {
     m_frame->load(url);
+
+    // preExploreTimeout - the time we will allow the analysis to run before the page is loaded and exploration starts
+    // if we can't reach this timeout then we will stop
+
+    if (preExploreTimeout > 0) {
+        m_preExplorationTimer.setInterval(preExploreTimeout * 1000);
+        m_preExplorationTimer.setSingleShot(true);
+
+        connect(m_frame, SIGNAL(loadStarted()), &m_preExplorationTimer, SLOT(start()));
+        connect(&m_preExplorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
+    }
+
+    // m_explorationTimer - limit the timeframe in which we do exploration
+
+    if (explorationTimeout > 0) {
+        m_explorationTimer.setInterval(explorationTimeout * 1000);
+        m_explorationTimer.setSingleShot(true);
+        connect(&m_explorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
+    }
 }
 
 void AutoExplorer::explorationKeepAlive()

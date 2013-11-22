@@ -64,6 +64,7 @@ private:
     QString m_logTimePath;
     QString m_logRandomPath;
     QString m_url;
+    unsigned int m_autoExplorePreTimout;
     unsigned int m_autoExploreTimout;
     bool m_autoExplore;
     bool m_showWindow;
@@ -83,6 +84,7 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     , m_hbPath("/tmp/happensbefore.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
+    , m_autoExplorePreTimout(30)
     , m_autoExploreTimout(30)
     , m_autoExplore(false)
     , m_showWindow(true)
@@ -90,7 +92,7 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     , m_timeProvider(new TimeProviderRecord())
     , m_randomProvider(new RandomProviderRecord())
     , m_scheduler(new SpecificationScheduler(m_controllableFactory))
-    , m_autoExplorer(new AutoExplorer(m_window, m_window->page()->mainFrame(), m_autoExploreTimout))
+    , m_autoExplorer(new AutoExplorer(m_window, m_window->page()->mainFrame()))
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
@@ -108,7 +110,7 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     // Load and explore the website
 
     if (m_autoExplore) {
-        m_autoExplorer->explore(m_url);
+        m_autoExplorer->explore(m_url, m_autoExplorePreTimout, m_autoExploreTimout);
         QObject::connect(m_autoExplorer, SIGNAL(done()), this, SLOT(slOnCloseEvent()));
     } else {
         loadWebsite(m_url);
@@ -131,6 +133,7 @@ void RecordClientApplication::handleUserOptions()
                  << "[-happens-before-path]"
                  << "[-autoexplore]"
                  << "[-autoexplore-timeout]"
+                 << "[-pre-autoexplore-timeout]"
                  << "[-hidewindow]"
                  << "URL";
         exit(0);
@@ -149,6 +152,11 @@ void RecordClientApplication::handleUserOptions()
     int timeoutIndex = args.indexOf("-autoexplore-timeout");
     if (timeoutIndex != -1) {
         m_autoExploreTimout = takeOptionValue(&args, timeoutIndex).toInt();
+    }
+
+    int preTimeoutIndex = args.indexOf("-pre-autoexplore-timeout");
+    if (preTimeoutIndex != -1) {
+        m_autoExplorePreTimout = takeOptionValue(&args, preTimeoutIndex).toInt();
     }
 
     int autoexploreIndex = args.indexOf("-autoexplore");
