@@ -39,6 +39,7 @@
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
+#include <WebCore/platform/schedule/DefaultScheduler.h>
 
 #include "utils.h"
 #include "clientapplication.h"
@@ -71,7 +72,8 @@ private:
     QNetworkReplyControllableFactoryRecord* m_controllableFactory;
     TimeProviderRecord* m_timeProvider;
     RandomProviderRecord* m_randomProvider;
-    SpecificationScheduler* m_scheduler;
+    //SpecificationScheduler* m_scheduler;
+    WebCore::DefaultScheduler* m_scheduler;
     AutoExplorer* m_autoExplorer;
 
 public slots:
@@ -91,7 +93,8 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     , m_controllableFactory(new QNetworkReplyControllableFactoryRecord())
     , m_timeProvider(new TimeProviderRecord())
     , m_randomProvider(new RandomProviderRecord())
-    , m_scheduler(new SpecificationScheduler(m_controllableFactory))
+    //, m_scheduler(new SpecificationScheduler(m_controllableFactory))
+    , m_scheduler(new WebCore::DefaultScheduler())
     , m_autoExplorer(new AutoExplorer(m_window, m_window->page()->mainFrame()))
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
@@ -206,7 +209,7 @@ void RecordClientApplication::slOnCloseEvent()
     m_timeProvider->writeLogFile(m_logTimePath);
     m_randomProvider->writeLogFile(m_logRandomPath);
 
-    m_scheduler->stop();
+    //m_scheduler->stop();
     m_window->close();
 }
 
