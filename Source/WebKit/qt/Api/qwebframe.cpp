@@ -1009,8 +1009,6 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
     ActionLogScope scope("auto:explore");
     ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
 
-    // TODO(WebERA): I'm not sure about all of this Node*<->void* casting we are doing. Could we avoid it?
-
     QList<QWebElement> allEls = q->findAllElements(QString::fromAscii("*")).toList();
     allEls.append(q->documentElement().parent());
 
@@ -1032,6 +1030,11 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
     }
 
     if (target.isNull()) {
+        // TODO(WebERA): In some cases we can't find nodes again. The following nodes has been observed for https://maps.google.com
+        // Running 1921 : 2-AUTO(mousedown, @ ID=inlineTileContainer)
+        // Warning: Node ( @ ID=inlineTileContainer) not found...
+        // Notice, that when we kept a void pointer for this node, the pointer was invalid when we tried to use it at a later time.
+
         std::cerr << "Warning: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
         updateAutoExplorationTimer();
         return; // skip
