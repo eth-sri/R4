@@ -117,7 +117,8 @@ bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<Eve
 	ActionLogFormat(ActionLog::MEMORY_VALUE, "Event[%p]", static_cast<void*>(listener.get()));
 
     // SRL: Note that an event listener was added for the auto-exploration to run it later.
-    if (toNode() != 0) {
+    if (toNode() != 0 && !toNode()->baseURI().string().isNull()) {
+        // don't add nodes without a baseURI, we cant find them again
         getEventAttachLog()->addEventStr(toNode()->getNodeReplayIdentifier(), eventType.string().ascii().data());
     }
 
