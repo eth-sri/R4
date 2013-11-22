@@ -141,7 +141,7 @@ if __name__ == '__main__':
         
             print(' recording...')
             record_log = subprocess.check_output(
-                [abs_path('clients/Record/bin/record'), "-autoexplore", "-autoexplore-timeout", "120", "-hidewindow", site], 
+                [abs_path('clients/Record/bin/record'), "-autoexplore", "-pre-autoexplore-timeout", "40",  "-autoexplore-timeout", "40", "-hidewindow", site], 
                 stderr=subprocess.STDOUT)
         
             print(' replaying...')

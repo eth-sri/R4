@@ -57,6 +57,9 @@ public:
     }
 
 private:
+
+    bool executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister);
+
     std::string getNetworkSequenceId(const WTF::EventActionDescriptor& descriptor) const {
         return descriptor.getParameter(0) + "," + descriptor.getParameter(1);
     }

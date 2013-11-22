@@ -104,8 +104,15 @@ void SpecificationScheduler::eventActionDescheduled(const WTF::EventActionDescri
 
 void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
 {
+    while (executeDelayedEventAction(eventActionRegister)) {
+        continue; // execute until empty;
+    }
+}
+
+bool SpecificationScheduler::executeDelayedEventAction(WebCore::EventActionRegister *eventActionRegister)
+{
     if (m_stopped) {
-        return;
+        return false;
     }
 
     // Force ongoing network events to finish before anything else
@@ -130,13 +137,14 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
 
         }
 
-        return;
+        return false;
     }
 
     if (!m_parsingQueue.empty()) {
 
         if (eventActionRegister->runEventAction(m_parsingQueue.front())) {
             m_parsingQueue.pop();
+            return true;
         }
 
     } else if (!m_networkQueue.empty()) {
@@ -174,11 +182,16 @@ void SpecificationScheduler::executeDelayedEventActions(WebCore::EventActionRegi
                     }
                 }
             }
+
+            return true;
         }
 
     } else if (!m_otherQueue.empty()) {
         if (eventActionRegister->runEventAction(m_otherQueue.front())) {
             m_otherQueue.pop();
+            return true;
         }
     }
+
+    return false;
 }

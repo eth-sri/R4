@@ -58,6 +58,8 @@ public:
 
 private:
 
+    bool executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister);
+
     void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
 
     WebCore::EventActionSchedule* m_schedule;

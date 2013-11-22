@@ -62,10 +62,16 @@ void ReplayScheduler::eventActionScheduled(const WTF::EventActionDescriptor&,
 
 void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
 {
+    while (executeDelayedEventAction(eventActionRegister)) {
+        continue;
+    }
+}
 
+bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister)
+{
     if (m_schedule->isEmpty()) {
         emit sigDone();
-        return;
+        return false;
     }
 
     WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
@@ -82,7 +88,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
         if (m_schedule->isEmpty()) {
             emit sigDone();
-            return;
+            return false;
         }
 
         nextToSchedule = m_schedule->first().second;
@@ -192,7 +198,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
             emit sigDone(); // send early warning that we are done, such that we can tell other replay subsystems that we are on unknown grounds
         }
 
-        return;
+        return true;
     }
 
     // timer not registered yet
@@ -206,6 +212,8 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
     }
 
     m_scheduleWaits++;
+
+    return false;
 }
 
 bool ReplayScheduler::isFinished()
