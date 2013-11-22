@@ -52,12 +52,6 @@ AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame)
 
     connect(m_frame, SIGNAL(automaticExplorationDone()), this, SLOT(stop()));
 
-    // This timer is used to reactivate auto exploration, since auto exploration stops
-    // if there are nothing to do (often happens when initializing a page)
-
-    m_explorationKeepAliveTimer.setInterval(10);
-    connect(&m_explorationKeepAliveTimer, SIGNAL(timeout()), this, SLOT(explorationKeepAlive()));
-
 }
 
 void AutoExplorer::explore(const QString& url, unsigned int preExploreTimeout, unsigned int explorationTimeout)
@@ -84,6 +78,12 @@ void AutoExplorer::explore(const QString& url, unsigned int preExploreTimeout, u
         m_explorationTimer.setSingleShot(true);
         connect(&m_explorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
     }
+
+    // This timer is used to reactivate auto exploration, since auto exploration stops
+    // if there are nothing to do (often happens when initializing a page)
+
+    m_explorationKeepAliveTimer.setInterval(10);
+    connect(&m_explorationKeepAliveTimer, SIGNAL(timeout()), this, SLOT(explorationKeepAlive()));
 }
 
 void AutoExplorer::explorationKeepAlive()
