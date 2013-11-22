@@ -42,6 +42,7 @@ private slots:
     void frameLoadStarted();
     void frameLoadFinished();
     void differentPage();
+    void differentUrl(QUrl);
     void stop();
     void explorationKeepAlive();
 
@@ -49,6 +50,8 @@ signals:
     void done();
 
 private:
+
+    void startAutoExploration();
 
     QMainWindow* m_window;
     QWebFrame* m_frame;

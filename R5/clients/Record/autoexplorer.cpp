@@ -117,12 +117,24 @@ void AutoExplorer::frameLoadFinished()
 
     if (m_numFramesLoading == 0 && !m_explorationTimer.isActive()) {
         // only do this once
-
-        m_explorationKeepAliveTimer.start();
-        m_explorationTimer.start();
-
-        m_preExplorationTimer.stop();
+        startAutoExploration();
     }
+}
+
+void AutoExplorer::startAutoExploration()
+{
+    connect(m_frame, SIGNAL(urlChanged(QUrl)), this, SLOT(differentUrl(QUrl)));
+
+    m_explorationKeepAliveTimer.start();
+    m_explorationTimer.start();
+
+    m_preExplorationTimer.stop();
+}
+
+void AutoExplorer::differentUrl(QUrl)
+{
+    fprintf(stderr, "Page url changed. Stopping automation.\n");
+    stop();
 }
 
 void AutoExplorer::differentPage()
