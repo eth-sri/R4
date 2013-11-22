@@ -64,6 +64,7 @@ private:
     QNetworkReplyControllableFactoryReplay* m_network;
 
     bool m_isStopping;
+    bool m_showWindow;
 
 public slots:
     void slSchedulerDone();
@@ -74,6 +75,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     , m_timeProvider(new TimeProviderReplay("/tmp/log.time.data"))
     , m_randomProvider(new RandomProviderReplay("/tmp/log.random.data"))
     , m_isStopping(false)
+    , m_showWindow(true)
     , m_network(new QNetworkReplyControllableFactoryReplay())
 {
     handleUserOptions();
@@ -88,10 +90,17 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
 
     m_window->page()->enableReplayUserEventMode();
+    m_window->page()->mainFrame()->enableReplayUserEventMode();
 
     m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
 
     loadWebsite(m_url);
+
+    // Show window while running
+
+    if (m_showWindow) {
+        m_window->show();
+    }
 }
 
 void ReplayClientApplication::handleUserOptions()
@@ -99,8 +108,15 @@ void ReplayClientApplication::handleUserOptions()
     QStringList args = arguments();
 
     if (args.contains(QString::fromAscii("-help")) || args.size() == 1) {
-        qDebug() << "Usage:" << m_programName.toLatin1().data() << "<URL> <schedule>";
+        qDebug() << "Usage:" << m_programName.toLatin1().data()
+                 << "[-hidewindow]"
+                 << "<URL> <schedule>";
         exit(0);
+    }
+
+    int windowIndex = args.indexOf("-hidewindow");
+    if (windowIndex != -1) {
+        m_showWindow = false;
     }
 
     m_url = args.at(1);

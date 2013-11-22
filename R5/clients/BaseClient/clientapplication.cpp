@@ -19,7 +19,6 @@ ClientApplication::ClientApplication(int& argc, char** argv)
 void ClientApplication::loadWebsite(QString url)
 {
     m_window->load(url);
-    m_window->show();
 }
 
 void ClientApplication::applyDefaultSettings()
