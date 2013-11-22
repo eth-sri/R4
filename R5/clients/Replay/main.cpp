@@ -138,8 +138,10 @@ void ReplayClientApplication::handleUserOptions()
     }
 
     int lastArg = args.lastIndexOf(QRegExp("^-.*"));
+    if (lastArg == -1)
+        lastArg = 0;
 
-    m_url = (lastArg != -1) ? args.at(++lastArg) : args.at(1);
+    m_url = args.at(++lastArg);
     m_schedulePath = args.at(++lastArg);
 }
 
