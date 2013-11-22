@@ -117,9 +117,7 @@ bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<Eve
 	ActionLogFormat(ActionLog::MEMORY_VALUE, "Event[%p]", static_cast<void*>(listener.get()));
 
     // SRL: Note that an event listener was added for the auto-exploration to run it later.
-    if (toNode() == 0) {
-        std::cerr << "Warning: Event listener added to NULL node" << std::endl;
-    } else {
+    if (toNode() != 0) {
         getEventAttachLog()->addEventStr(toNode()->getNodeReplayIdentifier(), eventType.string().ascii().data());
     }
 

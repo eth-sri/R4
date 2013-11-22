@@ -944,9 +944,7 @@ Node::InsertionNotificationRequest Element::insertedInto(Node* insertionPoint)
     	 Attribute* href = getAttributeItem(HTMLNames::hrefAttr);
     	 if (href && !href->value().isNull() && href->value().startsWith("javascript:")) {
     		 // SRL: Auto-trigger an onclick event.
-             if (toNode() == 0) {
-                std::cerr << "Warning: Event listener added to NULL node" << std::endl;
-             } else {
+             if (toNode() != 0) {
                 getEventAttachLog()->addEvent(toNode()->getNodeReplayIdentifier(), EventAttachLog::EV_CLICK);
              }
     	 }
