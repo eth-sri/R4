@@ -63,8 +63,8 @@ QNetworkSnapshotCookieJar::QNetworkSnapshotCookieJar(QObject* parent)
 bool QNetworkSnapshotCookieJar::setCookiesFromUrl(const QList<QNetworkCookie>& cookieList, const QUrl& url)
 {
     if (HBIsCurrentEventActionValid()) { // only set cookies for schedulable elements
-        // TODO(WebERA-HB-REVIEW): Check if this is proper usage
-        ActionLogFormat(ActionLog::WRITE_MEMORY, "Cookie");
+        // TODO(WebERA-HB-REVIEW): Decide what we want to do with cookies
+        //ActionLogFormat(ActionLog::WRITE_MEMORY, "Cookie");
         return QNetworkCookieJar::setCookiesFromUrl(cookieList, url);
     } else {
         return false;
@@ -82,8 +82,8 @@ QList<QNetworkCookie> QNetworkSnapshotCookieJar::cookiesForUrl(const QUrl& url) 
         //
         // Discuss what we want to do here.
 
-        // TODO(WebERA-HB-REVIEW): Check if this is proper usage
-        ActionLogFormat(ActionLog::READ_MEMORY, "Cookie");
+        // TODO(WebERA-HB-REVIEW): Decide what we want to do with cookies
+        //ActionLogFormat(ActionLog::READ_MEMORY, "Cookie");
     }
 
     return QNetworkCookieJar::cookiesForUrl(url);
