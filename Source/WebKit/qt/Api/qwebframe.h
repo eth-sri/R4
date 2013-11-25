@@ -251,6 +251,7 @@ private:
 
     // WebERA:
     QUrl m_loadUrl;
+    bool m_providerEnabled;
 };
 
 #endif

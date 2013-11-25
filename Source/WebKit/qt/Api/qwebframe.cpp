@@ -599,6 +599,7 @@ void QWebFramePrivate::addQtSenderToGlobalObject()
 QWebFrame::QWebFrame(QWebPage *parent, QWebFrameData *frameData)
     : QObject(parent)
     , d(new QWebFramePrivate(this))
+    , m_providerEnabled(false)
 {
     d->page = parent;
     d->init(this, frameData);
@@ -616,6 +617,7 @@ QWebFrame::QWebFrame(QWebPage *parent, QWebFrameData *frameData)
 QWebFrame::QWebFrame(QWebFrame *parent, QWebFrameData *frameData)
     : QObject(parent)
     , d(new QWebFramePrivate(this))
+    , m_providerEnabled(false)
 {
     d->page = parent->d->page;
     d->init(this, frameData);
@@ -956,6 +958,8 @@ void QWebFrame::enableReplayUserEventMode() {
                 "AUTO",
                 &QWebFramePrivate::autoEventProvider,
                 d);
+
+    m_providerEnabled = true;
 }
 
 bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor)
@@ -972,6 +976,8 @@ bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDes
 
 void QWebFramePrivate::updateAutoExplorationTimer()
 {
+    ASSERT(!q->m_providerEnabled);
+
     if (!isAutoExplorationFinished()) {
 
         if (getEventAttachLog()->pullEvent(&m_nextAutoExplorationNodeIdentifier, &m_nextAutoExplorationType)) {
@@ -999,7 +1005,6 @@ void QWebFramePrivate::updateAutoExplorationTimer()
 void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer)
 {
     triggerEventOnNode(m_nextAutoExplorationType, m_nextAutoExplorationNodeIdentifier);
-
     updateAutoExplorationTimer();
     return;
 }
@@ -1037,7 +1042,6 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
         // TODO(WebERA): This should result in a crash
         std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
 
-        updateAutoExplorationTimer();
         return; // skip
     }
 
