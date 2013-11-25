@@ -965,7 +965,10 @@ bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDes
     EventAttachLog::EventType type = EventAttachLog::StrEventType(descriptor.getParameter(0).c_str());
     WTF::String nodeIdentifier = WTF::String(descriptor.getParameter(1).c_str());
 
-    ths->triggerEventOnNode(type, nodeIdentifier);
+    if (!ths->triggerEventOnNode(type, nodeIdentifier)) {
+        std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
+        CRASH();
+    }
 
     return true;
 }
@@ -985,12 +988,6 @@ bool QWebFrame::runAutomaticExploration() {
 
     WTF::String nodeIdentifier = static_cast<Node*>(node)->getNodeReplayIdentifier();
 
-    std::stringstream params;
-    params << EventAttachLog::EventTypeStr(type) << ",";
-    params << nodeIdentifier.ascii().data();
-
-    WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "AUTO", params.str());
-
     /**
      * Use immediate event actions in order to avoid internal races on the node identifiers.
      *
@@ -999,17 +996,16 @@ bool QWebFrame::runAutomaticExploration() {
      *
      */
 
-    threadGlobalData().threadTimers().eventActionRegister()->enterImmediateEventAction(ActionLog::USER_INTERFACE, descriptor);
-    d->triggerEventOnNode(type, nodeIdentifier);
-    threadGlobalData().threadTimers().eventActionRegister()->exitImmediateEventAction();
+    if (!d->triggerEventOnNode(type, nodeIdentifier)) {
+        std::cerr << "Warning: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
+    }
 
     return true;
 }
 
-void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier)
+bool QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier)
 {
-    ActionLogScope scope("auto:explore");
-    ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
+    // Find node
 
     QList<QWebElement> allEls = q->findAllElements(QString::fromAscii("*")).toList();
 
@@ -1033,16 +1029,25 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
     }
 
     if (target.isNull()) {
-        // TODO(WebERA): In some cases we can't find nodes again. The following nodes has been observed for https://maps.google.com
-        // Running 1921 : 2-AUTO(mousedown, @ ID=inlineTileContainer)
-        // Warning: Node ( @ ID=inlineTileContainer) not found...
-        // Notice, that when we kept a void pointer for this node, the pointer was invalid when we tried to use it at a later time.
-        // TODO(WebERA): This should result in a crash
-        std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
-        CRASH();
-
-        return; // skip
+        return false;
     }
+
+    // Node found, pre-trigger
+
+    if (!HBIsCurrentEventActionValid()) {
+        std::stringstream params;
+        params << EventAttachLog::EventTypeStr(type) << ",";
+        params << nodeIdentifier.ascii().data();
+
+        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "AUTO", params.str());
+
+        threadGlobalData().threadTimers().eventActionRegister()->enterImmediateEventAction(ActionLog::USER_INTERFACE, descriptor);
+    }
+
+    ActionLogScopeStart("auto:explore");
+    ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
+
+    // Trigger event on node
 
     //QByteArray elURI = target.namespaceUri().toLatin1();
     //fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
@@ -1122,7 +1127,16 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
     }
     //fprintf(stderr, "Event QWE\n");
 
+    // Cleanup
+
     ActionLogScopeEnd();
+    ActionLogScopeEnd();
+
+    if (!HBIsCurrentEventActionValid()) {
+        threadGlobalData().threadTimers().eventActionRegister()->exitImmediateEventAction();
+    }
+
+    return true;
 }
 
 void QWebFrame::loadAsync()

@@ -152,7 +152,7 @@ public:
     QWebFrame* m_parent;
 
     static bool autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
-    void triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier);
+    bool triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier);
 };
 
 class QWebHitTestResultPrivate {
