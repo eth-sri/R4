@@ -965,10 +965,14 @@ bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDes
     EventAttachLog::EventType type = EventAttachLog::StrEventType(descriptor.getParameter(0).c_str());
     WTF::String nodeIdentifier = WTF::String(descriptor.getParameter(1).c_str());
 
-    if (!ths->triggerEventOnNode(type, nodeIdentifier)) {
+    QWebElement target = ths->findElement(nodeIdentifier);
+
+    if (target.isNull()) {
         std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
         CRASH();
     }
+
+    ths->triggerEventOnNode(type, nodeIdentifier, target);
 
     return true;
 }
@@ -996,17 +1000,30 @@ bool QWebFrame::runAutomaticExploration() {
      *
      */
 
-    if (!d->triggerEventOnNode(type, nodeIdentifier)) {
+    QWebElement target = d->findElement(nodeIdentifier);
+
+    if (!target.isNull()) {
+
+        std::stringstream params;
+        params << EventAttachLog::EventTypeStr(type) << ",";
+        params << nodeIdentifier.ascii().data();
+
+        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "AUTO", params.str());
+
+        threadGlobalData().threadTimers().eventActionRegister()->enterImmediateEventAction(ActionLog::USER_INTERFACE, descriptor);
+        d->triggerEventOnNode(type, nodeIdentifier, target);
+        threadGlobalData().threadTimers().eventActionRegister()->exitImmediateEventAction();
+
+    } else {
+
         std::cerr << "Warning: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
     }
 
     return true;
 }
 
-bool QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier)
+QWebElement QWebFramePrivate::findElement(const WTF::String& nodeIdentifier)
 {
-    // Find node
-
     QList<QWebElement> allEls = q->findAllElements(QString::fromAscii("*")).toList();
 
     //fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
@@ -1028,26 +1045,14 @@ bool QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
         }
     }
 
-    if (target.isNull()) {
-        return false;
-    }
+    return target;
+}
 
-    // Node found, pre-trigger
-
-    if (!HBIsCurrentEventActionValid()) {
-        std::stringstream params;
-        params << EventAttachLog::EventTypeStr(type) << ",";
-        params << nodeIdentifier.ascii().data();
-
-        WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "AUTO", params.str());
-
-        threadGlobalData().threadTimers().eventActionRegister()->enterImmediateEventAction(ActionLog::USER_INTERFACE, descriptor);
-    }
+bool QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier, QWebElement target)
+{
 
     ActionLogScopeStart("auto:explore");
     ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
-
-    // Trigger event on node
 
     //QByteArray elURI = target.namespaceUri().toLatin1();
     //fprintf(stderr, "End QWE %p - %s, event %s\n", node, elURI.data(), EventAttachLog::EventTypeStr(type));
@@ -1127,14 +1132,8 @@ bool QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
     }
     //fprintf(stderr, "Event QWE\n");
 
-    // Cleanup
-
     ActionLogScopeEnd();
     ActionLogScopeEnd();
-
-    if (!HBIsCurrentEventActionValid()) {
-        threadGlobalData().threadTimers().eventActionRegister()->exitImmediateEventAction();
-    }
 
     return true;
 }

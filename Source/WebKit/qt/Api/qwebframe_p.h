@@ -151,8 +151,9 @@ public:
 
     QWebFrame* m_parent;
 
+    QWebElement findElement(const WTF::String& nodeIdentifier);
     static bool autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
-    bool triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier);
+    bool triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier, QWebElement target);
 };
 
 class QWebHitTestResultPrivate {
