@@ -688,24 +688,29 @@ void FrameLoader::checkCompleted(bool async)
         m_frame->view()->checkStopDelayingDeferredRepaints();
 
     // Have we completed before?
-    if (m_isComplete)
+    if (m_isComplete) {
         return;
+    }
 
     // Are we still parsing?
-    if (m_frame->document()->parsing())
+    if (m_frame->document()->parsing()) {
         return;
+    }
 
     // Still waiting for images/scripts?
-    if (m_frame->document()->cachedResourceLoader()->requestCount())
+    if (m_frame->document()->cachedResourceLoader()->requestCount()) {
         return;
+    }
 
     // Still waiting for elements that don't go through a FrameLoader?
-    if (m_frame->document()->isDelayingLoadEvent())
+    if (m_frame->document()->isDelayingLoadEvent()) {
         return;
+    }
 
     // Any frame that hasn't completed yet?
-    if (!allChildrenAreComplete())
+    if (!allChildrenAreComplete()) {
         return;
+    }
 
     // WebERA: We allow non-async calls such that the checkCompleted call to the parent frame (of a completed child) is done sync. as is normal behaviour
     if (async) {
