@@ -229,13 +229,17 @@ bool HTMLDocumentParser::canTakeNextToken(SynchronousMode mode, PumpSession& ses
         return false;
 
     // The parser will pause itself when waiting on a script to load or run.
-    if (m_treeBuilder->isPaused()) {
+    if (m_treeBuilder->isPaused()) { 
+        // WebERA: This is used for deferring the execution of scripts if there exist a pending layout repaint
+        // We can't allow this in WebERA since it would make it non-deterministic if we run the script or not.
+        /*
         if (mode == AllowYield)
             m_parserScheduler->checkForYieldBeforeScript(session);
 
         // If we don't run the script, we cannot allow the next token to be taken.
         if (session.needsYield)
             return false;
+        */
 
         // If we're paused waiting for a script, we try to execute scripts before continuing.
         bool shouldContinueParsing = runScriptsForPausedTreeBuilder();
