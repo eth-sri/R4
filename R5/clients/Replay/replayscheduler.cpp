@@ -27,6 +27,9 @@
 #include <fstream>
 #include <string>
 
+#include "wtf/ExportMacros.h"
+#include "platform/ThreadGlobalData.h"
+#include "platform/ThreadTimers.h"
 #include "platform/schedule/EventActionRegister.h"
 #include "wtf/ActionLogReport.h"
 
@@ -39,7 +42,6 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderRe
     , Scheduler()
     , m_timeProvider(timeProvider)
     , m_randomProvider(randomProvider)
-    , m_scheduleWaits(0)
     , m_relaxedReplayMode(false)
 {
     std::ifstream fp;
@@ -48,6 +50,10 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderRe
     fp.close();
 
     ActionLogStrictMode(false); // replaying does not play well with the action log
+
+    m_eventActionTimeoutTimer.setInterval(10 * 1000); // an event action must be executed within 10 seconds
+    m_eventActionTimeoutTimer.setSingleShot(true);
+    connect(&m_eventActionTimeoutTimer, SIGNAL(timeout()), this, SLOT(slEventActionTimeout()));
 }
 
 ReplayScheduler::~ReplayScheduler()
@@ -192,7 +198,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     if (found) {
         m_schedule->remove(0);
-        m_scheduleWaits = 0;
+
+        m_eventActionTimeoutTimer.stop();
 
         if (m_schedule->isEmpty()) {
             emit sigDone(); // send early warning that we are done, such that we can tell other replay subsystems that we are on unknown grounds
@@ -201,19 +208,21 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         return true;
     }
 
-    // timer not registered yet
-
-    if (m_scheduleWaits > 500) { // 500 is an arbitrary magic number
-        std::cerr << std::endl << "Error: Failed execution schedule after waiting for 500 iterations..." << std::endl;
-        std::cerr << "This is the current queue of events" << std::endl;
-        debugPrintTimers(eventActionRegister);
-
-        std::exit(1);
+    if (!m_eventActionTimeoutTimer.isActive()) {
+        m_eventActionTimeoutTimer.start(); // start timeout for this event action
     }
 
-    m_scheduleWaits++;
-
     return false;
+}
+
+void ReplayScheduler::slEventActionTimeout()
+{
+    std::cerr << std::endl << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
+
+    std::cerr << "This is the current queue of events" << std::endl;
+    debugPrintTimers(WebCore::threadGlobalData().threadTimers().eventActionRegister());
+
+    std::exit(1);
 }
 
 bool ReplayScheduler::isFinished()

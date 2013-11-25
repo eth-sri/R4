@@ -29,6 +29,7 @@
 #include <string>
 
 #include <QObject>
+#include <QTimer>
 
 #include <wtf/ExportMacros.h>
 #include <wtf/Vector.h>
@@ -66,9 +67,12 @@ private:
     TimeProviderReplay* m_timeProvider;
     RandomProviderReplay* m_randomProvider;
 
-    unsigned int m_scheduleWaits;
-
     bool m_relaxedReplayMode;
+
+    QTimer m_eventActionTimeoutTimer;
+
+private slots:
+    void slEventActionTimeout();
 
 signals:
     void sigEnteredRelaxedReplayMode();
