@@ -129,6 +129,7 @@ bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<Eve
 bool EventTarget::removeEventListener(const AtomicString& eventType, EventListener* listener, bool useCapture)
 {
     // SRL: Tell the auto-exploration that no more events can be accepted.
+    // TODO(WebERA): This removes all registered events for this target, which is a bit too much
     if (toNode() != 0) {
         getEventAttachLog()->removeEventTarget(toNode());
     }

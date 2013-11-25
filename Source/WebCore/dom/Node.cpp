@@ -399,6 +399,8 @@ void Node::trackForDebugging()
 Node::~Node()
 {
 #ifndef NDEBUG
+    getEventAttachLog()->removeEventTarget(this);
+
     HashSet<Node*>::iterator it = ignoreSet.find(this);
     if (it != ignoreSet.end())
         ignoreSet.remove(it);
