@@ -140,7 +140,6 @@ public:
     QString renderTreeDump() const;
 
     bool runAutomaticExploration();
-    bool isAutomaticExplorationDone();
     void enableReplayUserEventMode();
 
     QString title() const;
@@ -230,13 +229,7 @@ Q_SIGNALS:
 
     void pageChanged();
 
-    void automaticExplorationDone();
-
 private:
-    void emitAutomaticExplorationDone() {
-        emit automaticExplorationDone();
-    }
-
     friend class QGraphicsWebView;
     friend class QWebPage;
     friend class QWebPagePrivate;
@@ -251,7 +244,6 @@ private:
 
     // WebERA:
     QUrl m_loadUrl;
-    bool m_providerEnabled;
 };
 
 #endif

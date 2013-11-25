@@ -36,6 +36,8 @@ AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame)
     : m_window(window)
     , m_frame(frame)
     , m_numFramesLoading(0)
+    , m_numEventActionsExploredLimit(128)
+    , m_numFailedExplorationAttempts(0)
 {
 
     // Track the current number of frames being loaded
@@ -47,10 +49,6 @@ AutoExplorer::AutoExplorer(QMainWindow* window, QWebFrame* frame)
     // Monitor page changes
 
     connect(m_frame, SIGNAL(pageChanged()), this, SLOT(differentPage()));
-
-    // Stop when auto exploration is done
-
-    connect(m_frame, SIGNAL(automaticExplorationDone()), this, SLOT(stop()));
 
 }
 
@@ -79,24 +77,45 @@ void AutoExplorer::explore(const QString& url, unsigned int preExploreTimeout, u
         connect(&m_explorationTimer, SIGNAL(timeout()), this, SLOT(stop()));
     }
 
-    // This timer is used to reactivate auto exploration, since auto exploration stops
-    // if there are nothing to do (often happens when initializing a page)
+    // This timer is used to invoke each auto explored event action
+    // The event action is invoked immediately when this timer is fired (it is not deferred to an internal timer)
 
-    m_explorationKeepAliveTimer.setInterval(10);
+    m_explorationKeepAliveTimer.setInterval(500); // 500 ms
     connect(&m_explorationKeepAliveTimer, SIGNAL(timeout()), this, SLOT(explorationKeepAlive()));
 }
 
 void AutoExplorer::explorationKeepAlive()
 {
-    if (m_numFramesLoading == 0) {
-        m_frame->runAutomaticExploration();
+    if (m_numFramesLoading != 0) {
+        m_explorationKeepAliveTimer.start();
+        return;
+    }
+
+    bool success = m_frame->runAutomaticExploration();
+
+    if (success) {
+
+        m_numFailedExplorationAttempts = 0;
+        --m_numEventActionsExploredLimit;
+
+    } else {
+
+        ++m_numFailedExplorationAttempts;
+
+    }
+
+    // Stop if we have reached our execution limit or failure limit
+    if (m_numEventActionsExploredLimit == 0 || m_numFailedExplorationAttempts == 10) { // > 2.5 seconds
+        stop();
+        return;
     }
 
     m_explorationKeepAliveTimer.start();
+
 }
 
 void AutoExplorer::stop() {
-    if (!m_frame->isAutomaticExplorationDone()) {
+    if (m_numFailedExplorationAttempts == 10) { // > 2.5 seconds
         std::cerr << "Warning: Auto exploration not finished before stopping." << std::endl;
     }
 

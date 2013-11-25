@@ -83,7 +83,7 @@ EventTarget::~EventTarget()
 {
 	// SRL: Tell the auto-exploration that no more events can be accepted.
     if (toNode() != 0) {
-        getEventAttachLog()->removeEventTarget(toNode()->getNodeReplayIdentifier());
+        getEventAttachLog()->removeEventTarget(toNode());
     }
 }
 
@@ -119,7 +119,7 @@ bool EventTarget::addEventListener(const AtomicString& eventType, PassRefPtr<Eve
     // SRL: Note that an event listener was added for the auto-exploration to run it later.
     if (toNode() != 0 && !toNode()->baseURI().string().isNull()) {
         // don't add nodes without a baseURI, we cant find them again
-        getEventAttachLog()->addEventStr(toNode()->getNodeReplayIdentifier(), eventType.string().ascii().data());
+        getEventAttachLog()->addEventStr(toNode(), eventType.string().ascii().data());
     }
 
     EventTargetData* d = ensureEventTargetData();
@@ -130,7 +130,7 @@ bool EventTarget::removeEventListener(const AtomicString& eventType, EventListen
 {
     // SRL: Tell the auto-exploration that no more events can be accepted.
     if (toNode() != 0) {
-        getEventAttachLog()->removeEventTarget(toNode()->getNodeReplayIdentifier());
+        getEventAttachLog()->removeEventTarget(toNode());
     }
 
     EventTargetData* d = eventTargetData();

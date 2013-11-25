@@ -62,6 +62,9 @@ private:
     QTimer m_explorationTimer;
 
     QTimer m_explorationKeepAliveTimer;
+
+    unsigned int m_numEventActionsExploredLimit;
+    unsigned int m_numFailedExplorationAttempts;
 };
 
 #endif

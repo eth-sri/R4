@@ -182,6 +182,22 @@ void EventActionRegister::exitGhostEventAction()
     HBExitEventAction();
 }
 
+void EventActionRegister::enterImmediateEventAction(ActionLog::EventActionType type, const WTF::EventActionDescriptor& descriptor)
+{
+    WTF::EventActionId id = HBAllocateEventActionId();
+
+    std::cout << "Running[NOW] " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
+
+    eventActionDispatchStart(id, descriptor);
+    HBEnterEventAction(id, type);
+}
+
+void EventActionRegister::exitImmediateEventAction()
+{
+    HBExitEventAction();
+    eventActionDispatchEnd(true);
+}
+
 void EventActionRegister::debugPrintNames() const
 {
     std::cout << "Handlers ::" << std::endl;

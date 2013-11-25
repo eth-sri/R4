@@ -92,8 +92,6 @@ public:
 #endif
         , m_loadTimer(this, &QWebFramePrivate::loadAsync)
         , m_parent(parent)
-        , m_autoExplorationRemainingActions(128)
-        , m_autoExplorationTimer(this, &QWebFramePrivate::autoExplorationTimerFired)
         {}
     void init(QWebFrame* qframe, QWebFrameData* frameData);
     void setPage(QWebPage*);
@@ -153,26 +151,8 @@ public:
 
     QWebFrame* m_parent;
 
-    void updateAutoExplorationTimer();
-
-    bool isAutoExplorationFinished() {
-        return m_autoExplorationRemainingActions == 0;
-    }
-
-    bool isAutoExplorationRunning() {
-        return m_autoExplorationTimer.isActive();
-    }
-
     static bool autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
-
-private:
-    unsigned int m_autoExplorationRemainingActions;
-    WebCore::Timer<QWebFramePrivate> m_autoExplorationTimer;
-    void autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer);
     void triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier);
-
-    WTF::String m_nextAutoExplorationNodeIdentifier;
-    EventAttachLog::EventType m_nextAutoExplorationType;
 };
 
 class QWebHitTestResultPrivate {

@@ -945,7 +945,7 @@ Node::InsertionNotificationRequest Element::insertedInto(Node* insertionPoint)
     	 if (href && !href->value().isNull() && href->value().startsWith("javascript:")) {
     		 // SRL: Auto-trigger an onclick event.
              if (toNode() != 0) {
-                getEventAttachLog()->addEvent(toNode()->getNodeReplayIdentifier(), EventAttachLog::EV_CLICK);
+                getEventAttachLog()->addEvent(toNode(), EventAttachLog::EV_CLICK);
              }
     	 }
     }

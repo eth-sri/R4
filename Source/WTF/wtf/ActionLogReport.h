@@ -78,11 +78,11 @@ public:
 	static const char* EventTypeStr(EventType t);
     static EventAttachLog::EventType StrEventType(const char* t);
 
-    void addEventStr(const WTF::String& eventTarget, const char* str);
+    void addEventStr(void* eventTarget, const char* str);
 
-    virtual void removeEventTarget(const WTF::String& eventTarget) = 0;
-    virtual void addEvent(const WTF::String& eventTarget, EventType eventType) = 0;
-    virtual bool pullEvent(WTF::String* eventTarget, EventType* eventType) = 0;
+    virtual void removeEventTarget(void* eventTarget) = 0;
+    virtual void addEvent(void* eventTarget, EventType eventType) = 0;
+    virtual bool pullEvent(void** eventTarget, EventType* eventType) = 0;
 };
 
 EventAttachLog* getEventAttachLog();

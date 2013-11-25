@@ -599,7 +599,6 @@ void QWebFramePrivate::addQtSenderToGlobalObject()
 QWebFrame::QWebFrame(QWebPage *parent, QWebFrameData *frameData)
     : QObject(parent)
     , d(new QWebFramePrivate(this))
-    , m_providerEnabled(false)
 {
     d->page = parent;
     d->init(this, frameData);
@@ -617,7 +616,6 @@ QWebFrame::QWebFrame(QWebPage *parent, QWebFrameData *frameData)
 QWebFrame::QWebFrame(QWebFrame *parent, QWebFrameData *frameData)
     : QObject(parent)
     , d(new QWebFramePrivate(this))
-    , m_providerEnabled(false)
 {
     d->page = parent->d->page;
     d->init(this, frameData);
@@ -958,8 +956,6 @@ void QWebFrame::enableReplayUserEventMode() {
                 "AUTO",
                 &QWebFramePrivate::autoEventProvider,
                 d);
-
-    m_providerEnabled = true;
 }
 
 bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDescriptor& descriptor)
@@ -974,39 +970,40 @@ bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDes
     return true;
 }
 
-void QWebFramePrivate::updateAutoExplorationTimer()
-{
-    ASSERT(!q->m_providerEnabled);
+// SRL: A helper method for performing automatic exploration of a web page:
+//  - automatic generation of mouse events, clicking, focus events, filling forms.
+bool QWebFrame::runAutomaticExploration() {
 
-    if (!isAutoExplorationFinished()) {
+    // Runs 1 pending event action
 
-        if (getEventAttachLog()->pullEvent(&m_nextAutoExplorationNodeIdentifier, &m_nextAutoExplorationType)) {
+    void* node;
+    EventAttachLog::EventType type;
 
-            m_autoExplorationRemainingActions--;
-
-            std::stringstream params;
-            params << EventAttachLog::EventTypeStr(m_nextAutoExplorationType) << ",";
-            params << m_nextAutoExplorationNodeIdentifier.ascii().data();
-
-            m_autoExplorationTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::USER_INTERFACE, "AUTO", params.str()));
-            m_autoExplorationTimer.startOneShot(0);
-
-        }
-
-        // notice, auto exploration will stop if it can't do anything, but not emit the done signal
-        // we don't know if auto explorer can do something if the page loads/runs a bit longer - so the user
-        // of this api should wait and try again, and at some point stop.
-
-    } else {
-        q->emitAutomaticExplorationDone();
+    if (!getEventAttachLog()->pullEvent(&node, &type)) {
+        return false;
     }
-}
 
-void QWebFramePrivate::autoExplorationTimerFired(WebCore::Timer<QWebFramePrivate>* timer)
-{
-    triggerEventOnNode(m_nextAutoExplorationType, m_nextAutoExplorationNodeIdentifier);
-    updateAutoExplorationTimer();
-    return;
+    WTF::String nodeIdentifier = static_cast<Node*>(node)->getNodeReplayIdentifier();
+
+    std::stringstream params;
+    params << EventAttachLog::EventTypeStr(type) << ",";
+    params << nodeIdentifier.ascii().data();
+
+    WTF::EventActionDescriptor descriptor(WTF::USER_INTERFACE, "AUTO", params.str());
+
+    /**
+     * Use immediate event actions in order to avoid internal races on the node identifiers.
+     *
+     * If we schedule an event action A with a node identifier, and another event action B is executed between the
+     * schedulation of A and execution of A, then it is possible that the node identifier points to the wrong (or a non-existing) node.
+     *
+     */
+
+    threadGlobalData().threadTimers().eventActionRegister()->enterImmediateEventAction(ActionLog::USER_INTERFACE, descriptor);
+    d->triggerEventOnNode(type, nodeIdentifier);
+    threadGlobalData().threadTimers().eventActionRegister()->exitImmediateEventAction();
+
+    return true;
 }
 
 void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier)
@@ -1015,11 +1012,11 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
     ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
 
     QList<QWebElement> allEls = q->findAllElements(QString::fromAscii("*")).toList();
-    allEls.append(q->documentElement().parent());
 
     //fprintf(stderr, "Start QWE - %d elements\n", allEls.count());
     QWebElement target;
     foreach (QWebElement el, allEls) {
+        //std::cout << "CMP " << static_cast<Node*>(el.webkitNodePtr())->getNodeReplayIdentifier().ascii().data() << std::endl; // DEBUG
         if (!el.isNull() && static_cast<Node*>(el.webkitNodePtr())->getNodeReplayIdentifier() == nodeIdentifier) {
             target = el;
             break;
@@ -1028,6 +1025,7 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
 
     if (target.isNull()) {
         Node* root = static_cast<Node*>(q->documentElement().webkitNodePtr())->parentNode();
+        //std::cout << "CMP-ROOT " << root->getNodeReplayIdentifier().ascii().data() << std::endl;  // DEBUG
 
         if (root->getNodeReplayIdentifier() == nodeIdentifier) {
             target = q->documentElement(); //  the node pointed to by document element is the HTML node, it cant point to the "real" root Node*
@@ -1041,6 +1039,7 @@ void QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const 
         // Notice, that when we kept a void pointer for this node, the pointer was invalid when we tried to use it at a later time.
         // TODO(WebERA): This should result in a crash
         std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
+        CRASH();
 
         return; // skip
     }
@@ -1613,20 +1612,6 @@ QSize QWebFrame::contentsSize() const
     if (!view)
         return QSize();
     return QSize(view->contentsWidth(), view->contentsHeight());
-}
-
-// SRL: A helper method for performing automatic exploration of a web page:
-//  - automatic generation of mouse events, clicking, focus events, filling forms.
-bool QWebFrame::runAutomaticExploration() {
-    if (!d->isAutoExplorationRunning()) {
-        d->updateAutoExplorationTimer();
-    }
-
-    return !d->isAutoExplorationFinished();
-}
-
-bool QWebFrame::isAutomaticExplorationDone() {
-    return d->isAutoExplorationFinished();
 }
 
 /*!

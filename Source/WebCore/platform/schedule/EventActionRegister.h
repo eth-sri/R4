@@ -51,9 +51,16 @@ public:
     // Attempts to execute an event action. Returns true on success.
     bool runEventAction(const WTF::EventActionDescriptor& descriptor);
 
+    // TODO(WebERA): We should not use ghost operations anywere, it is a bit unclear how well we can replay them / reorder them
+
     // Ghost operations, used to simulate the execution of certain un-schedulable event actions
     void enterGhostEventAction(WTF::EventActionId id, ActionLog::EventActionType type);
     void exitGhostEventAction();
+
+    // Immediate operations, used to mark the current executing timer as a schedulable event action
+    // These are only feasible if combined with a event action provider for replay
+    void enterImmediateEventAction(ActionLog::EventActionType type, const WTF::EventActionDescriptor& descriptor);
+    void exitImmediateEventAction();
 
     // Used to inspect the currently executed event action globally
     const WTF::EventActionDescriptor& currentEventActionDispatching() const
