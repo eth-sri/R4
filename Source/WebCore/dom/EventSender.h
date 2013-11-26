@@ -30,7 +30,6 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/text/CString.h>
 
-#include <iostream>
 #include <sstream>
 #include <utility>
 #include <map>
@@ -110,8 +109,6 @@ template<typename T> EventSenderEvent<T>::EventSenderEvent(void* parent, T* send
     m_timer.startOneShot(0);
 
     m_params = params.str();
-
-    std::cout << "REGISTER " << m_params << std::endl;
 }
 
 template<typename T> void EventSenderEvent<T>::dispatchEvent()
@@ -126,13 +123,10 @@ template<typename T> void EventSenderEvent<T>::dispatchEvent()
     m_sender->dispatchPendingEvent(static_cast<EventSender<T>*>(m_parent));
 
     HBAddExplicitArc(m_parentEventAction, HBCurrentEventAction());
-
-    std::cout << "DISPATCH " << m_params << std::endl;
 }
 
 template<typename T> void EventSenderEvent<T>::cancelEvent()
 {
-    std::cout << "STOP " << m_params << std::endl;
     m_dispatched = true;
 }
 
