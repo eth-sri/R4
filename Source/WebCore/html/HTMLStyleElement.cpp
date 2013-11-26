@@ -255,7 +255,7 @@ void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOcc
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(this, m_sourceUrl);
+    styleLoadEventSender().dispatchEventSoon(this, "HTMLStyleElement", m_sourceUrl);
     m_firedLoad = true;
 }
 

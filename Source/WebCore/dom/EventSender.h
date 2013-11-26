@@ -30,6 +30,7 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/text/CString.h>
 
+#include <iostream>
 #include <sstream>
 #include <utility>
 #include <map>
@@ -48,7 +49,7 @@ template<typename T> class EventSenderEvent {
     WTF_MAKE_NONCOPYABLE(EventSenderEvent); WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    explicit EventSenderEvent(void* parent, T* sender, const AtomicString& eventType, const std::string& identifier);
+    explicit EventSenderEvent(void* parent, T* sender, const AtomicString& eventType, const std::string& owner, const std::string& identifier);
     ~EventSenderEvent() { cancelEvent(); }
 
     void dispatchEvent();
@@ -64,6 +65,8 @@ private:
     Timer<EventSenderEvent<T> > m_timer;
     bool m_dispatched;
     WTF::EventActionId m_parentEventAction;
+
+    std::string m_params;
 };
 
 template<typename T> class EventSender {
@@ -73,7 +76,7 @@ public:
     ~EventSender();
 
     const AtomicString& eventType() const { return m_eventType; }
-    void dispatchEventSoon(T*, const std::string&);
+    void dispatchEventSoon(T*, const std::string&, const std::string&);
     void cancelEvent(T*);
     void dispatchPendingEvents();
 
@@ -89,7 +92,7 @@ private:
 
 // EventSenderEvent
 
-template<typename T> EventSenderEvent<T>::EventSenderEvent(void* parent, T* sender, const AtomicString& eventType, const std::string& identifier)
+template<typename T> EventSenderEvent<T>::EventSenderEvent(void* parent, T* sender, const AtomicString& eventType, const std::string& owner, const std::string& identifier)
     : m_parent(parent)
     , m_sender(sender)
     , m_timer(this, &EventSenderEvent::timerFired)
@@ -98,12 +101,17 @@ template<typename T> EventSenderEvent<T>::EventSenderEvent(void* parent, T* send
 {
     std::stringstream params;
     params << eventType.string().ascii().data() << ",";
+    params << owner << ",";
     params << identifier;
 
     WTF::EventActionDescriptor descriptor(WTF::OTHER, "EventSender", params.str());
 
     m_timer.setEventActionDescriptor(descriptor);
     m_timer.startOneShot(0);
+
+    m_params = params.str();
+
+    std::cout << "REGISTER " << m_params << std::endl;
 }
 
 template<typename T> void EventSenderEvent<T>::dispatchEvent()
@@ -118,10 +126,13 @@ template<typename T> void EventSenderEvent<T>::dispatchEvent()
     m_sender->dispatchPendingEvent(static_cast<EventSender<T>*>(m_parent));
 
     HBAddExplicitArc(m_parentEventAction, HBCurrentEventAction());
+
+    std::cout << "DISPATCH " << m_params << std::endl;
 }
 
 template<typename T> void EventSenderEvent<T>::cancelEvent()
 {
+    std::cout << "STOP " << m_params << std::endl;
     m_dispatched = true;
 }
 
@@ -139,9 +150,9 @@ template<typename T> EventSender<T>::~EventSender()
     }
 }
 
-template<typename T> void EventSender<T>::dispatchEventSoon(T* sender, const std::string& identifier)
+template<typename T> void EventSender<T>::dispatchEventSoon(T* sender, const std::string& owner, const std::string& identifier)
 {
-    m_dispatchMap.insert(std::pair<T*, EventSenderEvent<T>*>(sender, new EventSenderEvent<T>(this, sender, m_eventType, identifier)));
+    m_dispatchMap.insert(std::pair<T*, EventSenderEvent<T>*>(sender, new EventSenderEvent<T>(this, sender, m_eventType, owner, identifier)));
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)
