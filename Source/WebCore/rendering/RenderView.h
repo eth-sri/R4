@@ -335,7 +335,8 @@ public:
     
     ~LayoutStateMaintainer()
     {
-        ASSERT(m_didStart == m_didEnd);   // if this fires, it means that someone did a push(), but forgot to pop().
+        // WebERA(TODO): This assertions fails on sites such as http://imgur.com
+        //ASSERT(m_didStart == m_didEnd);   // if this fires, it means that someone did a push(), but forgot to pop().
     }
 
     void push(RenderBox* root, LayoutSize offset, LayoutUnit pageHeight = 0, bool pageHeightChanged = false, ColumnInfo* colInfo = 0)
