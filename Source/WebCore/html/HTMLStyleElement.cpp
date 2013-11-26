@@ -52,6 +52,7 @@ inline HTMLStyleElement::HTMLStyleElement(const QualifiedName& tagName, Document
 #if ENABLE(STYLE_SCOPED)
     , m_isRegisteredWithScopingNode(false)
 #endif
+    , m_sourceUrl(document->baseURI().string().ascii().data())
 {
     ASSERT(hasTagName(styleTag));
 }
@@ -254,7 +255,7 @@ void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOcc
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(this);
+    styleLoadEventSender().dispatchEventSoon(this, m_sourceUrl);
     m_firedLoad = true;
 }
 

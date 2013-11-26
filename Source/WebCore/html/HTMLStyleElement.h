@@ -23,6 +23,8 @@
 #ifndef HTMLStyleElement_h
 #define HTMLStyleElement_h
 
+#include <string>
+
 #include "HTMLElement.h"
 #include "StyleElement.h"
 
@@ -88,6 +90,8 @@ private:
 #if ENABLE(STYLE_SCOPED)
     bool m_isRegisteredWithScopingNode;
 #endif
+
+    std::string m_sourceUrl;
 };
 
 } //namespace

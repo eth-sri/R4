@@ -379,7 +379,7 @@ void HTMLLinkElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccu
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    linkLoadEventSender().dispatchEventSoon(this);
+    linkLoadEventSender().dispatchEventSoon(this, href().string().ascii().data());
     m_firedLoad = true;
 }
 

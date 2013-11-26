@@ -31,6 +31,8 @@
 #include <wtf/text/CString.h>
 
 #include <sstream>
+#include <utility>
+#include <map>
 
 #include "WebCore/platform/Timer.h"
 #include "WebCore/platform/ThreadTimers.h"
@@ -42,137 +44,133 @@
 
 namespace WebCore {
 
-class EventSenderSeqNumber {
-public:
-    static unsigned int getSeqNumber() {
-        return EventSenderSeqNumber::m_seqNumber++;
-    }
+template<typename T> class EventSenderEvent {
+    WTF_MAKE_NONCOPYABLE(EventSenderEvent); WTF_MAKE_FAST_ALLOCATED;
 
-    static unsigned int m_seqNumber;
+public:
+    explicit EventSenderEvent(void* parent, T* sender, const AtomicString& eventType, const std::string& identifier);
+    ~EventSenderEvent() { cancelEvent(); }
+
+    void dispatchEvent();
+    void cancelEvent();
+
+    bool isPending() { return !m_dispatched; }
+
+private:
+    void timerFired(Timer<EventSenderEvent<T> >*) { dispatchEvent(); }
+
+    void* m_parent;
+    T* m_sender;
+    Timer<EventSenderEvent<T> > m_timer;
+    bool m_dispatched;
+    WTF::EventActionId m_parentEventAction;
 };
 
 template<typename T> class EventSender {
     WTF_MAKE_NONCOPYABLE(EventSender); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit EventSender(const AtomicString& eventType);
+    ~EventSender();
 
     const AtomicString& eventType() const { return m_eventType; }
-    void dispatchEventSoon(T*);
+    void dispatchEventSoon(T*, const std::string&);
     void cancelEvent(T*);
     void dispatchPendingEvents();
 
 #ifndef NDEBUG
-    bool hasPendingEvents(T* sender) const
-    {
-        return m_dispatchSoonList.find(sender) != notFound || m_dispatchingList.find(sender) != notFound;
-    }
+    bool hasPendingEvents(T* sender) const;
 #endif
 
 private:
-    void timerFired(Timer<EventSender<T> >*) { dispatchPendingEvents(); }
-
     AtomicString m_eventType;
-    Timer<EventSender<T> > m_timer;
-    Vector<T*> m_dispatchSoonList;
-    Vector<T*> m_dispatchingList;
 
-    MultiJoinHappensBefore m_sendJoin;
-    WTF::EventActionId m_lastEventAction;
+    std::multimap<T*, EventSenderEvent<T>*> m_dispatchMap;
 };
+
+// EventSenderEvent
+
+template<typename T> EventSenderEvent<T>::EventSenderEvent(void* parent, T* sender, const AtomicString& eventType, const std::string& identifier)
+    : m_parent(parent)
+    , m_sender(sender)
+    , m_timer(this, &EventSenderEvent::timerFired)
+    , m_dispatched(false)
+    , m_parentEventAction(HBCurrentEventAction())
+{
+    std::stringstream params;
+    params << eventType.string().ascii().data() << ",";
+    params << identifier;
+
+    WTF::EventActionDescriptor descriptor(WTF::OTHER, "EventSender", params.str());
+
+    m_timer.setEventActionDescriptor(descriptor);
+    m_timer.startOneShot(0);
+}
+
+template<typename T> void EventSenderEvent<T>::dispatchEvent()
+{
+    if (m_dispatched) {
+        return;
+    }
+
+    m_dispatched = true;
+
+    ActionLogScope s("dispatch-event");
+    m_sender->dispatchPendingEvent(static_cast<EventSender<T>*>(m_parent));
+
+    HBAddExplicitArc(m_parentEventAction, HBCurrentEventAction());
+}
+
+template<typename T> void EventSenderEvent<T>::cancelEvent()
+{
+    m_dispatched = true;
+}
+
+// EventSender
 
 template<typename T> EventSender<T>::EventSender(const AtomicString& eventType)
     : m_eventType(eventType)
-    , m_timer(this, &EventSender::timerFired)
-    , m_lastEventAction(0)
 {
 }
 
-template<typename T> void EventSender<T>::dispatchEventSoon(T* sender)
+template<typename T> EventSender<T>::~EventSender()
 {
-    m_dispatchSoonList.append(sender);
-    
-    if (!m_timer.isActive()) {
-
-        // WebERA:
-
-        std::stringstream params;
-        params << m_eventType.string().ascii().data() << ",";
-        params << EventSenderSeqNumber::getSeqNumber();
-
-        WTF::EventActionDescriptor descriptor(WTF::OTHER, "EventSender", params.str());
-
-        m_timer.setEventActionDescriptor(descriptor);
-        m_timer.startOneShot(0);
+    for (typename std::multimap<T*, EventSenderEvent<T>* >::iterator it = m_dispatchMap.begin(); it != m_dispatchMap.end(); it++) {
+        delete (*it);
     }
+}
 
-    m_sendJoin.threadEndAction();
-
-    // WebERA: Happens before (always trigger after the previous event)
-    if (m_lastEventAction != 0) {
-        HBAddExplicitArc(m_lastEventAction, HBCurrentEventAction());
-    }
-
-    // TODO(WebERA-HB): Should we split this into multiple timers such that events are not batched togheter?
-    // The original EventRacer implementation splits these timers into individual event actions.
+template<typename T> void EventSender<T>::dispatchEventSoon(T* sender, const std::string& identifier)
+{
+    m_dispatchMap.insert(std::pair<T*, EventSenderEvent<T>*>(sender, new EventSenderEvent<T>(this, sender, m_eventType, identifier)));
 }
 
 template<typename T> void EventSender<T>::cancelEvent(T* sender)
 {
-    if (HBIsCurrentEventActionValid()) { // Not the case if this is triggere by GC
-        m_sendJoin.threadEndAction();
+    std::pair<typename std::multimap<T*, EventSenderEvent<T>*>::iterator, typename std::multimap<T*, EventSenderEvent<T>*>::iterator> result = m_dispatchMap.equal_range(sender);
 
-
-        // WebERA: Happens before (always trigger after the previous event)
-        if (m_lastEventAction != 0) {
-            HBAddExplicitArc(m_lastEventAction, HBCurrentEventAction());
-        }
-    }
-
-    // Remove instances of this sender from both lists.
-    // Use loops because we allow multiple instances to get into the lists.
-    size_t size = m_dispatchSoonList.size();
-    for (size_t i = 0; i < size; ++i) {
-        if (m_dispatchSoonList[i] == sender)
-            m_dispatchSoonList[i] = 0;
-    }
-    size = m_dispatchingList.size();
-    for (size_t i = 0; i < size; ++i) {
-        if (m_dispatchingList[i] == sender)
-            m_dispatchingList[i] = 0;
+    for (typename std::multimap<T*, EventSenderEvent<T>*>::iterator it = result.first; it != result.second; it++) {
+        (*it).second->cancelEvent();
     }
 }
 
 template<typename T> void EventSender<T>::dispatchPendingEvents()
 {
+    for (typename std::multimap<T*, EventSenderEvent<T>*>::iterator it = m_dispatchMap.begin(); it != m_dispatchMap.end(); it++) {
+        (*it).second->dispatchEvent();
+    }
+}
 
-    // Need to avoid re-entering this function; if new dispatches are
-    // scheduled before the parent finishes processing the list, they
-    // will set a timer and eventually be processed.
-    if (!m_dispatchingList.isEmpty())
-        return;
+template<typename T> bool EventSender<T>::hasPendingEvents(T* sender) const
+{
+    std::pair<typename std::multimap<T*, EventSenderEvent<T>*>::const_iterator, typename std::multimap<T*, EventSenderEvent<T>*>::const_iterator> result = m_dispatchMap.equal_range(sender);
 
-    // WebERA: Happens before (all event actions triggering this)
-    m_sendJoin.joinAction();
-
-    m_timer.stop();
-
-    m_dispatchSoonList.checkConsistency();
-
-    m_dispatchingList.swap(m_dispatchSoonList);
-    size_t size = m_dispatchingList.size();
-    for (size_t i = 0; i < size; ++i) {
-        if (T* sender = m_dispatchingList[i]) {
-            m_dispatchingList[i] = 0;
-            
-            // WebERA:
-            ActionLogScope s("dispatch-event");
-
-            sender->dispatchPendingEvent(this);
+    for (typename std::multimap<T*, EventSenderEvent<T>*>::const_iterator it = result.first; it != result.second; it++) {
+        if ((*it).second->isPending()) {
+            return true;
         }
     }
-    m_dispatchingList.clear();
 
-    m_lastEventAction = HBCurrentEventAction();
+    return false;
 }
 
 } // namespace WebCore

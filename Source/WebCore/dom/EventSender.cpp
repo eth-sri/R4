@@ -24,9 +24,6 @@
 #include "EventSender.h"
 
 namespace WebCore {
-
-unsigned int EventSenderSeqNumber::m_seqNumber = 0;
-
 }
 
 
