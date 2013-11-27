@@ -93,8 +93,11 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
     if (iter != m_snapshots.end()) {
         // HIT
 
-        ASSERT(!(*iter)->isEmpty());
-        return new QNetworkReplyControllableReplay(reply, (*iter)->takeFirst(), parent);
+        // It could be that we have replayed all known instances of this URL
+        // If that is the case let it flow through the relaxedReplayMode logic or error out
+        if (!(*iter)->isEmpty()) {
+            return new QNetworkReplyControllableReplay(reply, (*iter)->takeFirst(), parent);
+        }
     }
 
     // Fuzzy matching
@@ -140,7 +143,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
         return new WebCore::QNetworkReplyControllableLive(reply, parent);
     }
 
-    std::cerr << "Error, unknown network request (" << reply->url().toString().toStdString() << ") in exact mode." << std::endl;
-    CRASH();
+    std::cerr << "Error: unknown network request (" << reply->url().toString().toStdString() << ") (exact mode)." << std::endl;
+    std::exit(1);
 
 }

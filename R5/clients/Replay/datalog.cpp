@@ -52,7 +52,9 @@ double TimeProviderReplay::currentTime()
     }
 
     if (m_currentDescriptorString.isNull()) {
-        ASSERT(false); // dont allow non-deterministic input to uncontrolled event actions
+        std::cerr << "Error: Time requested by non-schedulable event action." << std::endl;
+        std::exit(1);
+
         return time;
     }
 
@@ -64,8 +66,10 @@ double TimeProviderReplay::currentTime()
             return time;
         }
 
-        std::cerr << "Error, accessing time when no recorded time is available (exact mode)." << std::endl;
-        CRASH();
+        std::cerr << "Error: Time requested but time log is empty (exact mode)." << std::endl;
+        std::exit(1);
+
+        return time;
     }
 
     return iter->takeFirst();
@@ -108,7 +112,9 @@ double RandomProviderReplay::get()
     }
 
     if (m_currentDescriptorString.isNull()) {
-        CRASH(); // don't allow non-deterministic input to uncontrolled event actions
+        std::cerr << "Error: Random number requested by non-schedulable event action." << std::endl;
+        std::exit(1);
+
         return random;
     }
 
@@ -120,8 +126,10 @@ double RandomProviderReplay::get()
             return random;
         }
 
-        std::cerr << "Error, accessing random number when no recorded random number is available (exact mode)." << std::endl;
-        CRASH();
+        std::cerr << "Error: Random number requested but random log is empty (exact mode)." << std::endl;
+        std::exit(1);
+
+        return random;
     }
 
     return iter->takeFirst();
@@ -137,7 +145,9 @@ unsigned RandomProviderReplay::getUint32()
     }
 
     if (m_currentDescriptorString.isNull()) {
-        ASSERT(false); // dont allow non-deterministic input to uncontrolled event actions
+        std::cerr << "Error: Random number requested by non-schedulable event action." << std::endl;
+        std::exit(1);
+
         return random;
     }
 
@@ -149,8 +159,10 @@ unsigned RandomProviderReplay::getUint32()
             return random;
         }
 
-        std::cerr << "Error, accessing random number when no recorded random number is available (exact mode)." << std::endl;
-        CRASH();
+        std::cerr << "Error: Random number requested but random log is empty (exact mode)." << std::endl;
+        std::exit(1);
+
+        return random;
     }
 
     return iter->takeFirst();

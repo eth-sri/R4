@@ -33,7 +33,7 @@ if __name__ == '__main__':
         print('Testing %s' % site)
         
         print(' recording...')
-        subprocess.check_call([abs_path('clients/Record/bin/record'), "-autoexplore", "-pre-autoexplore-timeout", "30", "-autoexplore-timeout", "30", site])
+        subprocess.check_call([abs_path('clients/Record/bin/record'),  "-hidewindow", "-autoexplore", "-pre-autoexplore-timeout", "40", "-autoexplore-timeout", "40", site])
         
         print(' replaying...')
-        subprocess.check_call([abs_path('clients/Replay/bin/replay'), "-timeout", "180", site, "/tmp/schedule.data"])
+        subprocess.check_call([abs_path('clients/Replay/bin/replay'),  "-hidewindow", "-timeout", "180", site, "/tmp/schedule.data"])
