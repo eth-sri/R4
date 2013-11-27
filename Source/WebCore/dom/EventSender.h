@@ -165,6 +165,7 @@ template<typename T> void EventSender<T>::dispatchPendingEvents()
     }
 }
 
+#ifndef NDEBUG
 template<typename T> bool EventSender<T>::hasPendingEvents(T* sender) const
 {
     std::pair<typename std::multimap<T*, EventSenderEvent<T>*>::const_iterator, typename std::multimap<T*, EventSenderEvent<T>*>::const_iterator> result = m_dispatchMap.equal_range(sender);
@@ -177,6 +178,7 @@ template<typename T> bool EventSender<T>::hasPendingEvents(T* sender) const
 
     return false;
 }
+#endif
 
 } // namespace WebCore
 
