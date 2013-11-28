@@ -31,6 +31,7 @@
  */
 
 #include <fstream>
+#include <iostream>
 
 #include <QString>
 #include <QTimer>
@@ -211,6 +212,8 @@ void RecordClientApplication::slOnCloseEvent()
 
     //m_scheduler->stop();
     m_window->close();
+
+    std::cout << "Recording finished" << std::endl;
 }
 
 
