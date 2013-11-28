@@ -233,6 +233,7 @@ bool ReplayScheduler::isFinished()
 void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister* eventActionRegister)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
+    std::cout << "RELAXED MODE: " << (m_relaxedReplayMode ? "Yes" : "No") << std::endl;
     std::cout << "NEXT -> " << m_schedule->first().second.toString() << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 
