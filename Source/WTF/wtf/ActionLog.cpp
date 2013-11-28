@@ -6,6 +6,7 @@
  */
 
 #include "ActionLog.h"
+#include <iostream>
 
 const char* ActionLog::CommandType_AsString(CommandType ctype) {
 	switch (ctype) {

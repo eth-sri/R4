@@ -210,6 +210,17 @@ void RecordClientApplication::slOnCloseEvent()
     m_timeProvider->writeLogFile(m_logTimePath);
     m_randomProvider->writeLogFile(m_logRandomPath);
 
+    // Write human readable HB relation dump (DEBUG)
+    std::vector<ActionLog::Arc> arcs = ActionLogReportArcs();
+    std::ofstream arcslog;
+    arcslog.open("/tmp/arcs.log");
+
+    for (std::vector<ActionLog::Arc>::iterator it = arcs.begin(); it != arcs.end(); ++it) {
+        arcslog << (*it).m_tail << " -> " << (*it).m_head << std::endl;
+    }
+
+    arcslog.close();
+
     //m_scheduler->stop();
     m_window->close();
 

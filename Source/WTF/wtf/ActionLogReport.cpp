@@ -181,6 +181,10 @@ void ActionLogSave() {
 	fclose(f);
 }
 
+const std::vector<ActionLog::Arc>& ActionLogReportArcs() {
+    return wtfThreadData().actionLog()->arcs();
+}
+
 
 EventAttachLog::EventAttachLog() {
 }

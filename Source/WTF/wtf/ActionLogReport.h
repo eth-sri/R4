@@ -44,6 +44,8 @@ int ActionLogScopeDepth();
 void ActionLogAddArc(int earlierId, int laterId, int duration);
 void ActionLogSave();
 
+const std::vector<ActionLog::Arc>& ActionLogReportArcs();
+
 // Logs that an event identified by a pointer eventId is triggered node.
 void ActionLogTriggerEvent(void* eventId);
 // Logs that the id of the currently entered operation is the one triggered by a
