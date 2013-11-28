@@ -43,6 +43,7 @@ DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script
     : m_timer(this, &DeferAsyncScriptExecution::timerFired)
     , m_script(script)
     , m_document(document)
+    , m_suspended(false)
 {
 
     std::stringstream params;
@@ -58,7 +59,7 @@ DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script
 
 DeferAsyncScriptExecution::~DeferAsyncScriptExecution()
 {
-    if (m_timer.isActive()) {
+    if (m_timer.isActive() || m_suspended) {
         m_timer.stop();
         m_document->decrementLoadEventDelayCount();
     }
@@ -80,6 +81,29 @@ void DeferAsyncScriptExecution::timerFired(Timer<DeferAsyncScriptExecution> *tim
 
     // No need to add HB relation for the event action loading the resource. That relation should have been
     // added implicitly when creating the timer.
+
+    // HB resume join
+
+    m_resumeJoin.joinAction();
+    m_resumeJoin.clear();
+}
+
+void DeferAsyncScriptExecution::suspend()
+{
+    if (m_timer.isActive()) {
+        m_suspended = true;
+        m_timer.stop();
+    }
+}
+
+void DeferAsyncScriptExecution::resume()
+{
+    if (m_suspended) {
+        m_suspended = false;
+        m_timer.startOneShot(0);
+    }
+
+    m_resumeJoin.threadEndAction();
 }
 
 unsigned int ScriptRunner::m_seqNumber = 0;
@@ -91,6 +115,7 @@ ScriptRunner::ScriptRunner(Document* document)
     , m_inOrderTimer(this, &ScriptRunner::inOrderTimerFired)
     , m_inOrderExecuted(0)
     , m_inOrderLastEventAction(0)
+    , m_suspended(false)
 {
     ASSERT(document);
 }
@@ -135,20 +160,24 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
 
 void ScriptRunner::suspend()
 {
-    // TODO(WebERA): extend suspend/resume to include async scripts
+    m_suspendJoin.threadEndAction();
 
-    std::cerr << "Warning, ScriptRunner::suspend not supported." << std::endl;
-    ASSERT_NOT_REACHED();
-
+    m_suspended = true;
     m_inOrderTimer.stop();
 }
 
 void ScriptRunner::resume()
 {
-    //if (hasPendingScripts())
-    //    m_inOrderTimer.startOneShot(0);
+    m_suspendJoin.joinAction();
+    m_suspendJoin.clear();
 
-    updateInOrderTimer();
+    if (m_suspended) {
+        m_suspended = false;
+        m_inOrderTimer.startOneShot(0);
+    }
+
+    m_resumeJoin.threadEndAction();
+
 }
 
 void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType executionType)
@@ -232,6 +261,11 @@ void ScriptRunner::inOrderTimerFired(Timer<ScriptRunner>* timer)
 
     ASSERT(script->eventActionToFinish() != 0);
     HBAddExplicitArc(script->eventActionToFinish(), HBCurrentEventAction());
+
+    // Happens before - resume join
+
+    m_resumeJoin.joinAction();
+    m_resumeJoin.clear();
 
     // Schedule the next script if possible
 

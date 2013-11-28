@@ -37,6 +37,7 @@
 #include <wtf/Vector.h>
 #include <wtf/EventActionDescriptor.h>
 
+#include "WebCore/platform/EventActionHappensBeforeReport.h"
 #include "WebCore/dom/PendingScript.h"
 
 namespace WebCore {
@@ -63,6 +64,9 @@ class DeferAsyncScriptExecution {
         DeferAsyncScriptExecution(const PendingScript& script, Document* document, unsigned int scriptRunnerId, unsigned int scriptOffset);
         ~DeferAsyncScriptExecution();
 
+        void suspend();
+        void resume();
+
     private:
 
         void timerFired(Timer<DeferAsyncScriptExecution>* timer);
@@ -70,6 +74,9 @@ class DeferAsyncScriptExecution {
 
         PendingScript m_script;
         Document* m_document;
+
+        bool m_suspended;
+        MultiJoinHappensBefore m_resumeJoin;
 
 };
 
@@ -109,6 +116,10 @@ private:
     Timer<ScriptRunner> m_inOrderTimer;
     unsigned int m_inOrderExecuted;
     WTF::EventActionId m_inOrderLastEventAction;
+    bool m_suspended;
+
+    MultiJoinHappensBefore m_suspendJoin;
+    MultiJoinHappensBefore m_resumeJoin;
 
 };
 
