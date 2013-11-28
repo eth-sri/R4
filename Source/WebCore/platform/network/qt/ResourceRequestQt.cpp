@@ -27,6 +27,8 @@
 #include <QNetworkRequest>
 #include <QUrl>
 
+#include <WebCore/platform/network/qt/HBQNetworkHelper.h>
+
 namespace WebCore {
 
 // The limit can be found in qhttpnetworkconnection.cpp.
@@ -87,6 +89,8 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
 
     if (!allowCookies())
         request.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
+
+    HBQNetworkRequestAnnotate(&request);
 
     return request;
 }

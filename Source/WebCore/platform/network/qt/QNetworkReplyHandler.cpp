@@ -37,7 +37,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QNetworkCookie>
+#include <WebCore/platform/network/qt/HBQNetworkHelper.h>
 
 #include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
@@ -417,6 +419,10 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
     // HB - Force HB relations between subsequent network events in the same request
     if (m_lastNetworkEventAction != 0) {
         HBAddExplicitArc(m_lastNetworkEventAction, HBCurrentEventAction());
+
+    // HB - Force HB relation between event action initiating a network request and the initial response
+    } else {
+        HBAddExplicitArc(HBQNetworkRequestGetEventAction(m_reply->request()), HBCurrentEventAction());
     }
 
     m_lastNetworkEventAction = HBCurrentEventAction();

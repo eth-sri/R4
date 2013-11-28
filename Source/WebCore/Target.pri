@@ -75,7 +75,8 @@ SOURCES += \
     bindings/generic/RuntimeEnabledFeatures.cpp \
     platform/schedule/Scheduler.cpp \
     platform/schedule/EventActionRegister.cpp \
-    dom/EventSender.cpp
+    dom/EventSender.cpp \
+    platform/network/qt/HBQNetworkHelper.cpp
 
 v8 {
     include($$PWD/../JavaScriptCore/yarr/yarr.pri)
@@ -1409,7 +1410,8 @@ HEADERS += \
     bindings/ScriptControllerBase.h \
     bindings/generic/ActiveDOMCallback.h \
     bindings/generic/RuntimeEnabledFeatures.h \
-    platform/schedule/EventActionRegister.h
+    platform/schedule/EventActionRegister.h \
+    platform/network/qt/HBQNetworkHelper.h
 
 v8 {
     HEADERS += \

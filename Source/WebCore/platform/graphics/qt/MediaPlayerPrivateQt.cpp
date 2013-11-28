@@ -52,6 +52,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/text/CString.h>
 
+#include <WebCore/platform/network/qt/HBQNetworkHelper.h>
+
 #if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
 #include "texmap/TextureMapper.h"
 #endif
@@ -208,6 +210,7 @@ void MediaPlayerPrivateQt::commitLoad(const String& url)
     // Construct the media content with a network request if the resource is http[s]
     if (scheme == QString::fromLatin1("http") || scheme == QString::fromLatin1("https")) {
         QNetworkRequest request = QNetworkRequest(rUrl);
+        HBQNetworkRequestAnnotate(&request);
 
         // Grab the current document
         Document* document = element->document();
