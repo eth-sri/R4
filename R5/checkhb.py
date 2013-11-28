@@ -17,7 +17,7 @@ if __name__ == '__main__':
         for line in sfp:
             linenum += 1
 
-            if line == '<relax>':
+            if '<relax>' in line:
                 continue
 
             idnum, rest = line.split(';', 1)
