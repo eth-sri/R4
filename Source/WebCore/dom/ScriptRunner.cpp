@@ -162,8 +162,10 @@ void ScriptRunner::suspend()
 {
     m_suspendJoin.threadEndAction();
 
-    m_suspended = true;
-    m_inOrderTimer.stop();
+    if (m_inOrderTimer.isActive()) {
+        m_suspended = true;
+        m_inOrderTimer.stop();
+    }
 }
 
 void ScriptRunner::resume()
