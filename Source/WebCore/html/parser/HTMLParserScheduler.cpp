@@ -149,10 +149,11 @@ void HTMLParserScheduler::resume()
     if (!m_isSuspendedWithActiveTimer)
         return;
 
-    m_isSuspendedWithActiveTimer = false;
-
     // WebERA - we are assuming that the timer was suspended and already contains the correct descriptor
-    m_continueNextChunkTimer.startOneShot(0);
+    if (m_isSuspendedWithActiveTimer) {
+        m_isSuspendedWithActiveTimer = false;
+        m_continueNextChunkTimer.startOneShot(0);
+    }
 }
 
 }
