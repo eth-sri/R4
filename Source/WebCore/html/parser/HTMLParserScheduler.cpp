@@ -135,16 +135,17 @@ void HTMLParserScheduler::scheduleForResume()
 
 void HTMLParserScheduler::suspend()
 {
-    ASSERT(!m_isSuspendedWithActiveTimer);
     if (!m_continueNextChunkTimer.isActive())
         return;
+
     m_isSuspendedWithActiveTimer = true;
     m_continueNextChunkTimer.stop();
 }
 
 void HTMLParserScheduler::resume()
 {
-    ASSERT(!m_continueNextChunkTimer.isActive());
+    // TODO(WebERA-HB): Should we add happens before relations for suspend/resume?
+
     if (!m_isSuspendedWithActiveTimer)
         return;
 
