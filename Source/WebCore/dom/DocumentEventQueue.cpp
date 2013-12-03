@@ -121,20 +121,26 @@ bool DocumentEventQueue::cancelEvent(Event* event)
 {
     bool found = m_queuedEvents.contains(event);
 
-    // WebERA: Remove the source from the queue
-    unsigned int index = 0;
-    ListHashSet<RefPtr<Event> >::const_iterator it = m_queuedEvents.begin();
-    std::list<WTF::EventActionId>::iterator it2 = m_queuedSources.begin();
-    while ((*it) != event) {
-        index++;
-        ++it;
-        it2++;
-    }
-    m_queuedSources.erase(it2);
+    if (found) {
+        // WebERA: Find index of queued source
+        ListHashSet<RefPtr<Event> >::const_iterator it = m_queuedEvents.begin();
+        std::list<WTF::EventActionId>::iterator it2 = m_queuedSources.begin();
+        while ((*it) != event) {
+            ++it;
+            ++it2;
+        }
 
-    m_queuedEvents.remove(event);
-    if (m_queuedEvents.isEmpty())
-        m_pendingEventTimer->stop();
+        if (m_queuedEvents.first() == event) {
+            m_pendingEventTimer->stop();
+        }
+
+        m_queuedSources.erase(it2);
+        m_queuedEvents.remove(event);
+
+        // restart timer with new identifier
+        tryUpdateAndStartTimer();
+    }
+
     return found;
 }
 
