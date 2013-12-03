@@ -67,7 +67,15 @@ bool QNetworkSnapshotCookieJar::setCookiesFromUrl(const QList<QNetworkCookie>& c
     if (HBIsCurrentEventActionValid()) { // only set cookies for schedulable elements
         // TODO(WebERA-HB-REVIEW): Decide what we want to do with cookies
         //ActionLogFormat(ActionLog::WRITE_MEMORY, "Cookie");
-        return QNetworkCookieJar::setCookiesFromUrl(cookieList, url);
+
+        QList<QNetworkCookie> list;
+
+        foreach (QNetworkCookie c, cookieList) {
+            c.setExpirationDate(QDateTime(QDate(2020, 1, 1), QTime()));
+            list.append(c);
+        }
+
+        return QNetworkCookieJar::setCookiesFromUrl(list, url);
     } else {
         return false;
     }
