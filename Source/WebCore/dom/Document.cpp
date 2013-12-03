@@ -5048,7 +5048,6 @@ void Document::cancelFocusAppearanceUpdate()
 
 void Document::updateFocusAppearanceTimerFired(Timer<Document>*)
 {
-	ActionLogScope log_scope("dom focus");
     Node* node = focusedNode();
     if (!node)
         return;
