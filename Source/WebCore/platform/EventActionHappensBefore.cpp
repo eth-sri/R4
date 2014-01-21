@@ -59,7 +59,11 @@ void EventActionsHB::addExplicitArc(WTF::EventActionId earlier, WTF::EventAction
             CRASH();
         }
     }
-    ActionLogAddArc(earlier, later, -1);
+
+    if (m_hbarcs_unique.find(std::pair<int, int>(earlier, later)) == m_hbarcs_unique.end()) {
+        m_hbarcs_unique.insert(std::pair<int, int>(earlier, later));
+        ActionLogAddArc(earlier, later, -1);
+    }
 }
 
 void EventActionsHB::addTimedArc(WTF::EventActionId earlier, WTF::EventActionId later, double duration) {
@@ -68,7 +72,10 @@ void EventActionsHB::addTimedArc(WTF::EventActionId earlier, WTF::EventActionId 
             CRASH();
         }
     }
-    ActionLogAddArc(earlier, later, duration * 1000);
+    if (m_hbarcs_unique.find(std::pair<int, int>(earlier, later)) == m_hbarcs_unique.end()) {
+        m_hbarcs_unique.insert(std::pair<int, int>(earlier, later));
+        ActionLogAddArc(earlier, later, duration * 1000);
+    }
 }
 
 void EventActionsHB::setCurrentEventAction(WTF::EventActionId newEventActionId, ActionLog::EventActionType type) {

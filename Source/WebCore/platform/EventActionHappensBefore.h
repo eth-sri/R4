@@ -36,6 +36,8 @@
 #include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLog.h>
 
+#include <set>
+
 namespace WebCore {
 
 // Happens before graph for event actions.
@@ -97,6 +99,9 @@ private:
     WTF::EventActionId m_lastUIEventAction;
 
     int m_numDisabledInstrumentationRequests;
+
+    // TODO(WebERA): Temporary uniqueness fix until we figure out if duplicated arcs are a problem
+    std::set<std::pair<int, int> > m_hbarcs_unique;
 };
 
 
