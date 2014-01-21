@@ -47,7 +47,7 @@ class QNetworkReplyControllableFactoryReplay : public WebCore::QNetworkReplyCont
 {
 
 public:
-    QNetworkReplyControllableFactoryReplay();
+    QNetworkReplyControllableFactoryReplay(QString logNetworkPath);
 
     WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
 

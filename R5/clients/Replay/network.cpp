@@ -52,12 +52,12 @@ QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(QNetworkReply* 
 
 }
 
-QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay()
+QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay(QString logNetworkPath)
     : QNetworkReplyControllableFactory()
     , m_stopped(false)
     , m_relaxedReplayMode(false)
 {
-    QFile fp(QString::fromAscii("/tmp/network.data"));
+    QFile fp(logNetworkPath);
     fp.open(QIODevice::ReadOnly);
 
     while (!fp.atEnd()) {

@@ -62,7 +62,6 @@ private:
 
 private:
     QString m_schedulePath;
-    QString m_hbPath;
     QString m_logTimePath;
     QString m_logRandomPath;
     QString m_url;
@@ -84,7 +83,6 @@ public slots:
 RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_schedulePath("/tmp/schedule.data")
-    , m_hbPath("/tmp/happensbefore.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
     , m_autoExplorePreTimout(30)
@@ -134,7 +132,6 @@ void RecordClientApplication::handleUserOptions()
     if (args.contains("-help")) {
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-schedule-path]"
-                 << "[-happens-before-path]"
                  << "[-autoexplore]"
                  << "[-autoexplore-timeout]"
                  << "[-pre-autoexplore-timeout]"
@@ -146,11 +143,6 @@ void RecordClientApplication::handleUserOptions()
     int schedulePathIndex = args.indexOf("-schedule-path");
     if (schedulePathIndex != -1) {
         this->m_schedulePath = takeOptionValue(&args, schedulePathIndex);
-    }
-
-    int hbPathIndex = args.indexOf("-happens-before-path");
-    if (hbPathIndex != -1) {
-        this->m_hbPath = takeOptionValue(&args, hbPathIndex);
     }
 
     int timeoutIndex = args.indexOf("-autoexplore-timeout");

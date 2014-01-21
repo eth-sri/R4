@@ -61,6 +61,10 @@ private:
 
     QString m_url;
     QString m_schedulePath;
+    QString m_logNetworkPath;
+    QString m_logRandomPath;
+    QString m_logTimePath;
+
     TimeProviderReplay* m_timeProvider;
     RandomProviderReplay* m_randomProvider;
     QNetworkReplyControllableFactoryReplay* m_network;
@@ -76,32 +80,45 @@ public slots:
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
-    , m_timeProvider(new TimeProviderReplay("/tmp/log.time.data"))
-    , m_randomProvider(new RandomProviderReplay("/tmp/log.random.data"))
     , m_isStopping(false)
     , m_showWindow(true)
-    , m_network(new QNetworkReplyControllableFactoryReplay())
 {
+
     handleUserOptions();
 
+    // Network
+
+    m_network = new QNetworkReplyControllableFactoryReplay(m_logNetworkPath);
+
+    WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
+    m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
+
+    // Random
+
+    m_timeProvider = new TimeProviderReplay(m_logTimePath);
     m_timeProvider->attach();
+
+    // Time
+
+    m_randomProvider = new RandomProviderReplay(m_logRandomPath);
     m_randomProvider->attach();
+
+    // Scheduler
 
     ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_timeProvider, m_randomProvider);
     QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
     QObject::connect(scheduler, SIGNAL(sigEnteredRelaxedReplayMode()), this, SLOT(slEnteredRelaxedMode()));
 
     WebCore::ThreadTimers::setScheduler(scheduler);
-    WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
+
+    // Replay-mode setup
 
     m_window->page()->enableReplayUserEventMode();
     m_window->page()->mainFrame()->enableReplayUserEventMode();
 
-    m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
+    // Load website and run
 
     loadWebsite(m_url);
-
-    // Show window while running
 
     if (m_showWindow) {
         m_window->show();
@@ -123,7 +140,7 @@ void ReplayClientApplication::handleUserOptions()
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-hidewindow]"
                  << "[-timeout]"
-                 << "<URL> <schedule>";
+                 << "<URL> <schedule> <log.network.data> <log.random.data> <log.time.data>";
         exit(0);
     }
 
@@ -143,6 +160,9 @@ void ReplayClientApplication::handleUserOptions()
 
     m_url = args.at(++lastArg);
     m_schedulePath = args.at(++lastArg);
+    m_logNetworkPath = args.at(++lastArg);
+    m_logRandomPath = args.at(++lastArg);
+    m_logTimePath = args.at(++lastArg);
 }
 
 void ReplayClientApplication::slTimeout() {
