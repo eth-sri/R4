@@ -49,6 +49,10 @@ public:
     	m_ignoreFireIntervalForHappensBefore = true;
     }
 
+    void disableImplicitHappensBeforeRelations() {
+        m_disableImplicitHappensBeforeRelations = true;
+    }
+
     void start(double nextFireInterval, double repeatInterval);
 
     void startRepeating(double repeatInterval) { start(repeatInterval, repeatInterval); }
@@ -106,6 +110,7 @@ private:
 private:
     double m_nextFireInterval;  // The interval for which the next file was set to.
     bool m_ignoreFireIntervalForHappensBefore;
+    bool m_disableImplicitHappensBeforeRelations;
 
     WTF::EventActionDescriptor m_eventActionDescriptor;
     bool m_inEventActionRegister;

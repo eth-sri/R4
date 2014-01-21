@@ -199,6 +199,7 @@ TimerBase::TimerBase()
     , m_lastFireEventAction(0)
     , m_starterEventAction(0)
     , m_ignoreFireIntervalForHappensBefore(false)
+    , m_disableImplicitHappensBeforeRelations(false)
     , m_inEventActionRegister(false)
 #ifndef NDEBUG
     , m_thread(currentThread())

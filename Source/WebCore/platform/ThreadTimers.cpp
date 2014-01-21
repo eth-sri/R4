@@ -132,7 +132,7 @@ bool ThreadTimers::fireTimerCallback(void* object, const WTF::EventActionDescrip
         timer->m_lastFireEventAction = 0;
     }
 
-    if (timer->m_starterEventAction != 0 && HBIsCurrentEventActionValid()) {
+    if (timer->m_starterEventAction != 0 && HBIsCurrentEventActionValid() && !timer->m_disableImplicitHappensBeforeRelations) {
         if (timer->m_ignoreFireIntervalForHappensBefore) {
             HBAddExplicitArc(timer->m_starterEventAction, HBCurrentEventAction());
         } else {

@@ -381,6 +381,8 @@ QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReply* reply, QObje
     , m_lastNetworkEventAction(0)
 {
     Q_ASSERT(m_reply);
+
+    m_nextSnapshotUpdateTimer.disableImplicitHappensBeforeRelations();
 }
 
 QNetworkReplyControllable::~QNetworkReplyControllable()
