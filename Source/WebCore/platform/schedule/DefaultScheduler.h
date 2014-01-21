@@ -44,6 +44,11 @@ namespace WebCore {
 
         void executeDelayedEventActions(EventActionRegister* eventActionRegister);
 
+        virtual void stop();
+
+    private:
+        bool m_stopped;
+
     };
 
 }

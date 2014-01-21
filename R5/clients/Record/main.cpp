@@ -61,14 +61,19 @@ private:
     void handleUserOptions();
 
 private:
+    bool m_running;
+
     QString m_schedulePath;
     QString m_logTimePath;
     QString m_logRandomPath;
     QString m_url;
+
     unsigned int m_autoExplorePreTimout;
     unsigned int m_autoExploreTimout;
     bool m_autoExplore;
+
     bool m_showWindow;
+
     QNetworkReplyControllableFactoryRecord* m_controllableFactory;
     TimeProviderRecord* m_timeProvider;
     RandomProviderRecord* m_randomProvider;
@@ -82,6 +87,7 @@ public slots:
 
 RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
+    , m_running(true)
     , m_schedulePath("/tmp/schedule.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
@@ -179,6 +185,12 @@ void RecordClientApplication::handleUserOptions()
 
 void RecordClientApplication::slOnCloseEvent()
 {
+    if (!m_running) {
+        return; // dont close twice
+    }
+
+    m_running = false;
+
     // happens before
 
     ActionLogSave();
@@ -213,7 +225,7 @@ void RecordClientApplication::slOnCloseEvent()
 
     arcslog.close();
 
-    //m_scheduler->stop();
+    m_scheduler->stop();
     m_window->close();
 
     std::cout << "Recording finished" << std::endl;

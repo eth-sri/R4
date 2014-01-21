@@ -50,6 +50,8 @@ class EventActionRegister;
         // Ask the scheduler to execute any delayed tasks
         // Called at every tick, after scheduling any new event actions
         virtual void executeDelayedEventActions(EventActionRegister* eventActionRegister) = 0;
+
+        virtual void stop() = 0;
     };
 }
 

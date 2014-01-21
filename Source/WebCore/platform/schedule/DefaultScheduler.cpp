@@ -28,6 +28,7 @@
 namespace WebCore {
 
 DefaultScheduler::DefaultScheduler()
+    : m_stopped(false)
 {
 }
 
@@ -38,7 +39,9 @@ DefaultScheduler::~DefaultScheduler()
 void DefaultScheduler::eventActionScheduled(const WTF::EventActionDescriptor& descriptor,
                                             EventActionRegister* eventActionRegister)
 {
-    eventActionRegister->runEventAction(descriptor);
+    if (!m_stopped) {
+        eventActionRegister->runEventAction(descriptor);
+    }
 }
 
 void DefaultScheduler::eventActionDescheduled(const WTF::EventActionDescriptor&, EventActionRegister*)
@@ -48,6 +51,11 @@ void DefaultScheduler::eventActionDescheduled(const WTF::EventActionDescriptor&,
 void DefaultScheduler::executeDelayedEventActions(EventActionRegister*)
 {
 	// Do nothing.
+}
+
+void DefaultScheduler::stop()
+{
+    m_stopped = true;
 }
 
 }
