@@ -55,6 +55,7 @@ DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script
 
     m_timer.setEventActionDescriptor(descriptor);
     m_timer.startOneShot(0);
+    m_timer.ignoreFireIntervalForHappensBefore();
 }
 
 DeferAsyncScriptExecution::~DeferAsyncScriptExecution()
