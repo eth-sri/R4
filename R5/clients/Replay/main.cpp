@@ -36,6 +36,7 @@
 #include <QHash>
 #include <QList>
 #include <QTimer>
+#include <QNetworkProxy>
 
 #include <config.h>
 
@@ -140,6 +141,7 @@ void ReplayClientApplication::handleUserOptions()
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-hidewindow]"
                  << "[-timeout]"
+                 << "[-proxy URL:PORT]"
                  << "<URL> <schedule> <log.network.data> <log.random.data> <log.time.data>";
         exit(0);
     }
@@ -147,6 +149,22 @@ void ReplayClientApplication::handleUserOptions()
     int windowIndex = args.indexOf("-hidewindow");
     if (windowIndex != -1) {
         m_showWindow = false;
+    }
+
+    int proxyUrlIndex = args.indexOf("-proxy");
+    if (proxyUrlIndex != -1) {
+
+        QString proxyUrl = takeOptionValue(&args, proxyUrlIndex);
+        QStringList parts = proxyUrl.split(QString(":"));
+
+        QNetworkProxy proxy;
+        proxy.setType(QNetworkProxy::HttpProxy);
+        proxy.setHostName(parts.at(0));
+        if(parts.length() > 1){
+            proxy.setPort(parts.at(1).toShort());
+        }
+        QNetworkProxy::setApplicationProxy(proxy);
+
     }
 
     int timeoutIndex = args.indexOf("-timeout");
