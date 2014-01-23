@@ -35,6 +35,7 @@
 
 #include <QString>
 #include <QTimer>
+#include <QNetworkProxy>
 
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/platform/ThreadGlobalData.h>
@@ -149,6 +150,22 @@ void RecordClientApplication::handleUserOptions()
     int schedulePathIndex = args.indexOf("-schedule-path");
     if (schedulePathIndex != -1) {
         this->m_schedulePath = takeOptionValue(&args, schedulePathIndex);
+    }
+
+    int proxyUrlIndex = args.indexOf("-proxy");
+    if (proxyUrlIndex != -1) {
+
+        QString proxyUrl = takeOptionValue(&args, proxyUrlIndex);
+        QStringList parts = proxyUrl.split(QString(":"));
+
+        QNetworkProxy proxy;
+        proxy.setType(QNetworkProxy::HttpProxy);
+        proxy.setHostName(parts.at(0));
+        if(parts.length() > 1){
+            proxy.setPort(parts.at(1).toShort());
+        }
+        QNetworkProxy::setApplicationProxy(proxy);
+
     }
 
     int timeoutIndex = args.indexOf("-autoexplore-timeout");
