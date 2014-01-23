@@ -37,6 +37,8 @@
 #include "ScriptSourceCode.h"
 #include "ScriptValue.h"
 #include <runtime/JSLock.h>
+#include <WTF/wtf/text/WTFString.h>
+#include <WebCore/platform/KURL.h>
 
 #if ENABLE(WORKERS)
 #include "JSWorkerContext.h"
@@ -66,11 +68,11 @@ PassOwnPtr<ScheduledAction> ScheduledAction::create(ExecState* exec, DOMWrapperW
 
     if (callType == CallTypeJS) {
         const SourceCode source = callData.js.functionExecutable->source();
+        WTF::String url = WebCore::decodeURLEscapeSequences(WTF::String(source.provider()->url().utf8().data()));
 
-        std::string url = source.provider()->url().utf8().data();
         uint calledLine = source.firstLine();
 
-        return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, url, calledLine));
+        return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, url.ascii().data(), calledLine));
     }
 
     return adoptPtr(new ScheduledAction(exec, v, isolatedWorld, "<native-function>", -1));

@@ -43,6 +43,7 @@
 #include "NestingLevelIncrementer.h"
 #include "Settings.h"
 
+#include <WebCore/platform/KURL.h>
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <WebCore/platform/Timer.h>
 #include <WebCore/platform/ThreadTimers.h>
@@ -691,7 +692,7 @@ void HTMLDocumentParser::resumeScheduledTasks()
 
 std::string HTMLDocumentParser::getDocumentUrl() const
 {
-    return std::string(m_document->url().string().ascii().data());
+    return std::string(WebCore::decodeURLEscapeSequences(m_document->url().string()).ascii().data());
 }
 
 }
