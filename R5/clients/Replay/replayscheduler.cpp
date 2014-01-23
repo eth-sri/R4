@@ -143,11 +143,11 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
           *
           */
 
-        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer") {
+        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer" || eventActionType == "BrowserLoadUrl") {
 
             QString url = QString::fromStdString(nextToSchedule.getParameter(0));
 
-            unsigned int sequenceNumber1 = QString::fromStdString(nextToSchedule.getParameter(1)).toUInt();
+            unsigned int sequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser") ? QString::fromStdString(nextToSchedule.getParameter(1)).toUInt() : 0;
             unsigned int sequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(2)).toUInt() : 0;
             unsigned int sequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(3)).toUInt() : 0;
 
@@ -167,7 +167,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                     continue;
                 }
 
-                unsigned int candidateSequenceNumber1 = QString::fromStdString(candidate.getParameter(1)).toUInt();
+                unsigned int candidateSequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser") ? QString::fromStdString(candidate.getParameter(1)).toUInt() : 0;
                 unsigned int candidateSequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(2)).toUInt() : 0;
                 unsigned int candidateSequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(3)).toUInt() : 0;
 
