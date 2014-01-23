@@ -57,6 +57,8 @@ public:
 
     bool isFinished();
 
+    void stop() { m_stopped = true; }
+
 private:
 
     bool executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister);
@@ -70,6 +72,8 @@ private:
     bool m_relaxedReplayMode;
 
     QTimer m_eventActionTimeoutTimer;
+
+    bool m_stopped;
 
 private slots:
     void slEventActionTimeout();

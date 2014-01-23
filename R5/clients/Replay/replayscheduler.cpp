@@ -43,6 +43,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderRe
     , m_timeProvider(timeProvider)
     , m_randomProvider(randomProvider)
     , m_relaxedReplayMode(false)
+    , m_stopped(false)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -75,7 +76,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
 bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister)
 {
-    if (m_schedule->isEmpty()) {
+    if (m_schedule->isEmpty() || m_stopped) {
         emit sigDone();
         return false;
     }
