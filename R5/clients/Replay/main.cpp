@@ -44,6 +44,7 @@
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
+#include <wtf/warningcollectorreport.h>
 
 #include "utils.h"
 #include "clientapplication.h"
@@ -65,6 +66,7 @@ private:
     QString m_logNetworkPath;
     QString m_logRandomPath;
     QString m_logTimePath;
+    QString m_logErrorsPath;
 
     TimeProviderReplay* m_timeProvider;
     RandomProviderReplay* m_randomProvider;
@@ -72,6 +74,8 @@ private:
 
     bool m_isStopping;
     bool m_showWindow;
+
+    bool m_useSeleniumRCFixes;
 
 public slots:
     void slSchedulerDone();
@@ -81,8 +85,10 @@ public slots:
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
+    , m_logErrorsPath("/tmp/errors.log")
     , m_isStopping(false)
     , m_showWindow(true)
+    , m_useSeleniumRCFixes(false)
 {
 
     handleUserOptions();
@@ -142,13 +148,19 @@ void ReplayClientApplication::handleUserOptions()
                  << "[-hidewindow]"
                  << "[-timeout]"
                  << "[-proxy URL:PORT]"
+                 << "[-seleniumrcfixes]"
                  << "<URL> <schedule> <log.network.data> <log.random.data> <log.time.data>";
-        exit(0);
+        std::exit(0);
     }
 
     int windowIndex = args.indexOf("-hidewindow");
     if (windowIndex != -1) {
         m_showWindow = false;
+    }
+
+    int seleniumRCFixesIndex = args.indexOf("-seleniumrcfixes");
+    if (seleniumRCFixesIndex != -1) {
+        m_useSeleniumRCFixes = true;
     }
 
     int proxyUrlIndex = args.indexOf("-proxy");
@@ -175,6 +187,11 @@ void ReplayClientApplication::handleUserOptions()
     int lastArg = args.lastIndexOf(QRegExp("^-.*"));
     if (lastArg == -1)
         lastArg = 0;
+
+    if ((args.length() - lastArg) != 6) {
+        std::cerr << "Missing required arguments" << std::endl;
+        std::exit(1);
+    }
 
     m_url = args.at(++lastArg);
     m_schedulePath = args.at(++lastArg);
@@ -206,6 +223,9 @@ void ReplayClientApplication::slSchedulerDone()
             htmlHash += qHash(current->toHtml());
             queue.append(current->childFrames());
         }
+
+        // Errors
+        WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
 
         std::cout << "Schedule executed successfully" << std::endl;
         std::cout << "HTML-hash: " << htmlHash << std::endl;

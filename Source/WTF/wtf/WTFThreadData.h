@@ -75,6 +75,8 @@ class EventAttachLog;
 
 namespace WTF {
 
+class WarningCollector;
+
 class AtomicStringTable;
 
 typedef void (*AtomicStringTableDestructor)(AtomicStringTable*);
@@ -142,6 +144,10 @@ public:
     void setEventAttachLog(EventAttachLog* l) {
     	m_eventAttachLog = l;
     }
+
+    WarningCollector* warningCollector() {
+        return m_warningCollector;
+    }
 #endif
 
 private:
@@ -158,6 +164,7 @@ private:
     StringSet* m_dataSet;
     ActionLog* m_actionLog;
     EventAttachLog* m_eventAttachLog;
+    WarningCollector* m_warningCollector;
 #endif
 
     static WTF_EXPORTDATA ThreadSpecific<WTFThreadData>* staticData;

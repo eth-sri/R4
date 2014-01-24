@@ -42,6 +42,7 @@
 #include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 #include <WebCore/platform/schedule/DefaultScheduler.h>
+#include <wtf/warningcollectorreport.h>
 
 #include "utils.h"
 #include "clientapplication.h"
@@ -67,6 +68,7 @@ private:
     QString m_schedulePath;
     QString m_logTimePath;
     QString m_logRandomPath;
+    QString m_logErrorsPath;
     QString m_url;
 
     unsigned int m_autoExplorePreTimout;
@@ -92,6 +94,7 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     , m_schedulePath("/tmp/schedule.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
+    , m_logErrorsPath("/tmp/errors.log")
     , m_autoExplorePreTimout(30)
     , m_autoExploreTimout(30)
     , m_autoExplore(false)
@@ -144,7 +147,7 @@ void RecordClientApplication::handleUserOptions()
                  << "[-pre-autoexplore-timeout]"
                  << "[-hidewindow]"
                  << "URL";
-        exit(0);
+        std::exit(0);
     }
 
     int schedulePathIndex = args.indexOf("-schedule-path");
@@ -193,8 +196,7 @@ void RecordClientApplication::handleUserOptions()
 
     if (urls.length() == 0) {
         qDebug() << "URL required";
-        exit(1);
-        return;
+        std::exit(1);
     }
 
     m_url = urls.at(0);
@@ -230,6 +232,9 @@ void RecordClientApplication::slOnCloseEvent()
 
     m_timeProvider->writeLogFile(m_logTimePath);
     m_randomProvider->writeLogFile(m_logRandomPath);
+
+    // errors
+    WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
 
     // Write human readable HB relation dump (DEBUG)
     std::vector<ActionLog::Arc> arcs = ActionLogReportArcs();

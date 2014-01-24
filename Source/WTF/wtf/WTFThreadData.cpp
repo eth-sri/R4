@@ -28,6 +28,7 @@
 #include "WTFThreadData.h"
 
 #include "ActionLog.h"
+#include "warningcollector.h"
 #include "StringSet.h"
 
 namespace WTF {
@@ -47,6 +48,7 @@ WTFThreadData::WTFThreadData()
     , m_dataSet(new StringSet())
     , m_actionLog(new ActionLog())
     , m_eventAttachLog(NULL)
+    , m_warningCollector(new WTF::WarningCollector())
 #endif
 {
 }
@@ -62,7 +64,10 @@ WTFThreadData::~WTFThreadData()
     delete m_jsSet;
     delete m_dataSet;
     delete m_actionLog;
-    delete m_eventAttachLog;
+    if (m_eventAttachLog != NULL) {
+        delete m_eventAttachLog;
+    }
+    delete m_warningCollector;
 #endif
 }
 

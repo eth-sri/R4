@@ -17,6 +17,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <stdint.h>
+
 #include "config.h"
 #include "Page.h"
 
@@ -77,6 +79,11 @@
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringHash.h>
+#include <wtf/warningcollectorreport.h>
+
+#include <JavaScriptCore/debugger/Debugger.h>
+#include <JavaScriptCore/debugger/DebuggerCallFrame.h>
+#include <JavaScriptCore/interpreter/CallFrame.h>
 
 namespace WebCore {
 
@@ -110,6 +117,34 @@ float deviceScaleFactor(Frame* frame)
         return 1;
     return page->deviceScaleFactor();
 }
+
+class DebuggerListener : public JSC::Debugger
+{
+public:
+    DebuggerListener();
+    virtual void exception(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, bool hasHandler);
+
+    virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int, const JSC::UString&) {}
+    virtual void atStatement(const JSC::DebuggerCallFrame&, intptr_t, int) {}
+    virtual void callEvent(const JSC::DebuggerCallFrame&, intptr_t, int) {}
+    virtual void returnEvent(const JSC::DebuggerCallFrame&, intptr_t, int) {}
+
+    virtual void willExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t, int) {}
+    virtual void didExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t, int) {}
+    virtual void didReachBreakpoint(const JSC::DebuggerCallFrame&, intptr_t, int) {}
+};
+
+DebuggerListener::DebuggerListener()
+{
+}
+
+void DebuggerListener::exception(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, bool hasHandler)
+{
+    WTF::WarningCollectorReport("JavaScript_Interpreter", "An exception occured", "---");
+}
+
+static DebuggerListener* debuggerListener = new DebuggerListener();
+
 
 Page::Page(PageClients& pageClients)
     : m_chrome(Chrome::create(this, pageClients.chromeClient))
@@ -174,6 +209,9 @@ Page::Page(PageClients& pageClients)
 
     ASSERT(!allPages->contains(this));
     allPages->add(this);
+
+    // WebERA: Inject debugger, emitting exceptions to the warning collector
+    setDebugger(debuggerListener);
 
 #ifndef NDEBUG
     pageCounter.increment();

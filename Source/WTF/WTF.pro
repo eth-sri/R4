@@ -163,7 +163,9 @@ HEADERS += \
     ActionLog.h \
     ActionLogReport.h \
     EventActionSchedule.h \
-    EventActionDescriptor.h
+    EventActionDescriptor.h \
+    wtf/warningcollector.h \
+    wtf/warningcollectorreport.h
 
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
@@ -222,7 +224,9 @@ SOURCES += \
     ActionLog.cpp \
     ActionLogReport.cpp \
     EventActionSchedule.cpp \
-    EventActionDescriptor.cpp
+    EventActionDescriptor.cpp \
+    wtf/warningcollector.cpp \
+    wtf/warningcollectorreport.cpp
 
 unix: SOURCES += \
     OSAllocatorPosix.cpp \
