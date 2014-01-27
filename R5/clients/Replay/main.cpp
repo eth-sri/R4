@@ -75,8 +75,6 @@ private:
     bool m_isStopping;
     bool m_showWindow;
 
-    bool m_useSeleniumRCFixes;
-
 public slots:
     void slSchedulerDone();
     void slEnteredRelaxedMode();
@@ -88,7 +86,6 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     , m_logErrorsPath("/tmp/errors.log")
     , m_isStopping(false)
     , m_showWindow(true)
-    , m_useSeleniumRCFixes(false)
 {
 
     handleUserOptions();
@@ -148,7 +145,6 @@ void ReplayClientApplication::handleUserOptions()
                  << "[-hidewindow]"
                  << "[-timeout]"
                  << "[-proxy URL:PORT]"
-                 << "[-seleniumrcfixes]"
                  << "<URL> <schedule> <log.network.data> <log.random.data> <log.time.data>";
         std::exit(0);
     }
@@ -156,11 +152,6 @@ void ReplayClientApplication::handleUserOptions()
     int windowIndex = args.indexOf("-hidewindow");
     if (windowIndex != -1) {
         m_showWindow = false;
-    }
-
-    int seleniumRCFixesIndex = args.indexOf("-seleniumrcfixes");
-    if (seleniumRCFixesIndex != -1) {
-        m_useSeleniumRCFixes = true;
     }
 
     int proxyUrlIndex = args.indexOf("-proxy");
