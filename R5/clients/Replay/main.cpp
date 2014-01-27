@@ -68,6 +68,7 @@ private:
     QString m_logTimePath;
     QString m_logErrorsPath;
 
+    ReplayScheduler* m_scheduler;
     TimeProviderReplay* m_timeProvider;
     RandomProviderReplay* m_randomProvider;
     QNetworkReplyControllableFactoryReplay* m_network;
@@ -77,12 +78,15 @@ private:
 
 public slots:
     void slSchedulerDone();
-    void slEnteredRelaxedMode();
     void slTimeout();
 };
 
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
+    , m_schedulePath("/tmp/schedule.data")
+    , m_logNetworkPath("/tmp/log.network.data")
+    , m_logRandomPath("/tmp/log.random.data")
+    , m_logTimePath("/tmp/log.time.data")
     , m_logErrorsPath("/tmp/errors.log")
     , m_isStopping(false)
     , m_showWindow(true)
@@ -109,11 +113,10 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
 
     // Scheduler
 
-    ReplayScheduler* scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_timeProvider, m_randomProvider);
-    QObject::connect(scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
-    QObject::connect(scheduler, SIGNAL(sigEnteredRelaxedReplayMode()), this, SLOT(slEnteredRelaxedMode()));
+    m_scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_network, m_timeProvider, m_randomProvider);
+    QObject::connect(m_scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
 
-    WebCore::ThreadTimers::setScheduler(scheduler);
+    WebCore::ThreadTimers::setScheduler(m_scheduler);
 
     // Replay-mode setup
 
@@ -129,13 +132,6 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     }
 }
 
-void ReplayClientApplication::slEnteredRelaxedMode()
-{
-    m_timeProvider->setRelaxedMode(true);
-    m_randomProvider->setRelaxedMode(true);
-    m_network->setRelaxedMode(true);
-}
-
 void ReplayClientApplication::handleUserOptions()
 {
     QStringList args = arguments();
@@ -145,7 +141,7 @@ void ReplayClientApplication::handleUserOptions()
                  << "[-hidewindow]"
                  << "[-timeout]"
                  << "[-proxy URL:PORT]"
-                 << "<URL> <schedule> <log.network.data> <log.random.data> <log.time.data>";
+                 << "<URL> [<schedule>|<schedule> <log.network.data> <log.random.data> <log.time.data>]";
         std::exit(0);
     }
 
@@ -179,16 +175,20 @@ void ReplayClientApplication::handleUserOptions()
     if (lastArg == -1)
         lastArg = 0;
 
-    if ((args.length() - lastArg) != 6) {
+    int numArgs = (args.length() - lastArg);
+    if (numArgs != 6 && numArgs != 3) {
         std::cerr << "Missing required arguments" << std::endl;
         std::exit(1);
     }
 
     m_url = args.at(++lastArg);
     m_schedulePath = args.at(++lastArg);
-    m_logNetworkPath = args.at(++lastArg);
-    m_logRandomPath = args.at(++lastArg);
-    m_logTimePath = args.at(++lastArg);
+
+    if (numArgs > 3) {
+        m_logNetworkPath = args.at(++lastArg);
+        m_logRandomPath = args.at(++lastArg);
+        m_logTimePath = args.at(++lastArg);
+    }
 }
 
 void ReplayClientApplication::slTimeout() {
@@ -199,10 +199,6 @@ void ReplayClientApplication::slTimeout() {
 void ReplayClientApplication::slSchedulerDone()
 {
     if (m_isStopping == false) {
-
-        m_network->stop();
-        m_timeProvider->stop();
-        m_randomProvider->stop();
 
         uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
 
@@ -218,7 +214,11 @@ void ReplayClientApplication::slSchedulerDone()
         // Errors
         WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
 
-        std::cout << "Schedule executed successfully" << std::endl;
+        if (m_scheduler->wasReplaySuccessful()) {
+            std::cout << "Schedule executed successfully" << std::endl;
+        } else {
+            std::cout << "Schedule partially executed, could not finish schedule!" << std::endl;
+        }
         std::cout << "HTML-hash: " << htmlHash << std::endl;
 
         m_window->close();

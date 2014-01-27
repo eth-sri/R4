@@ -35,6 +35,8 @@
 #include "JavaScriptCore/runtime/timeprovider.h"
 #include "JavaScriptCore/runtime/randomprovider.h"
 
+#include "replaymode.h"
+
 class TimeProviderReplay : public JSC::TimeProviderDefault {
 
 public:
@@ -51,17 +53,12 @@ public:
         m_currentDescriptorString = QString();
     }
 
-    void setRelaxedMode(bool value) {
-        m_relaxedReplayMode = value;
-    }
-
-    void stop() {
-        m_stopped = true;
+    void setMode(ReplayMode value) {
+        m_mode = value;
     }
 
 private:
-    bool m_stopped;
-    bool m_relaxedReplayMode;
+    ReplayMode m_mode;
 
     typedef QList<double> LogEntries;
     typedef QHash<QString, LogEntries> Log;
@@ -90,17 +87,12 @@ public:
         m_currentDescriptorString = QString();
     }
 
-    void setRelaxedMode(bool value) {
-        m_relaxedReplayMode = value;
-    }
-
-    void stop() {
-        m_stopped = true;
+    void setMode(ReplayMode value) {
+        m_mode = value;
     }
 
 private:
-    bool m_stopped;
-    bool m_relaxedReplayMode;
+    ReplayMode m_mode;
 
     typedef QList<double> DLogEntries;
     typedef QHash<QString, DLogEntries> DLog;

@@ -25,9 +25,12 @@
  */
 
 #include <iostream>
+#include <sstream>
 
 #include <QDataStream>
 #include <QFile>
+
+#include <wtf/warningcollectorreport.h>
 
 #include "fuzzyurl.h"
 
@@ -54,8 +57,7 @@ QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(QNetworkReply* 
 
 QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay(QString logNetworkPath)
     : QNetworkReplyControllableFactory()
-    , m_stopped(false)
-    , m_relaxedReplayMode(false)
+    , m_mode(STRICT)
 {
     QFile fp(logNetworkPath);
     fp.open(QIODevice::ReadOnly);
@@ -65,16 +67,13 @@ QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay(Q
 
         QString url = snapshot->getUrl().toString();
 
-        if (m_snapshots.contains(url)) {
-
-            SnapshotMap::iterator iter = m_snapshots.find(url);
-            (*iter)->append(snapshot);
-
-        } else {
+        SnapshotMap::iterator iter = m_snapshots.find(url);
+        if (iter == m_snapshots.end()) {
             SnapshotList* list = new SnapshotList();
             list->append(snapshot);
-
             m_snapshots.insert(url, list);
+        } else {
+            (*iter)->append(snapshot);
         }
 
     }
@@ -84,7 +83,7 @@ QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay(Q
 
 WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::construct(QNetworkReply* reply, QObject* parent)
 {
-    if (m_stopped) {
+    if (m_mode == STOP) {
         return new WebCore::QNetworkReplyControllableLive(reply, parent);
     }
 
@@ -102,7 +101,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
 
     // Fuzzy matching
 
-    if (m_relaxedReplayMode) {
+    if (m_mode == BEST_EFFORT) {
 
         std::cout << "Warning: No exact match for URL (" << reply->url().toString().toStdString() << ") found, fuzzy matching" << std::endl;
 
@@ -133,11 +132,21 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
         if (bestSnapshot != NULL) {
             // We found a fuzzy match
 
+            std::stringstream details;
+            details << "Network request " << reply->url().toString().toStdString() << " fuzzy matched with " << bestSnapshot->getUrl().toString().toStdString() << ".";
+
+            WTF::WarningCollectorReport("WEBERA_NETWORK_DATA", "Network message fuzzy matched in best effort mode.", details.str());
+
             std::cout << "Fuzzy match found (" << bestSnapshot->getUrl().toString().toStdString() << ")" << std::endl;
 
             (*bestList)->pop_front();
             return new QNetworkReplyControllableReplay(reply, bestSnapshot, parent);
         }
+
+        std::stringstream details;
+        details << "Network request " << reply->url().toString().toStdString() << ".";
+
+        WTF::WarningCollectorReport("WEBERA_NETWORK_DATA", "New network request in best effort mode.", details.str());
 
         std::cout << "Fuzzy match not found, using a live connection (relaxed mode)" << std::endl;
         return new WebCore::QNetworkReplyControllableLive(reply, parent);

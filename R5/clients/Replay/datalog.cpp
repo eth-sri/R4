@@ -32,12 +32,13 @@
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/platform/ThreadGlobalData.h>
 
+#include <wtf/warningcollectorreport.h>
+
 #include "datalog.h"
 
 TimeProviderReplay::TimeProviderReplay(QString logPath)
     : JSC::TimeProviderDefault()
-    , m_stopped(false)
-    , m_relaxedReplayMode(false)
+    , m_mode(STRICT)
 {
     deserialize(logPath);
 }
@@ -47,7 +48,7 @@ double TimeProviderReplay::currentTime()
 
     double time = JSC::TimeProviderDefault::currentTime();
 
-    if (m_stopped) {
+    if (m_mode == STOP) {
         return time;
     }
 
@@ -62,7 +63,8 @@ double TimeProviderReplay::currentTime()
 
     if (iter == m_log.end() || iter->isEmpty()) {
 
-        if (m_relaxedReplayMode) {
+        if (m_mode == BEST_EFFORT) {
+            WTF::WarningCollectorReport("WEBERA_TIME_DATA", "New access to the time API in best effort mode.", "");
             return time;
         }
 
@@ -96,8 +98,7 @@ void TimeProviderReplay::deserialize(QString path)
 
 RandomProviderReplay::RandomProviderReplay(QString logPath)
     : JSC::RandomProviderDefault()
-    , m_stopped(false)
-    , m_relaxedReplayMode(false)
+    , m_mode(STRICT)
 {
     deserialize(logPath);
 }
@@ -107,7 +108,7 @@ double RandomProviderReplay::get()
 
     double random = JSC::RandomProviderDefault::get();
 
-    if (m_stopped) {
+    if (m_mode == STOP) {
         return random;
     }
 
@@ -122,7 +123,8 @@ double RandomProviderReplay::get()
 
     if (iter == m_double_log.end() || iter->isEmpty()) {
 
-        if (m_relaxedReplayMode) {
+        if (m_mode == BEST_EFFORT) {
+            WTF::WarningCollectorReport("WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
             return random;
         }
 
@@ -140,7 +142,7 @@ unsigned RandomProviderReplay::getUint32()
 
     unsigned random = JSC::RandomProviderDefault::getUint32();
 
-    if (m_stopped) {
+    if (m_mode == STOP) {
         return random;
     }
 
@@ -155,7 +157,8 @@ unsigned RandomProviderReplay::getUint32()
 
     if (iter == m_unsigned_log.end() || iter->isEmpty()) {
 
-        if (m_relaxedReplayMode) {
+        if (m_mode = BEST_EFFORT) {
+            WTF::WarningCollectorReport("WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
             return random;
         }
 

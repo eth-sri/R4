@@ -17,5 +17,6 @@ HEADERS += \
     replayscheduler.h \
     network.h \
     fuzzyurl.h \
-    datalog.h
+    datalog.h \
+    replaymode.h
 

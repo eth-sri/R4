@@ -26,24 +26,27 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 
 #include "wtf/ExportMacros.h"
 #include "platform/ThreadGlobalData.h"
 #include "platform/ThreadTimers.h"
 #include "platform/schedule/EventActionRegister.h"
 #include "wtf/ActionLogReport.h"
+#include "wtf/warningcollectorreport.h"
 
 #include "fuzzyurl.h"
 
 #include "replayscheduler.h"
 
-ReplayScheduler::ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider)
+ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyControllableFactoryReplay* networkProvider, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider)
     : QObject(NULL)
     , Scheduler()
+    , m_networkProvider(networkProvider)
     , m_timeProvider(timeProvider)
     , m_randomProvider(randomProvider)
-    , m_relaxedReplayMode(false)
-    , m_stopped(false)
+    , m_mode(STRICT)
+    , m_replaySuccessful(true)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -76,7 +79,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 
 bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister)
 {
-    if (m_schedule->isEmpty() || m_stopped) {
+    if (m_schedule->isEmpty() || m_mode == STOP) {
         emit sigDone();
         return false;
     }
@@ -88,8 +91,10 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     if (nextToSchedule.isNull()) {
         std::cout << "Entered relaxed replay mode" << std::endl;
 
-        m_relaxedReplayMode = true;
-        emit sigEnteredRelaxedReplayMode();
+        m_timeProvider->setMode(BEST_EFFORT);
+        m_randomProvider->setMode(BEST_EFFORT);
+        m_networkProvider->setMode(BEST_EFFORT);
+        m_mode = BEST_EFFORT;
 
         m_schedule->remove(0);
 
@@ -115,14 +120,14 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     // Relaxed execution
 
-    if (!found && m_relaxedReplayMode)
+    if (!found && m_mode == BEST_EFFORT)
 
 
         // Try to do a fuzzy match
 
         /**
           * Fuzzy match the URL part of various event actions
-          * (Currently Network and HTMLDocumentParser)
+          * (Currently Network, HTMLDocumentParser, DOMTimer and BrowserLoadUrl)
           *
           * With event action A, we will match an event action B iff
           *
@@ -139,7 +144,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
           *
           * If we have multiple matches then we use the match score by fuzzyurl.
           *
-          * This solves the problem of URLS containing timestamps.
+          * This solves the problem of URLs with timestamps.
           *
           */
 
@@ -184,7 +189,13 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             }
 
             if (bestScore > 0) {
-                std::cout << "Fuzzy match of scheduler name (score " << bestScore << "), renaming " << nextToSchedule.toString() << " to " << bestDescriptor.toString() << std::endl;
+
+                std::stringstream details;
+                details << nextToSchedule.toString() << " fuzzy matched with " << bestDescriptor.toString() << " (score " << bestScore << ")";
+
+                std::cout << "Fuzzy match: " << details.str() << std::endl;
+                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
+
                 m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
                 m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
 
@@ -195,15 +206,13 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             }
     }
 
-
-
     if (found) {
         m_schedule->remove(0);
 
         m_eventActionTimeoutTimer.stop();
 
         if (m_schedule->isEmpty()) {
-            emit sigDone(); // send early warning that we are done, such that we can tell other replay subsystems that we are on unknown grounds
+            stop();
         }
 
         return true;
@@ -218,12 +227,21 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
 void ReplayScheduler::slEventActionTimeout()
 {
-    std::cerr << std::endl << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
 
-    std::cerr << "This is the current queue of events" << std::endl;
-    debugPrintTimers(WebCore::threadGlobalData().threadTimers().eventActionRegister());
+    if (m_mode == STRICT) {
+        // FATAL, this must not happen
 
-    std::exit(1);
+        std::cerr << std::endl << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
+        std::cerr << "This is the current queue of events" << std::endl;
+        debugPrintTimers(WebCore::threadGlobalData().threadTimers().eventActionRegister());
+
+        std::exit(1);
+    }
+
+    WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule", "");
+
+    m_replaySuccessful = false;
+    stop();
 }
 
 bool ReplayScheduler::isFinished()
@@ -234,7 +252,7 @@ bool ReplayScheduler::isFinished()
 void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister* eventActionRegister)
 {
     std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "RELAXED MODE: " << (m_relaxedReplayMode ? "Yes" : "No") << std::endl;
+    std::cout << "RELAXED MODE: " << (m_mode == BEST_EFFORT ? "Yes" : "No") << std::endl;
     std::cout << "NEXT -> " << m_schedule->first().second.toString() << std::endl;
     std::cout << "QUEUE -> " << std::endl;
 

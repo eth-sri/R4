@@ -24,44 +24,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef REPLAYMODE_H
+#define REPLAYMODE_H
 
-#include <QMultiHash>
-
-#include <JavaScriptCore/runtime/JSExportMacros.h>
-#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
-
-#include "replaymode.h"
-
-class QNetworkReplyControllableFactoryReplay;
-
-class QNetworkReplyControllableReplay : public WebCore::QNetworkReplyControllable {
-    Q_OBJECT
-
-public:
-    QNetworkReplyControllableReplay(QNetworkReply*, WebCore::QNetworkReplyInitialSnapshot*, QObject* parent = 0);
-
+enum ReplayMode {
+    STRICT, BEST_EFFORT, STOP
 };
 
-
-class QNetworkReplyControllableFactoryReplay : public WebCore::QNetworkReplyControllableFactory
-{
-
-public:
-    QNetworkReplyControllableFactoryReplay(QString logNetworkPath);
-
-    WebCore::QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0);
-
-    void setMode(ReplayMode value) {
-        m_mode = value;
-    }
-
-private:
-    typedef QList<WebCore::QNetworkReplyInitialSnapshot*> SnapshotList;
-    typedef QHash<QString, SnapshotList*> SnapshotMap;
-    SnapshotMap m_snapshots;
-    ReplayMode m_mode;
-};
-
-#endif // NETWORK_H
+#endif // REPLAYMODE_H

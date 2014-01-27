@@ -40,14 +40,16 @@
 #include "wtf/EventActionSchedule.h"
 #include "wtf/EventActionDescriptor.h"
 
+#include "replaymode.h"
 #include "datalog.h"
+#include "network.h"
 
 class ReplayScheduler : public QObject, public WebCore::Scheduler
 {
     Q_OBJECT
 
 public:
-    ReplayScheduler(const std::string& schedulePath, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider);
+    ReplayScheduler(const std::string& schedulePath, QNetworkReplyControllableFactoryReplay* networkProvider, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider);
     ~ReplayScheduler();
 
     void eventActionScheduled(const WTF::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
@@ -57,7 +59,18 @@ public:
 
     bool isFinished();
 
-    void stop() { m_stopped = true; }
+    void stop() {
+        m_networkProvider->setMode(STOP);
+        m_timeProvider->setMode(STOP);
+        m_randomProvider->setMode(STOP);
+        m_mode = STOP;
+
+        emit sigDone();
+    }
+
+    bool wasReplaySuccessful() {
+        return m_replaySuccessful;
+    }
 
 private:
 
@@ -66,20 +79,21 @@ private:
     void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
 
     WebCore::EventActionSchedule* m_schedule;
+
+    QNetworkReplyControllableFactoryReplay* m_networkProvider;
     TimeProviderReplay* m_timeProvider;
     RandomProviderReplay* m_randomProvider;
 
-    bool m_relaxedReplayMode;
+    ReplayMode m_mode;
+
+    bool m_replaySuccessful;
 
     QTimer m_eventActionTimeoutTimer;
-
-    bool m_stopped;
 
 private slots:
     void slEventActionTimeout();
 
 signals:
-    void sigEnteredRelaxedReplayMode();
     void sigDone();
 };
 
