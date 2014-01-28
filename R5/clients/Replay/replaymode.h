@@ -28,7 +28,7 @@
 #define REPLAYMODE_H
 
 enum ReplayMode {
-    STRICT, BEST_EFFORT, STOP
+    STRICT, BEST_EFFORT, BEST_EFFORT_NOND, STOP
 };
 
 #endif // REPLAYMODE_H

@@ -101,7 +101,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
 
     // Fuzzy matching
 
-    if (m_mode == BEST_EFFORT) {
+    if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
 
         std::cout << "Warning: No exact match for URL (" << reply->url().toString().toStdString() << ") found, fuzzy matching" << std::endl;
 

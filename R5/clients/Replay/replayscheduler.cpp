@@ -47,6 +47,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_randomProvider(randomProvider)
     , m_mode(STRICT)
     , m_replaySuccessful(true)
+    , m_skipEventActionsUntilHit(false)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -86,15 +87,24 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
 
-    // Detect relax token
+    // Detect relax non-determinism token and relax token. We assume that the first occurrence of a token
+    // is always the non-determinism one, and the second (and thrid and ...) are relax tokens.
 
     if (nextToSchedule.isNull()) {
-        std::cout << "Entered relaxed replay mode" << std::endl;
 
-        m_timeProvider->setMode(BEST_EFFORT);
-        m_randomProvider->setMode(BEST_EFFORT);
-        m_networkProvider->setMode(BEST_EFFORT);
-        m_mode = BEST_EFFORT;
+        if (m_mode == STRICT) {
+            std::cout << "Entered relaxed non-deterministic replay mode" << std::endl;
+            m_timeProvider->setMode(BEST_EFFORT_NOND);
+            m_randomProvider->setMode(BEST_EFFORT_NOND);
+            m_networkProvider->setMode(BEST_EFFORT_NOND);
+            m_mode = BEST_EFFORT_NOND;
+        } else {
+            std::cout << "Entered relaxed replay mode" << std::endl;
+            m_timeProvider->setMode(BEST_EFFORT);
+            m_randomProvider->setMode(BEST_EFFORT);
+            m_networkProvider->setMode(BEST_EFFORT);
+            m_mode = BEST_EFFORT;
+        }
 
         m_schedule->remove(0);
 
@@ -118,9 +128,9 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     m_timeProvider->unsetCurrentDescriptorString();
     m_randomProvider->unsetCurrentDescriptorString();
 
-    // Relaxed execution
+    // Relaxed non-deterministic execution
 
-    if (!found && m_mode == BEST_EFFORT)
+    if (!found && (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND)) {
 
 
         // Try to do a fuzzy match
@@ -204,14 +214,74 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                 m_timeProvider->unsetCurrentDescriptorString();
                 m_randomProvider->unsetCurrentDescriptorString();
             }
+        }
+
+    } // End fuzzy non-deterministic match
+
+    // Relaxed execution
+
+    if (!found && m_mode == BEST_EFFORT) {
+
+        /**
+          * Relaxed execution, when we did not find anything using a fuzzy match.
+          *
+          * When a replay deviates, compared to the original execution, it is
+          * possible that previously unknown event actions are scheduled, and
+          * previously known event actions are never scheduled or delayed.
+          *
+          * Missing event actions we can skip (and monitor if they appear later).
+          *
+          * New event actions are ignored (with the hope that they are not needed
+          * to enable any of the old event actions).
+          * This can be the case if these new event actions e.g. block load events.
+          *
+          */
+
+        // This step is implemented partially in the shutdown logic (see the next
+        // code block for detection of new events) and in the timeout handler
+        // (see slEventActionTimeout for deletion of missing event actions).
+
+    }
+
+    if (!found && m_skipEventActionsUntilHit) {
+        // We could not find the current event action in the replay schedule. Skip
+        // it and emit a warning.
+
+        // Notice that we will continue skipping event actions until we get a hit.
+
+        std::stringstream detail;
+        detail << "This is the current queue of events" << std::endl;
+        debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
+
+        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
+
+        m_schedule->remove(0);
+
+        return true; // Go to the next event action now
     }
 
     if (found) {
-        m_schedule->remove(0);
 
+        m_schedule->remove(0);
+        m_skipEventActionsUntilHit = false;
         m_eventActionTimeoutTimer.stop();
 
         if (m_schedule->isEmpty()) {
+
+            // Emit all remaining event actions as potential errors
+            // Notice, that we do not record the remaining event actions in the original
+            // exection. Thus, this will be an over approximation of the actual list of
+            // new event actions.
+
+            std::set<std::string> names = eventActionRegister->getWaitingNames();
+            std::set<std::string>::const_iterator iter;
+
+            for (iter = names.begin(); iter != names.end(); iter++) {
+                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "New event action observed.", (*iter));
+            }
+
+            // Stop scheduler and sub systems
+
             stop();
         }
 
@@ -227,21 +297,54 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
 void ReplayScheduler::slEventActionTimeout()
 {
+    if (m_schedule->isEmpty()) {
+        return;
+    }
 
-    if (m_mode == STRICT) {
-        // FATAL, this must not happen
+    switch (m_mode) {
+
+    case STRICT: {
 
         std::cerr << std::endl << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
         std::cerr << "This is the current queue of events" << std::endl;
-        debugPrintTimers(WebCore::threadGlobalData().threadTimers().eventActionRegister());
+        debugPrintTimers(std::cerr, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
         std::exit(1);
+
+        break;
     }
 
-    WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule", "");
+    case BEST_EFFORT_NOND: {
+        // This should not happen
 
-    m_replaySuccessful = false;
-    stop();
+        std::stringstream detail;
+        detail << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
+        detail << "This is the current queue of events" << std::endl;
+        debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
+
+        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
+        m_replaySuccessful = false;
+        stop();
+
+        break;
+    }
+
+
+    case BEST_EFFORT:
+        // Skip this event action, and enter fast forward mode (skipping any subsequent event actions
+        // in the replay schedule that are not enabled.
+
+        m_skipEventActionsUntilHit = true;
+
+        break;
+
+    case STOP:
+        break;
+
+    default:
+        ASSERT_NOT_REACHED();
+
+    }
 }
 
 bool ReplayScheduler::isFinished()
@@ -249,13 +352,13 @@ bool ReplayScheduler::isFinished()
     return m_schedule->isEmpty();
 }
 
-void ReplayScheduler::debugPrintTimers(WebCore::EventActionRegister* eventActionRegister)
+void ReplayScheduler::debugPrintTimers(std::ostream& out, WebCore::EventActionRegister* eventActionRegister)
 {
-    std::cout << "=========== TIMERS ===========" << std::endl;
-    std::cout << "RELAXED MODE: " << (m_mode == BEST_EFFORT ? "Yes" : "No") << std::endl;
-    std::cout << "NEXT -> " << m_schedule->first().second.toString() << std::endl;
-    std::cout << "QUEUE -> " << std::endl;
+    out << "=========== TIMERS ===========" << std::endl;
+    out << "RELAXED MODE: " << (m_mode == BEST_EFFORT ? "Yes" : "No") << std::endl;
+    out << "NEXT -> " << m_schedule->first().second.toString() << std::endl;
+    out << "QUEUE -> " << std::endl;
 
-    eventActionRegister->debugPrintNames();
+    eventActionRegister->debugPrintNames(out);
 
 }

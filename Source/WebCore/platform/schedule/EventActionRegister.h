@@ -9,6 +9,7 @@
 #define EVENTACTIONREGISTER_H_
 
 #include <vector>
+#include <ostream>
 
 #include "wtf/EventActionDescriptor.h"
 #include "wtf/EventActionSchedule.h"
@@ -76,7 +77,7 @@ public:
 
     std::set<std::string> getWaitingNames();
 
-    void debugPrintNames() const;
+    void debugPrintNames(std::ostream& out) const;
 
     ActionLog::EventActionType toActionLogType(WTF::EventActionCategory category) {
 

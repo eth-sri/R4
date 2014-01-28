@@ -198,21 +198,21 @@ void EventActionRegister::exitImmediateEventAction()
     eventActionDispatchEnd(true);
 }
 
-void EventActionRegister::debugPrintNames() const
+void EventActionRegister::debugPrintNames(std::ostream& out) const
 {
-    std::cout << "Handlers ::" << std::endl;
+    out << "Handlers ::" << std::endl;
     EventActionRegisterMaps::DescriptorToHandler::const_iterator it = m_maps->m_descriptorToHandler.begin();
     for (; it != m_maps->m_descriptorToHandler.end(); it++) {
-        std::cout << (*it).first << std::endl;
+        out << (*it).first << std::endl;
     }
 
-    std::cout << "Providers ::" << std::endl;
+    out << "Providers ::" << std::endl;
     EventActionRegisterMaps::TypeToProvider::const_iterator it2 = m_maps->m_typeToProvider.begin();
     for (; it2 != m_maps->m_typeToProvider.end(); it2++) {
-        std::cout << (*it2).first << std::endl;
+        out << (*it2).first << std::endl;
     }
 
-    std::cout << "--" << std::endl;
+    out << "--" << std::endl;
 }
 
 std::set<std::string> EventActionRegister::getWaitingNames()

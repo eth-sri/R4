@@ -27,6 +27,7 @@
 #define REPLAYSCHEDULER_H
 
 #include <string>
+#include <ostream>
 
 #include <QObject>
 #include <QTimer>
@@ -76,7 +77,7 @@ private:
 
     bool executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister);
 
-    void debugPrintTimers(WebCore::EventActionRegister* eventActionRegister);
+    void debugPrintTimers(std::ostream& out, WebCore::EventActionRegister* eventActionRegister);
 
     WebCore::EventActionSchedule* m_schedule;
 
@@ -89,6 +90,7 @@ private:
     bool m_replaySuccessful;
 
     QTimer m_eventActionTimeoutTimer;
+    bool m_skipEventActionsUntilHit;
 
 private slots:
     void slEventActionTimeout();
