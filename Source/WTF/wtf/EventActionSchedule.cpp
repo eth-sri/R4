@@ -53,7 +53,7 @@ EventActionSchedule* EventActionSchedule::deserialize(std::istream& stream)
             continue; // ignore blank lines
         }
 
-        if (eventaction.compare("<relax>") == 0) {
+        if (eventaction.compare("<relax>") == 0 || eventaction.compare("<change>") == 0) {
             schedule->append(std::pair<WTF::EventActionId, WTF::EventActionDescriptor>(0, WTF::EventActionDescriptor::null));
             continue;
         }
