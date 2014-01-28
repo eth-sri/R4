@@ -37,6 +37,8 @@ public:
     void collect(const std::string& module, const std::string& shortDescription, const std::string& details);
     void writeLogFile(const std::string& filepath);
 
+    static WarningCollector readLogFile(const std::string& filepath);
+
 private:
     typedef struct warning_t {
         const std::string module;

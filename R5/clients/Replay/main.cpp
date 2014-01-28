@@ -44,6 +44,7 @@
 #include <WebCore/platform/ThreadGlobalData.h>
 #include <JavaScriptCore/runtime/JSExportMacros.h>
 #include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
+#include <wtf/warningcollector.h>
 #include <wtf/warningcollectorreport.h>
 
 #include "utils.h"

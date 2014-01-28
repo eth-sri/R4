@@ -25,7 +25,10 @@
 
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
 #include <assert.h>
+#include <malloc.h>
+#include <sstream>
 
 namespace WTF {
 
@@ -37,16 +40,79 @@ void WarningCollector::collect(const std::string& module, const std::string& sho
 void WarningCollector::writeLogFile(const std::string& filepath)
 {
     std::ofstream fp;
-    fp.open(filepath.c_str());
+    fp.open(filepath.c_str(), std::ios_base::out);
 
     assert(fp.is_open());
 
     std::list<Warning>::iterator iter;
     for (iter = m_warnings.begin(); iter != m_warnings.end(); iter++) {
-        fp << (*iter).module << ";" << (*iter).shortDescription << ";" << (*iter).details << std::endl;
+
+        std::string details = ((*iter).details);
+
+        fp << (*iter).module << ";" << (*iter).shortDescription << ";" << (details.length() == 0 ? 0 : details.length() + 1) << std::endl;
+
+        if (details.length() != 0) {
+            fp << details << std::endl;
+        }
     }
 
     fp.close();
+}
+
+WarningCollector WarningCollector::readLogFile(const std::string& filepath)
+{
+    WarningCollector collector;
+
+    std::ifstream fp;
+    fp.open(filepath.c_str(), std::ios_base::in);
+
+    assert(fp.is_open());
+
+    while (fp.good()) {
+
+        // Read the entire line and check for the blank line (indicating EOF)
+
+        std::string line;
+        std::getline(fp, line);
+
+        if (line.compare("") == 0) {
+            break; // the last line is blank
+        }
+
+        // Parse header of warning
+
+        std::stringstream warning(line);
+
+        std::string module;
+        std::getline(warning, module, ';');
+
+        std::string shortDescription;
+        std::getline(warning, shortDescription, ';');
+
+        std::string detailsLength;
+        std::getline(warning, detailsLength);
+
+        // If we have details on the next line, then include those
+
+        int length = atoi(detailsLength.c_str());
+
+        if (length == 0) {
+            collector.m_warnings.push_back(Warning(module, shortDescription, ""));
+
+        } else {
+            char* details = new char [length];
+            fp.read(details, length);
+
+            collector.m_warnings.push_back(Warning(module, shortDescription, details));
+
+            delete details;
+        }
+
+    }
+
+    fp.close();
+
+    return collector;
 }
 
 }
