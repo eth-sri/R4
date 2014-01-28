@@ -18,6 +18,7 @@
  */
 
 #include <stdint.h>
+#include <sstream>
 
 #include "config.h"
 #include "Page.h"
@@ -84,6 +85,7 @@
 #include <JavaScriptCore/debugger/Debugger.h>
 #include <JavaScriptCore/debugger/DebuggerCallFrame.h>
 #include <JavaScriptCore/interpreter/CallFrame.h>
+#include <JavaScriptCore/parser/SourceProvider.h>
 
 namespace WebCore {
 
@@ -138,9 +140,37 @@ DebuggerListener::DebuggerListener()
 {
 }
 
-void DebuggerListener::exception(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, bool hasHandler)
+void DebuggerListener::exception(const JSC::DebuggerCallFrame& callFrame, intptr_t sourceID, int lineNumber, bool hasHandler)
 {
-    WTF::WarningCollectorReport("JavaScript_Interpreter", "An exception occured", "---");
+    JSC::SourceProvider* sp = reinterpret_cast<JSC::SourceProvider*>(sourceID); // sourceID is just a casted pointer to the provider
+
+    std::stringstream detail;
+
+    JSC::UString ex = callFrame.exceptionString();
+    if (!ex.isNull()) {
+        detail << "Exception: " << ex.ascii().data() << std::endl;
+    } else {
+        detail << "Exception: non-string exception (TODO improve identification)" << std::endl;
+    }
+
+    detail << "File: " << sp->url().ascii().data() << std::endl;
+    detail << "Linenumber: " << lineNumber << std::endl;
+
+    JSC::UString cfunc = callFrame.calculatedFunctionName();
+    if (!cfunc.isNull()) {
+        detail << "Calculated Function: " << cfunc.ascii().data() << std::endl;
+    }
+
+    const JSC::UString* func = callFrame.functionName();
+    if (func != 0 && !func->isNull()) {
+        detail << "Function: " << func->ascii().data() << std::endl;
+    }
+
+    // NOTICE: The linenumber announced by the interpreter points to the line of a code block in which an exception occured,
+    // and not the line throwing the exception.
+    // Thus, this value is identical with sp->startPosition().m_line.zeroBasedInt() + 1 (start line of source provider)
+
+    WTF::WarningCollectorReport("JavaScript_Interpreter", "An exception occured", detail.str());
 }
 
 static DebuggerListener* debuggerListener = new DebuggerListener();

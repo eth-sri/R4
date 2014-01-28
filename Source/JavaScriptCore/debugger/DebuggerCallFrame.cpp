@@ -105,4 +105,9 @@ JSValue DebuggerCallFrame::evaluate(const UString& script, JSValue& exception) c
     return result;
 }
 
+UString DebuggerCallFrame::exceptionString() const
+{
+    return m_exception.getString(m_callFrame);
+}
+
 } // namespace JSC
