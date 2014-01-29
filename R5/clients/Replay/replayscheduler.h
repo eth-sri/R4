@@ -92,6 +92,8 @@ private:
     QTimer m_eventActionTimeoutTimer;
     bool m_skipEventActionsUntilHit;
 
+    unsigned int m_timeout_miliseconds;
+
 private slots:
     void slEventActionTimeout();
 

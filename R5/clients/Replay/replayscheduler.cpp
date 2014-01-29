@@ -48,6 +48,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_mode(STRICT)
     , m_replaySuccessful(true)
     , m_skipEventActionsUntilHit(false)
+    , m_timeout_miliseconds(4000)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -56,7 +57,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
 
     ActionLogStrictMode(false); // replaying does not play well with the action log
 
-    m_eventActionTimeoutTimer.setInterval(10 * 1000); // an event action must be executed within 10 seconds
+    m_eventActionTimeoutTimer.setInterval(m_timeout_miliseconds); // an event action must be executed within x miliseconds
     m_eventActionTimeoutTimer.setSingleShot(true);
     connect(&m_eventActionTimeoutTimer, SIGNAL(timeout()), this, SLOT(slEventActionTimeout()));
 }
@@ -305,7 +306,7 @@ void ReplayScheduler::slEventActionTimeout()
 
     case STRICT: {
 
-        std::cerr << std::endl << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
+        std::cerr << std::endl << "Error: Failed execution schedule after waiting for " << m_timeout_miliseconds << " miliseconds." << std::endl;
         std::cerr << "This is the current queue of events" << std::endl;
         debugPrintTimers(std::cerr, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
@@ -318,7 +319,7 @@ void ReplayScheduler::slEventActionTimeout()
         // This should not happen
 
         std::stringstream detail;
-        detail << "Error: Failed execution schedule after waiting for 10 seconds..." << std::endl;
+        detail << "Error: Failed execution schedule after waiting for " << m_timeout_miliseconds << " miliseconds..." << std::endl;
         detail << "This is the current queue of events" << std::endl;
         debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 

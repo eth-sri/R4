@@ -62,6 +62,11 @@ QNetworkSnapshotCookieJar::QNetworkSnapshotCookieJar(QObject* parent)
 {
 }
 
+bool QNetworkSnapshotCookieJar::setCookiesFromUrlUnrestricted(const QList<QNetworkCookie>& list, const QUrl& url)
+{
+    return QNetworkCookieJar::setCookiesFromUrl(list, url);
+}
+
 bool QNetworkSnapshotCookieJar::setCookiesFromUrl(const QList<QNetworkCookie>& cookieList, const QUrl& url)
 {
     if (HBIsCurrentEventActionValid()) { // only set cookies for schedulable elements

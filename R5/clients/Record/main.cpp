@@ -36,6 +36,7 @@
 #include <QString>
 #include <QTimer>
 #include <QNetworkProxy>
+#include <QNetworkCookie>
 
 #include <WebCore/platform/ThreadTimers.h>
 #include <WebCore/platform/ThreadGlobalData.h>
@@ -84,6 +85,8 @@ private:
     WebCore::DefaultScheduler* m_scheduler;
     AutoExplorer* m_autoExplorer;
 
+    QList<QNetworkCookie> mPresetCookies;
+
 public slots:
     void slOnCloseEvent();
 };
@@ -117,7 +120,19 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     WebCore::ThreadTimers::setScheduler(m_scheduler);
     WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
 
-    m_window->page()->networkAccessManager()->setCookieJar(new WebCore::QNetworkSnapshotCookieJar(this));
+    // Cookies support
+
+    WebCore::QNetworkSnapshotCookieJar* cookieJar = new WebCore::QNetworkSnapshotCookieJar(this);
+    m_window->page()->networkAccessManager()->setCookieJar(cookieJar);
+
+    QUrl qurl = m_url;
+    QList<QNetworkCookie> bakedCookies;
+    foreach (QNetworkCookie cookie, mPresetCookies) {
+        cookie.setDomain(qurl.host());
+        bakedCookies.append(cookie);
+    }
+
+    cookieJar->setCookiesFromUrlUnrestricted(bakedCookies, qurl);
 
     // Load and explore the website
 
@@ -146,6 +161,8 @@ void RecordClientApplication::handleUserOptions()
                  << "[-autoexplore-timeout]"
                  << "[-pre-autoexplore-timeout]"
                  << "[-hidewindow]"
+                 << "[-proxy URL:PORT]"
+                 << "[-cookie KEY=VALUE]"
                  << "URL";
         std::exit(0);
     }
@@ -190,6 +207,18 @@ void RecordClientApplication::handleUserOptions()
     if (windowIndex != -1) {
         m_showWindow = false;
     }
+
+    int cookieIndex = args.indexOf("-cookie");
+    if (cookieIndex != -1) {
+        QString cookieRaw = takeOptionValue(&args, cookieIndex);
+        QStringList parts = cookieRaw.split(QString("="));
+
+        QNetworkCookie cookie(parts.at(0).toAscii(), parts.at(1).toAscii());
+        cookie.setPath(QString("/"));
+        mPresetCookies.append(cookie);
+    }
+
+    // URLS
 
     int lastArg = args.lastIndexOf(QRegExp("^-.*"));
     QStringList urls = (lastArg != -1) ? args.mid(++lastArg) : args.mid(1);

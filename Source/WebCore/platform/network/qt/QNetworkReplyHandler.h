@@ -67,6 +67,7 @@ class QNetworkSnapshotCookieJar : public QNetworkCookieJar {
 public:
     QNetworkSnapshotCookieJar(QObject* parent = 0);
 
+    bool setCookiesFromUrlUnrestricted(const QList<QNetworkCookie>&, const QUrl&);
     virtual bool setCookiesFromUrl(const QList<QNetworkCookie>&, const QUrl&);
     virtual QList<QNetworkCookie> cookiesForUrl(const QUrl&) const;
 };
