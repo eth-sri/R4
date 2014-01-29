@@ -55,6 +55,8 @@ public:
 
     void closeEvent(QCloseEvent *event);
 
+    void takeScreenshot(const QString& destinationFile);
+
 signals:
     void sigOnCloseEvent();
 

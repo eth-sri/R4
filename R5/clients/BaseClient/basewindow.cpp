@@ -37,6 +37,9 @@
 #include <QAction>
 #include <QFileInfo>
 #include <QDebug>
+#include <QImage>
+#include <QSize>
+#include <QPainter>
 
 BaseWindow::BaseWindow()
     : m_page(new QWebPage(this))
@@ -166,4 +169,24 @@ void BaseWindow::closeEvent(QCloseEvent *event)
 {
     emit sigOnCloseEvent();
     QMainWindow::closeEvent(event);
+}
+
+void BaseWindow::takeScreenshot(const QString &destinationFile)
+{
+    page()->mainFrame()->setScrollBarPolicy(Qt::Vertical, Qt::ScrollBarAlwaysOff);
+    page()->mainFrame()->setScrollBarPolicy(Qt::Horizontal, Qt::ScrollBarAlwaysOff);
+    page()->setViewportSize(page()->mainFrame()->contentsSize());
+
+    QSize size = page()->mainFrame()->contentsSize();
+    QImage image(size, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter p(&image);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setRenderHint(QPainter::TextAntialiasing, true);
+    p.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    page()->mainFrame()->render(&p);
+    p.end();
+
+    image.save(destinationFile);
 }

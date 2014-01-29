@@ -70,6 +70,9 @@ private:
     QString m_logTimePath;
     QString m_logRandomPath;
     QString m_logErrorsPath;
+
+    QString m_screenshotPath;
+
     QString m_url;
 
     unsigned int m_autoExplorePreTimout;
@@ -98,6 +101,7 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
     , m_logErrorsPath("/tmp/errors.log")
+    , m_screenshotPath("/tmp/record.png")
     , m_autoExplorePreTimout(30)
     , m_autoExploreTimout(30)
     , m_autoExplore(false)
@@ -261,6 +265,10 @@ void RecordClientApplication::slOnCloseEvent()
 
     m_timeProvider->writeLogFile(m_logTimePath);
     m_randomProvider->writeLogFile(m_logRandomPath);
+
+    // Screenshot
+
+    m_window->takeScreenshot(m_screenshotPath);
 
     // errors
     WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());

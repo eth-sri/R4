@@ -69,6 +69,8 @@ private:
     QString m_logTimePath;
     QString m_logErrorsPath;
 
+    QString m_screenshotPath;
+
     ReplayScheduler* m_scheduler;
     TimeProviderReplay* m_timeProvider;
     RandomProviderReplay* m_randomProvider;
@@ -89,6 +91,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     , m_logRandomPath("/tmp/log.random.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logErrorsPath("/tmp/errors.log")
+    , m_screenshotPath("/tmp/replay.png")
     , m_isStopping(false)
     , m_showWindow(true)
 {
@@ -211,6 +214,10 @@ void ReplayClientApplication::slSchedulerDone()
             htmlHash += qHash(current->toHtml());
             queue.append(current->childFrames());
         }
+
+        // Screenshot
+
+        m_window->takeScreenshot(m_screenshotPath);
 
         // Errors
         WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
