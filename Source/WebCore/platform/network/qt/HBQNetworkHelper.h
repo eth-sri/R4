@@ -20,8 +20,6 @@
 
 #include <WTF/wtf/EventActionDescriptor.h>
 
-#include <WebCore/platform/EventActionHappensBeforeReport.h>
-
 #include <QVariant>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -29,8 +27,12 @@
 namespace WebCore
 {
 
-void HBQNetworkRequestAnnotate(QNetworkRequest* request);
-WTF::EventActionId HBQNetworkRequestGetEventAction(const QNetworkRequest& request);
+enum HBQNetworkRequestAnnotateFrom {
+    ORIGIN, SENDER
+};
+
+void HBQNetworkRequestAnnotate(QNetworkRequest* request, HBQNetworkRequestAnnotateFrom from, WTF::EventActionId eventActionId);
+WTF::EventActionId HBQNetworkRequestGetEventAction(const QNetworkRequest& request, HBQNetworkRequestAnnotateFrom from);
 
 }
 

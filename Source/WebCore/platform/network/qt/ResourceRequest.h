@@ -27,7 +27,11 @@
 #ifndef ResourceRequest_h
 #define ResourceRequest_h
 
+#include <iostream>
+
 #include "ResourceRequestBase.h"
+#include "wtf/EventActionDescriptor.h"
+#include "WebCore/platform/EventActionHappensBeforeReport.h"
 
 QT_BEGIN_NAMESPACE
 class QNetworkRequest;
@@ -40,22 +44,26 @@ class NetworkingContext;
     public:
         ResourceRequest(const String& url) 
             : ResourceRequestBase(KURL(ParsedURLString, url), UseProtocolCachePolicy)
+            , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
         {
         }
 
         ResourceRequest(const KURL& url) 
             : ResourceRequestBase(url, UseProtocolCachePolicy)
+            , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
         {
         }
 
         ResourceRequest(const KURL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy) 
             : ResourceRequestBase(url, policy)
+            , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
         {
             setHTTPReferrer(referrer);
         }
 
         ResourceRequest()
             : ResourceRequestBase(KURL(), UseProtocolCachePolicy)
+            , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
         {
         }
 
@@ -69,6 +77,11 @@ class NetworkingContext;
 
         PassOwnPtr<CrossThreadResourceRequestData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceRequestData> data) const { return data; }
         void doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData>) { }
+
+        // WebERA: Notice, this value can be 0
+        // In some cases network requests are constructed before any UI events exist. In that case
+        // we set the value to 0.
+        WTF::EventActionId m_calleeEventAction;
     };
 
     struct CrossThreadResourceRequestData : public CrossThreadResourceRequestDataBase {

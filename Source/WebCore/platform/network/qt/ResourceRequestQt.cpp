@@ -28,6 +28,7 @@
 #include <QUrl>
 
 #include <WebCore/platform/network/qt/HBQNetworkHelper.h>
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
 
 namespace WebCore {
 
@@ -90,7 +91,10 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
     if (!allowCookies())
         request.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
 
-    HBQNetworkRequestAnnotate(&request);
+    HBQNetworkRequestAnnotate(&request, SENDER, HBIsCurrentEventActionValid() ? \
+                                  HBCurrentEventAction() : HBLastUIEventAction());
+    HBQNetworkRequestAnnotate(&request, ORIGIN, m_calleeEventAction != 0 ? \
+                                  m_calleeEventAction : HBLastUIEventAction());
 
     return request;
 }

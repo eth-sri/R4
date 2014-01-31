@@ -437,7 +437,8 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
 
     // HB - Force HB relation between event action initiating a network request and the initial response
     } else {
-        HBAddExplicitArc(HBQNetworkRequestGetEventAction(m_reply->request()), HBCurrentEventAction());
+        HBAddExplicitArc(HBQNetworkRequestGetEventAction(m_reply->request(), ORIGIN), HBCurrentEventAction());
+        HBAddExplicitArc(HBQNetworkRequestGetEventAction(m_reply->request(), SENDER), HBCurrentEventAction());
     }
 
     m_lastNetworkEventAction = HBCurrentEventAction();

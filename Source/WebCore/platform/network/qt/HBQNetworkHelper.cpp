@@ -26,22 +26,29 @@
 namespace WebCore
 {
 
-static QNetworkRequest::Attribute ATTR_ID = (QNetworkRequest::Attribute)(QNetworkRequest::User + 4242);
+/**
+ * WebERA
+ *
+ * Some parts of WebKit creates requests, and queues them for later dispatch.
+ * The ORIGIN is the event action creating the request, and the SENDER
+ * is the event action initiating the request from the queue. Both should
+ * have a HB relation with the response of the request.
+ */
 
-void HBQNetworkRequestAnnotate(QNetworkRequest* request) {
+static QNetworkRequest::Attribute ATTR_ORIGIN_ID = (QNetworkRequest::Attribute)(QNetworkRequest::User + 4242);
+static QNetworkRequest::Attribute ATTR_SENDER_ID = (QNetworkRequest::Attribute)(QNetworkRequest::User + 4243);
 
-    if (HBIsCurrentEventActionValid()) {
-        request->setAttribute(ATTR_ID, QVariant((int)HBCurrentEventAction()));
-    } else {
-        request->setAttribute(ATTR_ID, QVariant((int)HBLastUIEventAction()));
-    }
+void HBQNetworkRequestAnnotate(QNetworkRequest* request, HBQNetworkRequestAnnotateFrom from, WTF::EventActionId eventActionId) {
 
+    QNetworkRequest::Attribute attr = from == ORIGIN ? ATTR_ORIGIN_ID : ATTR_SENDER_ID;
+
+    request->setAttribute(attr, QVariant((int)eventActionId));
 }
 
+WTF::EventActionId HBQNetworkRequestGetEventAction(const QNetworkRequest& request, HBQNetworkRequestAnnotateFrom from) {
 
-WTF::EventActionId HBQNetworkRequestGetEventAction(const QNetworkRequest& request) {
-
-    QVariant requestEventActionId = request.attribute(ATTR_ID);
+    QNetworkRequest::Attribute attr = from == ORIGIN ? ATTR_ORIGIN_ID : ATTR_SENDER_ID;
+    QVariant requestEventActionId = request.attribute(attr);
 
     if (requestEventActionId.isNull() || requestEventActionId.type() != QVariant::Int) {
         std::cerr << "Error: QNetworkRequest detected without an associated initiating event action" << std::endl;
