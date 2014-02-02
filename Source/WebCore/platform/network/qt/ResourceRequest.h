@@ -69,6 +69,10 @@ class NetworkingContext;
 
         QNetworkRequest toNetworkRequest(NetworkingContext* = 0) const;
 
+        void setCalleeEventAction(WTF::EventActionId callee) {
+            m_calleeEventAction = callee;
+        }
+
     private:
         friend class ResourceRequestBase;
 

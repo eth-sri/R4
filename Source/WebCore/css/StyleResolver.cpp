@@ -27,6 +27,7 @@
 
 #include "config.h"
 #include "StyleResolver.h"
+#include <iostream>
 
 #include "Attribute.h"
 #include "CSSBorderImage.h"
@@ -5752,6 +5753,10 @@ PassRefPtr<StyleImage> StyleResolver::loadPendingImage(StylePendingImage* pendin
     }
 
     if (pendingImage->cssImageGeneratorValue()) {
+        // WebERA(TODO): Add proper HB relations between the final network response for a
+        // stylesheet and the images loaded because of this stylesheet.
+        std::cerr << "WebERA(Warning): Missing HB relation between stylesheet and loaded image." << std::endl;
+
         CSSImageGeneratorValue* imageGeneratorValue = pendingImage->cssImageGeneratorValue();
         imageGeneratorValue->loadSubimages(cachedResourceLoader);
         return StyleGeneratedImage::create(imageGeneratorValue);

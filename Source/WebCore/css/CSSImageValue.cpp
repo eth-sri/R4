@@ -31,12 +31,15 @@
 #include "StyleCachedImage.h"
 #include "StylePendingImage.h"
 
+#include "WebCore/platform/EventActionHappensBeforeReport.h"
+
 namespace WebCore {
 
 CSSImageValue::CSSImageValue(ClassType classType, const String& url)
     : CSSValue(classType)
     , m_url(url)
     , m_accessedImage(false)
+    , m_source(HBCurrentEventAction())
 {
 }
 
@@ -44,6 +47,7 @@ CSSImageValue::CSSImageValue(const String& url)
     : CSSValue(ImageClass)
     , m_url(url)
     , m_accessedImage(false)
+    , m_source(HBCurrentEventAction())
 {
 }
 
@@ -52,6 +56,7 @@ CSSImageValue::CSSImageValue(const String& url, StyleImage* image)
     , m_url(url)
     , m_image(image)
     , m_accessedImage(true)
+    , m_source(HBCurrentEventAction())
 {
 }
 
@@ -82,6 +87,7 @@ StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader, const
         m_accessedImage = true;
 
         ResourceRequest request(loader->document()->completeURL(url));
+        request.setCalleeEventAction(m_source);
         if (CachedImage* cachedImage = loader->requestImage(request))
             m_image = StyleCachedImage::create(cachedImage);
     }

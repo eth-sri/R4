@@ -24,6 +24,8 @@
 #include "CSSValue.h"
 #include <wtf/RefPtr.h>
 
+#include <wtf/EventActionDescriptor.h>
+
 namespace WebCore {
 
 class CachedResourceLoader;
@@ -46,6 +48,10 @@ public:
 
     PassRefPtr<CSSValue> cloneForCSSOM() const;
 
+    WTF::EventActionId getSourceEventActionId() {
+        return m_source;
+    }
+
 protected:
     CSSImageValue(ClassType, const String& url);
 
@@ -60,6 +66,8 @@ private:
     String m_url;
     RefPtr<StyleImage> m_image;
     bool m_accessedImage;
+
+    WTF::EventActionId m_source;
 };
 
 } // namespace WebCore
