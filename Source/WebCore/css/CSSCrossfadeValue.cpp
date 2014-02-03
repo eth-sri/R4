@@ -56,7 +56,7 @@ static CachedImage* cachedImageForCSSValue(CSSValue* value, CachedResourceLoader
         return 0;
 
     if (value->isImageValue()) {
-        StyleCachedImage* styleCachedImage = static_cast<CSSImageValue*>(value)->cachedImage(cachedResourceLoader);
+        StyleCachedImage* styleCachedImage = static_cast<CSSImageValue*>(value)->cachedImage(NULL, cachedResourceLoader);
         if (!styleCachedImage)
             return 0;
 

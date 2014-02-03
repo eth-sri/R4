@@ -112,7 +112,7 @@ bool CSSCursorImageValue::updateIfSVGCursorIsUsed(Element* element)
     return false;
 }
 
-StyleCachedImage* CSSCursorImageValue::cachedImage(CachedResourceLoader* loader)
+StyleCachedImage* CSSCursorImageValue::cachedImage(Element* element, CachedResourceLoader* loader)
 {
 #if ENABLE(SVG)
     if (isSVGCursorIdentifier(url()) && loader && loader->document()) {
@@ -122,7 +122,7 @@ StyleCachedImage* CSSCursorImageValue::cachedImage(CachedResourceLoader* loader)
     }
 #endif
 
-    return CSSImageValue::cachedImage(loader, url());
+    return CSSImageValue::cachedImage(element, loader, url());
 }
 
 #if ENABLE(SVG)

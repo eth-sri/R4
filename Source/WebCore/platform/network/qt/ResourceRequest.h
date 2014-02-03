@@ -45,18 +45,21 @@ class NetworkingContext;
         ResourceRequest(const String& url) 
             : ResourceRequestBase(KURL(ParsedURLString, url), UseProtocolCachePolicy)
             , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
+            , m_senderEventAction(0)
         {
         }
 
         ResourceRequest(const KURL& url) 
             : ResourceRequestBase(url, UseProtocolCachePolicy)
             , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
+            , m_senderEventAction(0)
         {
         }
 
         ResourceRequest(const KURL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy) 
             : ResourceRequestBase(url, policy)
             , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
+            , m_senderEventAction(0)
         {
             setHTTPReferrer(referrer);
         }
@@ -64,6 +67,7 @@ class NetworkingContext;
         ResourceRequest()
             : ResourceRequestBase(KURL(), UseProtocolCachePolicy)
             , m_calleeEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
+            , m_senderEventAction(0)
         {
         }
 
@@ -71,6 +75,10 @@ class NetworkingContext;
 
         void setCalleeEventAction(WTF::EventActionId callee) {
             m_calleeEventAction = callee;
+        }
+
+        void setSenderEventAction(WTF::EventActionId sender) {
+             m_senderEventAction = sender;
         }
 
     private:
@@ -86,6 +94,8 @@ class NetworkingContext;
         // In some cases network requests are constructed before any UI events exist. In that case
         // we set the value to 0.
         WTF::EventActionId m_calleeEventAction;
+        // And for this one, if no explicit sender event action has been set, then it is 0
+        WTF::EventActionId m_senderEventAction;
     };
 
     struct CrossThreadResourceRequestData : public CrossThreadResourceRequestDataBase {

@@ -18,6 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include <iostream>
+
 #include "config.h"
 #include "CSSImageValue.h"
 
@@ -32,6 +34,7 @@
 #include "StylePendingImage.h"
 
 #include "WebCore/platform/EventActionHappensBeforeReport.h"
+#include "WebCore/dom/Element.h"
 
 namespace WebCore {
 
@@ -72,14 +75,14 @@ StyleImage* CSSImageValue::cachedOrPendingImage()
     return m_image.get();
 }
 
-StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader)
+StyleCachedImage* CSSImageValue::cachedImage(Element* element, CachedResourceLoader* loader)
 {
     if (isCursorImageValue())
-        return static_cast<CSSCursorImageValue*>(this)->cachedImage(loader);
-    return cachedImage(loader, m_url);
+        return static_cast<CSSCursorImageValue*>(this)->cachedImage(element, loader);
+    return cachedImage(element, loader, m_url);
 }
 
-StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader, const String& url)
+StyleCachedImage* CSSImageValue::cachedImage(Element* element, CachedResourceLoader* loader, const String& url)
 {
     ASSERT(loader);
 
@@ -87,7 +90,16 @@ StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader, const
         m_accessedImage = true;
 
         ResourceRequest request(loader->document()->completeURL(url));
+
+        // WebERA
         request.setCalleeEventAction(m_source);
+
+        if (element != NULL) {
+            request.setSenderEventAction(element->getCreatingEventAction());
+        } else {
+            std::cerr << "WebERA(Warning): CSSImageValue used by unknown DOM Node. An image is being fetched because of a CSS rule matching a DOM element. Because of missing instrumentation, we can't insert a HB relation between the event action inserting the DOM element and the image load." << std::endl;
+        }
+
         if (CachedImage* cachedImage = loader->requestImage(request))
             m_image = StyleCachedImage::create(cachedImage);
     }

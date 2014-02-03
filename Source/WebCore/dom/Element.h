@@ -32,6 +32,8 @@
 #include "HTMLNames.h"
 #include "ScrollTypes.h"
 
+#include "WebCore/platform/EventActionHappensBeforeReport.h"
+
 namespace WebCore {
 
 class Attribute;
@@ -413,10 +415,15 @@ public:
     IntSize savedLayerScrollOffset() const;
     void setSavedLayerScrollOffset(const IntSize&);
 
+    WTF::EventActionId getCreatingEventAction() {
+        return m_creatingEventAction;
+    }
+
 protected:
     Element(const QualifiedName& tagName, Document* document, ConstructionType type)
         : ContainerNode(document, type)
         , m_tagName(tagName)
+        , m_creatingEventAction(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : HBLastUIEventAction())
     {
     }
 
@@ -487,6 +494,8 @@ private:
 
 private:
     mutable OwnPtr<ElementAttributeData> m_attributeData;
+
+    WTF::EventActionId m_creatingEventAction;
 };
     
 inline Element* toElement(Node* node)

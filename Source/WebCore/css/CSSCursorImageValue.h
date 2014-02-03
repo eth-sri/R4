@@ -42,7 +42,7 @@ public:
     IntPoint hotSpot() const { return m_hotSpot; }
 
     bool updateIfSVGCursorIsUsed(Element*);
-    StyleCachedImage* cachedImage(CachedResourceLoader*);
+    StyleCachedImage* cachedImage(Element* element, CachedResourceLoader*);
 
 #if ENABLE(SVG)
     void removeReferencedElement(SVGElement*);
