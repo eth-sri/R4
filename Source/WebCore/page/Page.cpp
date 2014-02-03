@@ -153,7 +153,10 @@ void DebuggerListener::exception(const JSC::DebuggerCallFrame& callFrame, intptr
         detail << "Exception: non-string exception (TODO improve identification)" << std::endl;
     }
 
-    detail << "File: " << sp->url().ascii().data() << std::endl;
+    if (!sp->url().isNull()) {
+        detail << "File: " << sp->url().ascii().data() << std::endl;
+    }
+
     detail << "Linenumber: " << lineNumber << std::endl;
 
     JSC::UString cfunc = callFrame.calculatedFunctionName();
