@@ -167,6 +167,7 @@ void RecordClientApplication::handleUserOptions()
                  << "[-hidewindow]"
                  << "[-proxy URL:PORT]"
                  << "[-cookie KEY=VALUE]"
+                 << "[-ignore-mouse-move]"
                  << "URL";
         std::exit(0);
     }
@@ -190,6 +191,11 @@ void RecordClientApplication::handleUserOptions()
         }
         QNetworkProxy::setApplicationProxy(proxy);
 
+    }
+
+    int ignoreMouseMoveIndex = args.indexOf("-ignore-mouse-move");
+    if (ignoreMouseMoveIndex != -1) {
+        this->m_window->page()->ignoreMouseMove(true);
     }
 
     int timeoutIndex = args.indexOf("-autoexplore-timeout");

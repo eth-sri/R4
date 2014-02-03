@@ -240,6 +240,7 @@ public:
     static bool userEventProvider(void* object, const WTF::EventActionDescriptor& descriptor);
 
     void deferEvent(QEvent*);
+    bool m_ignoreMouseMove;
 
 private:
 

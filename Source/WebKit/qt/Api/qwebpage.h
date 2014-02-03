@@ -313,6 +313,7 @@ public:
 
     // WebERA:
     void enableReplayUserEventMode();
+    void ignoreMouseMove(bool set);
 
     virtual bool event(QEvent*);
     void eventDeferred(QEvent*);

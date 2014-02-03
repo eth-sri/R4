@@ -161,6 +161,11 @@ using namespace WebCore;
 
 // WebERA START
 
+void QWebPage::ignoreMouseMove(bool set)
+{
+    d->m_ignoreMouseMove = set;
+}
+
 DeferredQEvent::DeferredQEvent(const QEvent* ev)
 {
     QEvent::Type eventType = ev->type();
@@ -519,6 +524,10 @@ bool QWebPagePrivate::userEventProvider(void* object, const WTF::EventActionDesc
 
 void QWebPagePrivate::deferEvent(QEvent* event)
 {
+    if (m_ignoreMouseMove && event->type() == QEvent::MouseMove) {
+        return;
+    }
+
     m_deferredEventQueue.append(DeferredQEvent(event));
     rescheduleDeferredEventTimerIfStopped();
 }
@@ -708,6 +717,7 @@ QWebPagePrivate::QWebPagePrivate(QWebPage *qq)
     , inspector(0)
     , inspectorIsInternalOnly(false)
     , m_lastDropAction(Qt::IgnoreAction)
+    , m_ignoreMouseMove(false)
     , m_deferredEventTimer(this, &QWebPagePrivate::deferredEventTimerFired)
 {
 #if ENABLE(GEOLOCATION) || ENABLE(DEVICE_ORIENTATION)
