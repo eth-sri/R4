@@ -48,7 +48,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_mode(STRICT)
     , m_replaySuccessful(true)
     , m_skipEventActionsUntilHit(false)
-    , m_timeout_miliseconds(4000)
+    , m_timeout_miliseconds(20000)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
