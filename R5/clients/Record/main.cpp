@@ -218,14 +218,18 @@ void RecordClientApplication::handleUserOptions()
         m_showWindow = false;
     }
 
-    int cookieIndex = args.indexOf("-cookie");
-    if (cookieIndex != -1) {
+    int cookieIndex = 0;
+    while ((cookieIndex = args.indexOf("-cookie", cookieIndex)) != -1) {
         QString cookieRaw = takeOptionValue(&args, cookieIndex);
         QStringList parts = cookieRaw.split(QString("="));
+
+        std::cout << "index " << cookieIndex << " " << cookieRaw.toStdString() << " parts length " << parts.size() << std::endl;
 
         QNetworkCookie cookie(parts.at(0).toAscii(), parts.at(1).toAscii());
         cookie.setPath(QString("/"));
         mPresetCookies.append(cookie);
+
+        cookieIndex++; // force the next iteration to exclude this index
     }
 
     // URLS
