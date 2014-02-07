@@ -57,10 +57,14 @@ def compare(base_data, race_data):
     race_errors = race_data['errors']
 
     diff = difflib.SequenceMatcher(None, base_errors, race_errors)
+    opcodes = diff.get_opcodes()
+
+    distance = sum(1 for opcode in opcodes if opcode[0] != 'equal')
 
     return {
         'errors_diff_count': abs(len(base_data['errors']) - len(race_data['errors'])),
-        'errors_diff': diff.get_opcodes()
+        'errors_diff': opcodes,
+        'errors_diff_distance': distance
     }
 
 

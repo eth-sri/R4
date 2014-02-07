@@ -196,8 +196,7 @@ void ReplayClientApplication::handleUserOptions()
 }
 
 void ReplayClientApplication::slTimeout() {
-    std::cerr << "Error, replay timeout reached" << std::endl;
-    QApplication::exit(1);
+    m_scheduler->timeout();
 }
 
 void ReplayClientApplication::slSchedulerDone()
@@ -221,9 +220,11 @@ void ReplayClientApplication::slSchedulerDone()
 
         // Errors
         WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
-
-        if (m_scheduler->wasReplaySuccessful()) {
+    RUNNING, TIMEOUT, FINISHED, ERROR
+        switch (m_scheduler->getState()) {
+        case FINISHED:
             std::cout << "Schedule executed successfully" << std::endl;
+            break;
         } else {
             std::cout << "Schedule partially executed, could not finish schedule!" << std::endl;
         }

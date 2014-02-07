@@ -45,6 +45,10 @@
 #include "datalog.h"
 #include "network.h"
 
+enum ReplaySchedulerState {
+    RUNNING, TIMEOUT, FINISHED, ERROR
+};
+
 class ReplayScheduler : public QObject, public WebCore::Scheduler
 {
     Q_OBJECT
@@ -60,18 +64,27 @@ public:
 
     bool isFinished();
 
-    void stop() {
+    void stop(ReplaySchedulerState state) {
+        if (m_doneEmitted) {
+            return;
+        }
+
+        m_doneEmitted = true;
+
         m_networkProvider->setMode(STOP);
         m_timeProvider->setMode(STOP);
         m_randomProvider->setMode(STOP);
         m_mode = STOP;
+        m_state = state;
 
         emit sigDone();
     }
 
-    bool wasReplaySuccessful() {
-        return m_replaySuccessful;
+    ReplaySchedulerState getState() {
+        return m_state;
     }
+
+    void timeout();
 
 private:
 
@@ -86,8 +99,8 @@ private:
     RandomProviderReplay* m_randomProvider;
 
     ReplayMode m_mode;
-
-    bool m_replaySuccessful;
+    ReplaySchedulerState m_state;
+    bool m_doneEmitted;
 
     QTimer m_eventActionTimeoutTimer;
     bool m_skipEventActionsUntilHit;

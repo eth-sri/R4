@@ -46,7 +46,8 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_timeProvider(timeProvider)
     , m_randomProvider(randomProvider)
     , m_mode(STRICT)
-    , m_replaySuccessful(true)
+    , m_state(RUNNING)
+    , m_doneEmitted(false)
     , m_skipEventActionsUntilHit(false)
     , m_timeout_miliseconds(20000)
 {
@@ -82,7 +83,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister)
 {
     if (m_schedule->isEmpty() || m_mode == STOP) {
-        emit sigDone();
+        stop(FINISHED);
         return false;
     }
 
@@ -110,7 +111,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         m_schedule->remove(0);
 
         if (m_schedule->isEmpty()) {
-            emit sigDone();
+            stop(FINISHED);
             return false;
         }
 
@@ -283,7 +284,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
             // Stop scheduler and sub systems
 
-            stop();
+            stop(FINISHED);
         }
 
         return true;
@@ -325,7 +326,7 @@ void ReplayScheduler::slEventActionTimeout()
 
         WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
         m_replaySuccessful = false;
-        stop();
+        stop(ERROR);
 
         break;
     }
@@ -351,6 +352,12 @@ void ReplayScheduler::slEventActionTimeout()
 bool ReplayScheduler::isFinished()
 {
     return m_schedule->isEmpty();
+}
+
+void ReplayScheduler::timeout()
+{
+    WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Scheduler timed out.", "");
+    stop(TIMEOUT);
 }
 
 void ReplayScheduler::debugPrintTimers(std::ostream& out, WebCore::EventActionRegister* eventActionRegister)
