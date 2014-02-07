@@ -106,12 +106,20 @@ void ThreadTimers::updateSharedTimer()
     if (!m_sharedTimer)
         return;
         
-    if (m_firingTimers || m_timerHeap.isEmpty())
+    if (m_firingTimers || m_timerHeap.isEmpty()) {
     	// WebERA: Regardless of whether there are timers, keep running every 50ms milliseconds.
     	// This is to allow for delayed events to trigger.
         m_sharedTimer->setFireInterval(0.05);
-    else
-        m_sharedTimer->setFireInterval(max(m_timerHeap.first()->m_nextFireTime - monotonicallyIncreasingTime(), 0.0));
+
+    } else {
+        // WebERA: Furthermore, force the timer to yield after 1 second regardless of other scheduled
+        // timers. This ensures that we can timely timeout even if a slow running timer exist.
+
+        // Notice! That we could timeout on an event action that has just not been scheduled in the
+        // scheduler yet, but is in the queue of timers. We assume that the sites we are testing are
+        // executed with a certain speed, and slow appearing event actions indicate an error of some sort.
+        m_sharedTimer->setFireInterval(min(max(m_timerHeap.first()->m_nextFireTime - monotonicallyIncreasingTime(), 0.0), 1.0));
+    }
 }
 
 void ThreadTimers::sharedTimerFired()
