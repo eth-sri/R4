@@ -220,14 +220,29 @@ void ReplayClientApplication::slSchedulerDone()
 
         // Errors
         WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
-    RUNNING, TIMEOUT, FINISHED, ERROR
+
         switch (m_scheduler->getState()) {
         case FINISHED:
             std::cout << "Schedule executed successfully" << std::endl;
+            std::cout << "Result: FINISHED" << std::endl;
             break;
-        } else {
+
+        case TIMEOUT:
+            std::cout << "Schedule partially executed, timed out before finishing." << std::endl;
+            std::cout << "Result: TIMEOUT" << std::endl;
+            break;
+
+        case ERROR:
             std::cout << "Schedule partially executed, could not finish schedule!" << std::endl;
+            std::cout << "Result: ERROR" << std::endl;
+            break;
+
+        default:
+            std::cout << "Scheduler stopped for an unknown reason." << std::endl;
+            std::cout << "Result: ERROR" << std::endl;
+            break;
         }
+
         std::cout << "HTML-hash: " << htmlHash << std::endl;
 
         m_window->close();

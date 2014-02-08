@@ -325,7 +325,6 @@ void ReplayScheduler::slEventActionTimeout()
         debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
         WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
-        m_replaySuccessful = false;
         stop(ERROR);
 
         break;

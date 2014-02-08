@@ -69,13 +69,22 @@ public:
             return;
         }
 
+        m_state = state;
+
+        stop();
+    }
+
+    void stop() {
+        if (m_doneEmitted) {
+            return;
+        }
+
         m_doneEmitted = true;
 
         m_networkProvider->setMode(STOP);
         m_timeProvider->setMode(STOP);
         m_randomProvider->setMode(STOP);
         m_mode = STOP;
-        m_state = state;
 
         emit sigDone();
     }
