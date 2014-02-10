@@ -1,7 +1,10 @@
+#!/usr/bin/env python
 
 import sys
 import os
 import difflib
+import re
+from jinja2 import Environment, PackageLoader
 
 
 class HashableDict(dict):
@@ -40,9 +43,20 @@ def parse(base_dir, handle):
                 details=details
             ))
 
+    stdout_file = os.path.join(handle_dir, 'stdout.txt')
+
+    with open(stdout_file, 'r') as fp:
+        stdout = fp.read()
+
+    result_match = re.compile('Result: ([A-Z]+)').search(stdout)
+    state_match = re.compile('HTML-hash: ([0-9]+)').search(stdout)
+
     return {
         'handle': handle,
-        'errors': errors
+        'errors': errors,
+        'stdout': stdout,
+        'result': result_match.group(1) if result_match is not None else 'ERROR',
+        'html_state': state_match
     }
 
 
@@ -64,11 +78,12 @@ def compare(base_data, race_data):
     return {
         'errors_diff_count': abs(len(base_data['errors']) - len(race_data['errors'])),
         'errors_diff': opcodes,
-        'errors_diff_distance': distance
+        'errors_diff_distance': distance,
+        'html_state_match': base_data['html_state'] == race_data['html_state']
     }
 
 
-def output_report(base_data, race_data, comparison):
+def output_report(base_data, race_data, comparison, comparison_template):
     """
     Outputs filename of written report
     """
@@ -84,16 +99,16 @@ def append_index(index, report_filepath, base_data, race_data, comparison):
     index.append((report_filepath, base_data, race_data, comparison))
 
 
-def output_index(index):
+def output_index(index, index_template):
 
-    for item in index:
-        report_filepath, base_data, race_data, comparison = item
-
-        print 'Comparing %s and %s' % (base_data['handle'], race_data['handle'])
-        print 'Errors diff: %s' % comparison['errors_diff_count']
-
+    with open('/tmp/index.html', 'w') as fp:
+        fp.write(index_template.render(
+            index=index
+        ))
 
 if __name__ == '__main__':
+
+    jinja = Environment(loader=PackageLoader('r5comparison', 'templates'))
 
     try:
         output_dir = sys.argv[1]
@@ -112,13 +127,14 @@ if __name__ == '__main__':
     base_data = parse(output_dir, 'base')
 
     index = init_index()
+    comparison_template = jinja.get_template('comparison.html')
 
     for race in races:
         race_data = parse(output_dir, race)
 
         comparison = compare(base_data, race_data)
-        report_filepath = output_report(base_data, race_data, comparison)
+        report_filepath = output_report(base_data, race_data, comparison, comparison_template)
         append_index(index, report_filepath, base_data, race_data, comparison)
 
-    print output_index(index)
+    print output_index(index, jinja.get_template('index.html'))
 
