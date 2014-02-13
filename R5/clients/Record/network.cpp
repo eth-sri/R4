@@ -41,9 +41,9 @@ QNetworkReplyControllableRecord::~QNetworkReplyControllableRecord()
     m_factory->controllableDone(this);
 }
 
-QNetworkReplyControllableFactoryRecord::QNetworkReplyControllableFactoryRecord()
+QNetworkReplyControllableFactoryRecord::QNetworkReplyControllableFactoryRecord(QString logFile)
     : QNetworkReplyControllableFactory()
-    , m_fp(new QFile(QString::fromAscii("/tmp/log.network.data")))
+    , m_fp(new QFile(logFile))
     , m_doneCounter(0)
 {
     m_fp->open(QIODevice::WriteOnly);

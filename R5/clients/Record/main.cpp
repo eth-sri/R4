@@ -67,9 +67,12 @@ private:
     bool m_running;
 
     QString m_schedulePath;
+    QString m_networkPath;
     QString m_logTimePath;
     QString m_logRandomPath;
     QString m_logErrorsPath;
+    QString m_arcsLogPath;
+    QString m_erLogPath;
 
     QString m_screenshotPath;
 
@@ -98,15 +101,17 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_running(true)
     , m_schedulePath("/tmp/schedule.data")
+    , m_networkPath("/tmp/log.network.data")
     , m_logTimePath("/tmp/log.time.data")
     , m_logRandomPath("/tmp/log.random.data")
     , m_logErrorsPath("/tmp/errors.log")
+    , m_arcsLogPath("/tmp/arcs.log")
+    , m_erLogPath("/tmp/ER_actionlog")
     , m_screenshotPath("/tmp/record.png")
     , m_autoExplorePreTimout(30)
     , m_autoExploreTimout(30)
     , m_autoExplore(false)
     , m_showWindow(true)
-    , m_controllableFactory(new QNetworkReplyControllableFactoryRecord())
     , m_timeProvider(new TimeProviderRecord())
     , m_randomProvider(new RandomProviderRecord())
     //, m_scheduler(new SpecificationScheduler(m_controllableFactory))
@@ -117,6 +122,10 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     handleUserOptions();
 
     // Recording specific setup
+
+    ActionLogSetLogFile(m_erLogPath.toStdString());
+
+    m_controllableFactory = new QNetworkReplyControllableFactoryRecord(m_networkPath);
 
     m_timeProvider->attach();
     m_randomProvider->attach();
@@ -168,6 +177,7 @@ void RecordClientApplication::handleUserOptions()
                  << "[-proxy URL:PORT]"
                  << "[-cookie KEY=VALUE]"
                  << "[-ignore-mouse-move]"
+                 << "[-out_dir]"
                  << "URL";
         std::exit(0);
     }
@@ -198,6 +208,20 @@ void RecordClientApplication::handleUserOptions()
         this->m_window->page()->ignoreMouseMove(true);
     }
 
+    int outdirIndex = args.indexOf("-out_dir");
+    if (outdirIndex != -1) {
+        QString outdir = takeOptionValue(&args, outdirIndex);
+
+        m_schedulePath = outdir + "/schedule.data";
+        m_networkPath = outdir + "/log.network.data";
+        m_logTimePath = outdir + "/log.time.data";
+        m_logRandomPath = outdir + "/log.random.data";
+        m_logErrorsPath = outdir + "/errors.log";
+        m_arcsLogPath = outdir + "/arcs.log";
+        m_erLogPath = outdir + "/ER_actionlog";
+        m_screenshotPath = outdir + "/record.png";
+    }
+
     int timeoutIndex = args.indexOf("-autoexplore-timeout");
     if (timeoutIndex != -1) {
         m_autoExploreTimout = takeOptionValue(&args, timeoutIndex).toInt();
@@ -222,8 +246,6 @@ void RecordClientApplication::handleUserOptions()
     while ((cookieIndex = args.indexOf("-cookie", cookieIndex)) != -1) {
         QString cookieRaw = takeOptionValue(&args, cookieIndex);
         QStringList parts = cookieRaw.split(QString("="));
-
-        std::cout << "index " << cookieIndex << " " << cookieRaw.toStdString() << " parts length " << parts.size() << std::endl;
 
         QNetworkCookie cookie(parts.at(0).toAscii(), parts.at(1).toAscii());
         cookie.setPath(QString("/"));
@@ -286,7 +308,7 @@ void RecordClientApplication::slOnCloseEvent()
     // Write human readable HB relation dump (DEBUG)
     std::vector<ActionLog::Arc> arcs = ActionLogReportArcs();
     std::ofstream arcslog;
-    arcslog.open("/tmp/arcs.log");
+    arcslog.open(m_arcsLogPath.toStdString().c_str());
 
     for (std::vector<ActionLog::Arc>::iterator it = arcs.begin(); it != arcs.end(); ++it) {
         arcslog << (*it).m_tail << " -> " << (*it).m_head << std::endl;

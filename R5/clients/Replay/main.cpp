@@ -144,6 +144,7 @@ void ReplayClientApplication::handleUserOptions()
         qDebug() << "Usage:" << m_programName.toLatin1().data()
                  << "[-hidewindow]"
                  << "[-timeout]"
+                 << "[-out_dir]"
                  << "[-proxy URL:PORT]"
                  << "<URL> [<schedule>|<schedule> <log.network.data> <log.random.data> <log.time.data>]";
         std::exit(0);
@@ -153,6 +154,19 @@ void ReplayClientApplication::handleUserOptions()
     if (windowIndex != -1) {
         m_showWindow = false;
     }
+
+    int outdirIndex = args.indexOf("-out_dir");
+    if (outdirIndex != -1) {
+        QString outdir = takeOptionValue(&args, outdirIndex);
+
+        m_schedulePath = outdir + "/schedule.data";
+        m_logNetworkPath = outdir + "/log.network.data";
+        m_logTimePath = outdir + "/log.time.data";
+        m_logRandomPath = outdir + "/log.random.data";
+        m_logErrorsPath = outdir + "/errors.log";
+        m_screenshotPath = outdir + "/replay.png";
+    }
+
 
     int proxyUrlIndex = args.indexOf("-proxy");
     if (proxyUrlIndex != -1) {

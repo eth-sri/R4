@@ -54,7 +54,7 @@ class QNetworkReplyControllableFactoryRecord : public WebCore::QNetworkReplyCont
 {
 
 public:
-    QNetworkReplyControllableFactoryRecord();
+    QNetworkReplyControllableFactoryRecord(QString logFile);
     ~QNetworkReplyControllableFactoryRecord();
 
     void controllableDone(QNetworkReplyControllableRecord* controllable);

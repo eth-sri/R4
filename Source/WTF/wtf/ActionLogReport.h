@@ -43,6 +43,7 @@ int ActionLogScopeDepth();
 
 void ActionLogAddArc(int earlierId, int laterId, int duration);
 void ActionLogSave();
+void ActionLogSetLogFile(const std::string& file_path);
 
 const std::vector<ActionLog::Arc>& ActionLogReportArcs();
 

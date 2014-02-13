@@ -16,6 +16,8 @@
 #include <set>
 #include <queue>
 
+static std::string LOG_FILE_PATH = "/tmp/ER_actionlog";
+
 ActionLogScope::ActionLogScope(const char* name) {
 	ActionLogScopeStart(name);
 }
@@ -172,13 +174,17 @@ bool ActionLogWillAddCommand(ActionLog::CommandType cmd) {
 }
 
 void ActionLogSave() {
-	FILE* f = fopen("/tmp/ER_actionlog", "wb");
+    FILE* f = fopen(LOG_FILE_PATH.c_str(), "wb");
 	wtfThreadData().variableSet()->saveToFile(f);
 	wtfThreadData().scopeSet()->saveToFile(f);
 	wtfThreadData().actionLog()->saveToFile(f);
 	wtfThreadData().jsSet()->saveToFile(f);
 	wtfThreadData().dataSet()->saveToFile(f);
 	fclose(f);
+}
+
+void ActionLogSetLogFile(const std::string& file_path) {
+    LOG_FILE_PATH = file_path;
 }
 
 const std::vector<ActionLog::Arc>& ActionLogReportArcs() {
