@@ -27,6 +27,7 @@
 #include "warningcollectorreport.h"
 
 #include <list>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WTF {
 
@@ -34,19 +35,21 @@ class WarningCollector
 {
 public:
     WarningCollector() {}
-    void collect(const std::string& module, const std::string& shortDescription, const std::string& details);
+    void collect(EventActionId eventActionId, const std::string& module, const std::string& shortDescription, const std::string& details);
     void writeLogFile(const std::string& filepath);
 
     static WarningCollector readLogFile(const std::string& filepath);
 
 private:
     typedef struct warning_t {
+        const EventActionId eventActionId;
         const std::string module;
         const std::string shortDescription;
         const std::string details;
 
-        warning_t(const std::string& module, const std::string& shortDescription, const std::string& details)
-            : module(module)
+        warning_t(EventActionId eventActionId, const std::string& module, const std::string& shortDescription, const std::string& details)
+            : eventActionId(eventActionId)
+            , module(module)
             , shortDescription(shortDescription)
             , details(details)
         {}

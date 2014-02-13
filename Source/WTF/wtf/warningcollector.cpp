@@ -32,9 +32,9 @@
 
 namespace WTF {
 
-void WarningCollector::collect(const std::string& module, const std::string& shortDescription, const std::string& details)
+void WarningCollector::collect(EventActionId eventActionId, const std::string& module, const std::string& shortDescription, const std::string& details)
 {
-    m_warnings.push_back(Warning(module, shortDescription, details));
+    m_warnings.push_back(Warning(eventActionId, module, shortDescription, details));
 }
 
 void WarningCollector::writeLogFile(const std::string& filepath)
@@ -49,7 +49,7 @@ void WarningCollector::writeLogFile(const std::string& filepath)
 
         std::string details = ((*iter).details);
 
-        fp << (*iter).module << ";" << (*iter).shortDescription << ";" << (details.length() == 0 ? 0 : details.length() + 1) << std::endl;
+        fp << (int)(*iter).eventActionId << ";" << (*iter).module << ";" << (*iter).shortDescription << ";" << (details.length() == 0 ? 0 : details.length() + 1) << std::endl;
 
         if (details.length() != 0) {
             fp << details << std::endl;
@@ -83,6 +83,9 @@ WarningCollector WarningCollector::readLogFile(const std::string& filepath)
 
         std::stringstream warning(line);
 
+        std::string eventActionId;
+        std::getline(warning, eventActionId, ';');
+
         std::string module;
         std::getline(warning, module, ';');
 
@@ -97,13 +100,13 @@ WarningCollector WarningCollector::readLogFile(const std::string& filepath)
         int length = atoi(detailsLength.c_str());
 
         if (length == 0) {
-            collector.m_warnings.push_back(Warning(module, shortDescription, ""));
+            collector.m_warnings.push_back(Warning((EventActionId)atoi(eventActionId.c_str()), module, shortDescription, ""));
 
         } else {
             char* details = new char [length];
             fp.read(details, length);
 
-            collector.m_warnings.push_back(Warning(module, shortDescription, details));
+            collector.m_warnings.push_back(Warning((EventActionId)atoi(eventActionId.c_str()), module, shortDescription, details));
 
             delete details;
         }

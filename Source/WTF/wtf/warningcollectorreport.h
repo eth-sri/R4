@@ -25,10 +25,11 @@
 #define WARNINGCOLLECTORREPORT_H
 
 #include <string>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WTF {
 
-void WarningCollectorReport(const std::string& module, const std::string& shortDescription, const std::string& details);
+void WarningCollectorReport(EventActionId eventActionId, const std::string& module, const std::string& shortDescription, const std::string& details);
 void WarningCollecterWriteToLogFile(const std::string& filePath);
 
 }

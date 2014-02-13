@@ -173,7 +173,8 @@ void DebuggerListener::exception(const JSC::DebuggerCallFrame& callFrame, intptr
     // and not the line throwing the exception.
     // Thus, this value is identical with sp->startPosition().m_line.zeroBasedInt() + 1 (start line of source provider)
 
-    WTF::WarningCollectorReport("JavaScript_Interpreter", "An exception occured", detail.str());
+    WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
+                                "JavaScript_Interpreter", "An exception occured", detail.str());
 }
 
 static DebuggerListener* debuggerListener = new DebuggerListener();

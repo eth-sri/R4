@@ -206,7 +206,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                 details << nextToSchedule.toString() << " fuzzy matched with " << bestDescriptor.toString() << " (score " << bestScore << ")";
 
                 std::cout << "Fuzzy match: " << details.str() << std::endl;
-                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
+                WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
+                                            "WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
 
                 m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
                 m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
@@ -255,7 +256,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         detail << "This is the current queue of events" << std::endl;
         debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
-        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
+        WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
+                                    "WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
 
         m_schedule->remove(0);
 
@@ -279,7 +281,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             std::set<std::string>::const_iterator iter;
 
             for (iter = names.begin(); iter != names.end(); iter++) {
-                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "New event action observed.", (*iter));
+                WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
+                                            "WEBERA_SCHEDULER", "New event action observed.", (*iter));
             }
 
             // Stop scheduler and sub systems
@@ -324,7 +327,8 @@ void ReplayScheduler::slEventActionTimeout()
         detail << "This is the current queue of events" << std::endl;
         debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
-        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
+        WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
+                                    "WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
         stop(ERROR);
 
         break;
@@ -355,7 +359,8 @@ bool ReplayScheduler::isFinished()
 
 void ReplayScheduler::timeout()
 {
-    WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Scheduler timed out.", "");
+    WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
+                                "WEBERA_SCHEDULER", "Scheduler timed out.", "");
     stop(TIMEOUT);
 }
 
