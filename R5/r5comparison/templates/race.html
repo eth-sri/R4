@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>{{ website }}: <u>{{ race }}</u></h2>
+
+<h3>Errors</h3>
+
+<table class="table">
+
+    <tr>
+        <th><h4>Base</h4></th>
+        <th></th>
+        <th><h4>{{ race }}</h4></th>
+    </tr>
+
+    {% for item in comparison.errors_diff_human %}
+    <tr class="{% if item.tag == 'equal' %}success{% elif item.tag == 'replace' %}danger{% else %}warning{% endif %}">
+        <td>{% for error in item.base %}{% include "parts/error.html" with context %}{% endfor %}</td>
+        <td>{{ item.tag }}</td>
+        <td>{% for error in item.race %}{% include "parts/error.html" with context %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+{% endblock %}

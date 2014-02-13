@@ -4,6 +4,7 @@ import sys
 import os
 import difflib
 import re
+import shutil
 from jinja2 import Environment, PackageLoader
 
 
@@ -12,7 +13,7 @@ class HashableDict(dict):
         return hash(tuple(sorted(self.items())))
 
 
-def parse(base_dir, handle):
+def parse_race(base_dir, handle):
     """
     Outputs data
     """
@@ -60,7 +61,7 @@ def parse(base_dir, handle):
     }
 
 
-def compare(base_data, race_data):
+def compare_race(base_data, race_data):
     """
     Outputs comparison
     """
@@ -72,69 +73,140 @@ def compare(base_data, race_data):
 
     diff = difflib.SequenceMatcher(None, base_errors, race_errors)
     opcodes = diff.get_opcodes()
+    opcodes_human = []
+
+    for opcode in opcodes:
+        tag, i1, i2, j1, j2 = opcode
+
+        opcodes_human.append({
+            'base': base_errors[i1:i2],
+            'tag': tag,
+            'race': race_errors[j1:j2]
+        })
 
     distance = sum(1 for opcode in opcodes if opcode[0] != 'equal')
 
     return {
         'errors_diff_count': abs(len(base_data['errors']) - len(race_data['errors'])),
         'errors_diff': opcodes,
+        'errors_diff_human': opcodes_human,
         'errors_diff_distance': distance,
         'html_state_match': base_data['html_state'] == race_data['html_state']
     }
 
 
-def output_report(base_data, race_data, comparison, comparison_template):
+def output_race_report(website, race, base_data, race_data, comparison, jinja, output_dir):
     """
     Outputs filename of written report
     """
 
-    return ''
+    with open(os.path.join(output_dir, '%s.html' % race), 'w') as fp:
+
+        fp.write(jinja.get_template('race.html').render(
+            website=website,
+            race=race,
+            base_data=base_data,
+            race_data=race_data,
+            comparison=comparison
+        ))
 
 
-def init_index():
+def init_race_index():
     return []
 
 
-def append_index(index, report_filepath, base_data, race_data, comparison):
-    index.append((report_filepath, base_data, race_data, comparison))
+def append_race_index(race_index, race, base_data, race_data, comparison):
+    race_index.append((race, base_data, race_data, comparison))
 
 
-def output_index(index, index_template):
+def output_race_index(website, race_index, jinja, output_dir):
 
-    with open('/tmp/index.html', 'w') as fp:
-        fp.write(index_template.render(
-            index=index
+    try:
+        os.mkdir(output_dir)
+    except OSError:
+        pass  # folder exists
+
+    for race, base_data, race_data, comparison in race_index:
+        output_race_report(website, race, base_data, race_data, comparison, jinja, output_dir)
+
+    with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
+
+        fp.write(jinja.get_template('race_index.html').render(
+            website=website,
+            index=race_index
         ))
 
-if __name__ == '__main__':
+
+def init_website_index():
+    return []
+
+
+def append_website_index(website_index, website, race_index):
+    website_index.append((website, race_index))
+
+
+def output_website_index(website_index, jinja, output_dir):
+
+    try:
+        os.mkdir(output_dir)
+    except OSError:
+        pass  # folder exists
+
+    website_statistics = []
+
+    for website, race_index in website_index:
+
+        website_dir = os.path.join(output_dir, website)
+        output_race_index(website, race_index, jinja, website_dir)
+
+        website_statistics.append({
+            'website': website,
+        })
+
+    with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
+
+        fp.write(jinja.get_template('index.html').render(
+            website_index=website_statistics
+        ))
+
+
+def main():
+
+    try:
+        analysis_dir = sys.argv[1]
+        output_dir = sys.argv[2]
+    except IndexError:
+        print('Usage: %s <analysis-dir> <report-dir>' % sys.argv[0])
+        sys.exit(1)
+
+    websites = os.listdir(analysis_dir)
+    website_index = init_website_index()
+
+    for website in websites:
+
+        website_dir = os.path.join(analysis_dir, website)
+
+        races = os.listdir(website_dir)
+        race_index = init_race_index()
+
+        try:
+            races.remove('base')
+            races.remove('record')
+        except ValueError:
+            print 'Error, missing base directory in output dir'
+            sys.exit(1)
+
+        base_data = parse_race(website_dir, 'base')
+
+        for race in races:
+            race_data = parse_race(website_dir, race)
+            comparison = compare_race(base_data, race_data)
+            append_race_index(race_index, race, base_data, race_data, comparison)
+
+        append_website_index(website_index, website, race_index)
 
     jinja = Environment(loader=PackageLoader('r5comparison', 'templates'))
+    print output_website_index(website_index, jinja, output_dir)
 
-    try:
-        output_dir = sys.argv[1]
-    except IndexError:
-        print('Usage: %s <EventRacer-output-dir>' % sys.argv[0])
-        sys.exit(1)
-
-    races = os.listdir(output_dir)
-
-    try:
-        races.remove('base')
-    except ValueError:
-        print 'Error, missing base directory in output dir'
-        sys.exit(1)
-
-    base_data = parse(output_dir, 'base')
-
-    index = init_index()
-    comparison_template = jinja.get_template('comparison.html')
-
-    for race in races:
-        race_data = parse(output_dir, race)
-
-        comparison = compare(base_data, race_data)
-        report_filepath = output_report(base_data, race_data, comparison, comparison_template)
-        append_index(index, report_filepath, base_data, race_data, comparison)
-
-    print output_index(index, jinja.get_template('index.html'))
-
+if __name__ == '__main__':
+    main()

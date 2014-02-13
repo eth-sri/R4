@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>{{ website }}</h2>
+
+<table class="table">
+    <tr>
+        <th>Race</th>
+        <th>Distance</th>
+        <th>HTML State Match</th>
+        <th>Replay</th>
+    </tr>
+
+    {% for race, base_data, race_data, comparison in index %}
+    <tr class="{% if race_data.result == 'FINISHED' %}success{% elif race_data.result == 'TIMEOUT' %}warning{% else %}danger{% endif %}">
+        <td><a href="{{ race }}.html">{{ race }}</a></td>
+        <td>{{ comparison.errors_diff_distance }}</td>
+        <td>{{ comparison.html_state_match }}</td>
+        <td>{{ race_data.result }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% endblock %}
