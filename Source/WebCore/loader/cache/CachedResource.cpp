@@ -171,6 +171,7 @@ CachedResource::CachedResource(const ResourceRequest& request, Type type)
     , m_owningCachedResourceLoader(0)
     , m_resourceToRevalidate(0)
     , m_proxyResource(0)
+    , m_loadingEventAction(0)
 {
     ASSERT(m_type == unsigned(type)); // m_type is a bitfield, so this tests careless updates of the enum.
 #ifndef NDEBUG

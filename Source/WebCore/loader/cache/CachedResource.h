@@ -38,6 +38,8 @@
 #include <wtf/Vector.h>
 #include <time.h>
 
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
+
 namespace WebCore {
 
 class MemoryCache;
@@ -142,7 +144,16 @@ public:
     bool isLoaded() const { return !m_loading; } // FIXME. Method name is inaccurate. Loading might not have started yet.
 
     bool isLoading() const { return m_loading; }
-    void setLoading(bool b) { m_loading = b; }
+    void setLoading(bool b) {
+        m_loading = b;
+        if (b == false) {
+            m_loadingEventAction = HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0;
+        }
+    }
+
+    WTF::EventActionId getLoadingEventAction() {
+        return m_loadingEventAction;
+    }
 
     virtual bool isImage() const { return false; }
     bool ignoreForRequestCount() const
@@ -342,6 +353,8 @@ private:
 
     // These handles will need to be updated to point to the m_resourceToRevalidate in case we get 304 response.
     HashSet<CachedResourceHandleBase*> m_handlesToRevalidate;
+
+    WTF::EventActionId m_loadingEventAction;
 };
 
 }

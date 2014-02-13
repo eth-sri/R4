@@ -41,6 +41,8 @@
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
 
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -126,6 +128,11 @@ void HTMLScriptRunner::executePendingScriptAndDispatchEvent(PendingScript& pendi
     // Stop watching loads before executeScript to prevent recursion if the script reloads itself.
     if (pendingScript.cachedScript() && pendingScript.watchingForLoad())
         stopWatchingForLoad(pendingScript);
+
+    // WebERA: Insert HB relation between the execution of a pending script and the load of the script
+    if (HBIsCurrentEventActionValid() && pendingScript.cachedScript() && pendingScript.cachedScript()->isLoaded() && pendingScript.cachedScript()->getLoadingEventAction() != 0) {
+        HBAddExplicitArc(pendingScript.cachedScript()->getLoadingEventAction(), HBCurrentEventAction());
+    }
 
     // Clear the pending script before possible rentrancy from executeScript()
     RefPtr<Element> element = pendingScript.releaseElementAndClear();

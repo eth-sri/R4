@@ -41,6 +41,7 @@
 #include <string>
 
 #include <wtf/EventActionDescriptor.h>
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
 
 namespace WebCore {
 
