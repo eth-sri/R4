@@ -88,6 +88,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     }
 
     WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
+    WTF::EventActionId nextToScheduleId = m_schedule->first().first;
 
     // Detect relax non-determinism token and relax token. We assume that the first occurrence of a token
     // is always the non-determinism one, and the second (and thrid and ...) are relax tokens.
@@ -116,7 +117,12 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         }
 
         nextToSchedule = m_schedule->first().second;
+        nextToScheduleId = m_schedule->first().first;
     }
+
+    // Update the warning collecter such that all warnings are associated with this event action
+
+    WTF::WarningCollectorSetCurrentEventAction(nextToScheduleId);
 
     // Exact execution
 
@@ -206,8 +212,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                 details << nextToSchedule.toString() << " fuzzy matched with " << bestDescriptor.toString() << " (score " << bestScore << ")";
 
                 std::cout << "Fuzzy match: " << details.str() << std::endl;
-                WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                            "WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
+                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
 
                 m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
                 m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
@@ -256,8 +261,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         detail << "This is the current queue of events" << std::endl;
         debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
-        WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                    "WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
+        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
 
         m_schedule->remove(0);
 
@@ -281,8 +285,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             std::set<std::string>::const_iterator iter;
 
             for (iter = names.begin(); iter != names.end(); iter++) {
-                WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                            "WEBERA_SCHEDULER", "New event action observed.", (*iter));
+                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "New event action observed.", (*iter));
             }
 
             // Stop scheduler and sub systems
@@ -327,8 +330,7 @@ void ReplayScheduler::slEventActionTimeout()
         detail << "This is the current queue of events" << std::endl;
         debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
-        WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                    "WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
+        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Could not replay schedule while in non-deterministic relax mode", detail.str());
         stop(ERROR);
 
         break;
@@ -359,8 +361,7 @@ bool ReplayScheduler::isFinished()
 
 void ReplayScheduler::timeout()
 {
-    WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                "WEBERA_SCHEDULER", "Scheduler timed out.", "");
+    WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Scheduler timed out.", "");
     stop(TIMEOUT);
 }
 

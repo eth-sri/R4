@@ -135,8 +135,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
             std::stringstream details;
             details << "Network request " << reply->url().toString().toStdString() << " fuzzy matched with " << bestSnapshot->getUrl().toString().toStdString() << ".";
 
-            WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                        "WEBERA_NETWORK_DATA", "Network message fuzzy matched in best effort mode.", details.str());
+            WTF::WarningCollectorReport("WEBERA_NETWORK_DATA", "Network message fuzzy matched in best effort mode.", details.str());
 
             std::cout << "Fuzzy match found (" << bestSnapshot->getUrl().toString().toStdString() << ")" << std::endl;
 
@@ -147,8 +146,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
         std::stringstream details;
         details << "Network request " << reply->url().toString().toStdString() << ".";
 
-        WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                    "WEBERA_NETWORK_DATA", "New network request in best effort mode.", details.str());
+        WTF::WarningCollectorReport("WEBERA_NETWORK_DATA", "New network request in best effort mode.", details.str());
 
         std::cout << "Fuzzy match not found, using a live connection (relaxed mode)" << std::endl;
         return new WebCore::QNetworkReplyControllableLive(reply, parent);

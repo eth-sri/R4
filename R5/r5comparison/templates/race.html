@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h2><a href="./index.html">{{ website }}</a>: <u>{{ race }}</u></h2>
+<h2><a href="./index.html">{{ website }}</a>: <u>{{ race.handle }}</u></h2>
 
 <!-- Nav tabs -->
 <ul class="nav nav-tabs">
@@ -22,10 +22,10 @@
           <tr>
               <th><h4>Base</h4></th>
               <th></th>
-              <th><h4>{{ race }}</h4></th>
+              <th><h4>{{ race.handle }}</h4></th>
           </tr>
 
-          {% for item in comparison.errors_diff_human %}
+          {% for item in race.comparison.errors_diff_human %}
           <tr class="{% if item.tag == 'equal' %}success{% elif item.tag == 'replace' %}danger{% else %}warning{% endif %}">
               <td>{% for error in item.base %}{% include "parts/error.html" with context %}{% endfor %}</td>
               <td>{{ item.tag }}</td>
@@ -41,9 +41,9 @@
 
       <h3>Visual Comparison</h3>
 
-      <img src="comparison.png" /><br/>
+      <img src="{{ race.handle }}-comparison.png" /><br/>
       <img src="record.png" /><br/>
-      <img src="replay.png" /><br/>
+      <img src="{{ race.handle }}-replay.png" /><br/>
 
   </div>
 
@@ -54,11 +54,11 @@
       <div class="row">
           <div class="col-lg-6">
               <h4>Base</h4>
-              <pre>{{ base_data.stdout }}</pre>
+              <pre>{{ race.base_data.stdout }}</pre>
           </div>
           <div class="col-lg-6">
-              <h4>{{ race }}</h4>
-              <pre>{{ race_data.stdout }}</pre>
+              <h4>{{ race.handle }}</h4>
+              <pre>{{ race.race_data.stdout }}</pre>
           </div>
       </div>
 

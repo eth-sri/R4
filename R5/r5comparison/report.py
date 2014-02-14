@@ -7,9 +7,14 @@ import re
 import shutil
 from jinja2 import Environment, PackageLoader
 import subprocess
+from builtins import FileNotFoundError, NotADirectoryError
 import concurrent.futures
 
 NUM_PROC = 7
+
+
+class RaceParseException(Exception):
+    pass
 
 
 class HashableDict(dict):
@@ -50,9 +55,14 @@ def parse_race(base_dir, handle):
     errors_file = os.path.join(handle_dir, 'errors.log')
     errors = []
 
-    with open(errors_file, 'r') as fp:
+    try:
+        fp = open(errors_file, 'rb')
+    except (FileNotFoundError, NotADirectoryError):
+        raise RaceParseException()
+
+    with fp:
         while True:
-            header = fp.readline()
+            header = fp.readline().decode('utf8', 'ignore')
 
             if header == '':
                 break  # EOF reached
@@ -63,7 +73,7 @@ def parse_race(base_dir, handle):
             if length == 0:
                 details = ''
             else:
-                details = fp.read(length)
+                details = fp.read(length).decode('utf8', 'ignore')
 
             errors.append(HashableDict(
                 event_action_id=event_action_id,
@@ -75,8 +85,8 @@ def parse_race(base_dir, handle):
 
     stdout_file = os.path.join(handle_dir, 'stdout.txt')
 
-    with open(stdout_file, 'r') as fp:
-        stdout = fp.read()
+    with open(stdout_file, 'rb') as fp:
+        stdout = fp.read().decode('utf8', 'ignore')
 
     result_match = re.compile('Result: ([A-Z]+)').search(stdout)
     state_match = re.compile('HTML-hash: ([0-9]+)').search(stdout)
@@ -86,13 +96,86 @@ def parse_race(base_dir, handle):
         'errors': errors,
         'stdout': stdout,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
-        'html_state': state_match is not None,
+        'html_state': state_match.group(1),
         'race_dir': handle_dir
     }
 
 
+def parse_er_log(base_dir):
+
+    result = {
+        'races_total': -1,
+        'races_success': -1,
+        'races_failure': -1,
+        'execution_time': 0,
+        'stdout': ''
+    }
+
+    try:
+        fp = open(os.path.join(base_dir, 'runner', 'stdout.txt'), 'rb')
+    except (FileNotFoundError, NotADirectoryError):
+        return result
+
+    with fp:
+        stdout = fp.read().decode('utf8', 'ignore')
+        result['stdout'] = stdout
+
+        result_match = re.compile('Tried ([0-9]+) schedules. ([0-9]+) generated, ([0-9]+) successful').search(stdout)
+
+        if result_match is not None:
+            result['races_total'] = int(result_match.group(1))
+            result['races_success'] = int(result_match.group(3))
+            result['races_failure'] = result['races_total'] - result['races_success']
+
+        time_match = re.compile('real ([0-9]+)\.[0-9]+').search(stdout)
+
+        if time_match is not None:
+            result['execution_time'] = int(time_match.group(1))
+
+    return result
+
+
 def generate_comparison_file(record_file, replay_file, comparison_file):
-    subprocess.check_call('compare %s %s %s' % (record_file, replay_file, comparison_file), shell=True)
+    try:
+        stdout = subprocess.check_output('compare -metric RMSE %s %s %s' % (record_file, replay_file, comparison_file), stderr=subprocess.STDOUT, shell=True)
+        type = 'normal'
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 2:
+            return 'error', -1
+
+        stdout = e.output
+        type = 'normal'
+
+    if b'image widths or heights differ' in stdout:
+        # do a subimage search
+
+        try:
+            stdout = subprocess.check_output('compare -metric RMSE -subimage-search %s %s %s' % (record_file, replay_file, comparison_file), stderr=subprocess.STDOUT, shell=True)
+            type = 'subimage'
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 2:
+                return 'error', -1
+
+            stdout = e.output
+            type = 'subimage'
+
+    match = re.compile(b'([0-9]+\.?[0-9]*) \([0-9]+\.?[0-9]*\)').search(stdout)
+
+    if match is None:
+        return 'error', -1
+
+    return type, float(match.group(1))
+
+
+def cimage_human(type, distance):
+    if type == 'normal' and distance == 0:
+        return 'EXACT'
+    elif type == 'normal' and distance != 0:
+        return 'DIFFER'
+    elif type == 'subimage':
+        return 'SUBSET'
+    else:
+        return 'ERROR'
 
 
 def compare_race(base_data, race_data, executor):
@@ -102,11 +185,46 @@ def compare_race(base_data, race_data, executor):
 
     # Compare image
 
-    if not os.path.isfile(os.path.join(race_data['race_dir'], 'comparison.png')):
-        executor.submit(generate_comparison_file,
-                        os.path.join(base_data['race_dir'], 'replay.png'),
-                        os.path.join(race_data['race_dir'], 'replay.png'),
-                        os.path.join(race_data['race_dir'], 'comparison.png'))
+    cimage_meta = os.path.join(race_data['race_dir'], 'comparison.txt')
+
+    if not os.path.isfile(cimage_meta):
+
+        cimage = {
+
+        }
+
+        def finished_callback(future):
+
+            match_type, distance = future.result()
+            cimage['distance'] = distance
+            cimage['match_type'] = match_type
+            cimage['human'] = cimage_human(match_type, distance)
+
+            with open(cimage_meta, 'w') as fp:
+                fp.writelines([
+                    str(cimage['distance']),
+                    cimage['match_type']
+                ])
+
+        visual_state_match = executor.submit(generate_comparison_file,
+                                             os.path.join(base_data['race_dir'], 'replay.png'),
+                                             os.path.join(race_data['race_dir'], 'replay.png'),
+                                             os.path.join(race_data['race_dir'], 'comparison.png'))
+
+        visual_state_match.add_done_callback(finished_callback)
+
+    else:
+
+        with open(cimage_meta, 'r') as fp:
+            line = fp.readline()
+            match = re.compile('^(\-?[0-9]+\.?[0-9]*)([a-z]+)$').search(line)
+
+            cimage = {
+                'distance': float(match.group(1)),
+                'match_type': match.group(2),
+                'human': cimage_human(match.group(2), float(match.group(1)))
+            }
+
 
     # Errors diff
 
@@ -133,31 +251,44 @@ def compare_race(base_data, race_data, executor):
         'errors_diff': opcodes,
         'errors_diff_human': opcodes_human,
         'errors_diff_distance': distance,
-        'html_state_match': base_data['html_state'] == race_data['html_state']
+        'html_state_match': base_data['html_state'] == race_data['html_state'],
+        'visual_state_match': cimage
     }
 
 
-def output_race_report(website, race, base_data, race_data, comparison, jinja, output_dir, input_dir):
+def output_race_report(website, race, jinja, output_dir, input_dir):
     """
     Outputs filename of written report
     """
 
     record_file = os.path.join(output_dir, 'record.png')
-    replay_file = os.path.join(output_dir, 'replay.png')
-    comparison_file = os.path.join(output_dir, 'comparison.png')
+    replay_file = os.path.join(output_dir, '%s-replay.png' % race['handle'])
+    comparison_file = os.path.join(output_dir, '%s-comparison.png' % race['handle'])
 
-    shutil.copy(os.path.join(input_dir, website, 'base', 'replay.png'), record_file)
-    shutil.copy(os.path.join(input_dir, website, race, 'replay.png'), replay_file)
-    shutil.copy(os.path.join(input_dir, website, race, 'comparison.png'), comparison_file)
+    try:
+        if not os.path.isfile(record_file):
+            shutil.copy(os.path.join(input_dir, website, 'base', 'replay.png'), record_file)
+    except FileNotFoundError:
+        pass
 
-    with open(os.path.join(output_dir, '%s.html' % race), 'w') as fp:
+    try:
+        shutil.copy(os.path.join(input_dir, website, race['handle'], 'replay.png'), replay_file)
+    except FileNotFoundError:
+        pass
+
+    try:
+        shutil.copy(os.path.join(input_dir, website, race['handle'], 'comparison.png'), comparison_file)
+    except FileNotFoundError:
+        try:
+            shutil.copy(os.path.join(input_dir, website, race['handle'], 'comparison-0.png'), comparison_file)
+        except FileNotFoundError:
+            pass
+
+    with open(os.path.join(output_dir, '%s.html' % race['handle']), 'w') as fp:
 
         fp.write(jinja.get_template('race.html').render(
             website=website,
-            race=race,
-            base_data=base_data,
-            race_data=race_data,
-            comparison=comparison
+            race=race
         ))
 
 
@@ -166,24 +297,28 @@ def init_race_index():
 
 
 def append_race_index(race_index, race, base_data, race_data, comparison):
-    race_index.append((race, base_data, race_data, comparison))
+    race_index.append({
+        'handle': race,
+        'base_data': base_data,
+        'race_data': race_data,
+        'comparison': comparison
+    })
 
 
-def output_race_index(website, race_index, jinja, output_dir, input_dir):
+def output_race_index(website, jinja, output_dir, input_dir):
 
     try:
         os.mkdir(output_dir)
     except OSError:
         pass  # folder exists
 
-    for race, base_data, race_data, comparison in race_index:
-        output_race_report(website, race, base_data, race_data, comparison, jinja, output_dir, input_dir)
+    for race in website['race_index']:
+        output_race_report(website['handle'], race, jinja, output_dir, input_dir)
 
     with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
         fp.write(jinja.get_template('race_index.html').render(
-            website=website,
-            index=race_index
+            website=website
         ))
 
 
@@ -191,8 +326,12 @@ def init_website_index():
     return []
 
 
-def append_website_index(website_index, website, race_index):
-    website_index.append((website, race_index))
+def append_website_index(website_index, website, er_log, race_index):
+    website_index.append({
+        'handle': website,
+        'race_index': race_index,
+        'er_log': er_log
+    })
 
 
 def output_website_index(website_index, jinja, output_dir, input_dir):
@@ -203,20 +342,53 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
         pass  # folder exists
 
     website_statistics = []
+    summary = {
+        'race_result': {
+            'success': 0,
+            'timeout': 0,
+            'error': 0
+        },
+        'execution_result': {
+            'total': 0,
+            'success': 0,
+            'failure': 0
+        },
+        'execution_time': 0,
+    }
 
-    for website, race_index in website_index:
+    for website in website_index:
 
-        website_dir = os.path.join(output_dir, website)
-        output_race_index(website, race_index, jinja, website_dir, input_dir)
+        website_dir = os.path.join(output_dir, website['handle'])
+        output_race_index(website, jinja, website_dir, input_dir)
+
+        result = {
+            'success': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED']),
+            'timeout': len([race for race in website['race_index'] if race['race_data']['result'] == 'TIMEOUT']),
+            'error': len([race for race in website['race_index'] if race['race_data']['result'] == 'ERROR'])
+        }
 
         website_statistics.append({
-            'website': website,
+            'handle': website['handle'],
+            'race_index': website['race_index'],
+            'er_log': website['er_log'],
+            'result': result
         })
+
+        summary['race_result']['success'] += result['success']
+        summary['race_result']['timeout'] += result['timeout']
+        summary['race_result']['error'] += result['error']
+
+        summary['execution_result']['total'] += website['er_log']['races_total']
+        summary['execution_result']['success'] += website['er_log']['races_success']
+        summary['execution_result']['failure'] += website['er_log']['races_failure']
+
+        summary['execution_time'] += website['er_log']['execution_time']
 
     with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
         fp.write(jinja.get_template('index.html').render(
-            website_index=website_statistics
+            website_index=website_statistics,
+            summary=summary
         ))
 
 
@@ -236,6 +408,8 @@ def main():
 
         for website in websites:
 
+            print ("PROCESSING %s", website)
+
             website_dir = os.path.join(analysis_dir, website)
 
             races = os.listdir(website_dir)
@@ -245,22 +419,41 @@ def main():
                 races.remove('base')
                 races.remove('record')
             except ValueError:
-                print('Error, missing base directory in output dir')
-                sys.exit(1)
+                print('Error, missing base or record directory in output dir for %s' % website)
+                continue
 
-            base_data = parse_race(website_dir, 'base')
+            if 'runner' in races:
+                races.remove('runner')
 
-            for race in races:
-                race_data = parse_race(website_dir, race)
-                comparison = compare_race(base_data, race_data, executor)
-                append_race_index(race_index, race, base_data, race_data, comparison)
+            if 'new_schedule.data' in races:
+                races.remove('new_schedule.data')
 
-            append_website_index(website_index, website, race_index)
+            if 'stdout.txt' in races:
+                races.remove('stdout.txt')
+
+            try:
+                base_data = parse_race(website_dir, 'base')
+
+                for race in races:
+                    try:
+                        race_data = parse_race(website_dir, race)
+                        comparison = compare_race(base_data, race_data, executor)
+                        append_race_index(race_index, race, base_data, race_data, comparison)
+
+                    except RaceParseException:
+                        print("Error parsing %s :: %s" % (website, race))
+
+                er_log = parse_er_log(website_dir)
+
+                append_website_index(website_index, website, er_log, race_index)
+
+            except RaceParseException:
+                print("Error parsing %s :: base" % website)
 
         executor.shutdown()
 
     jinja = Environment(loader=PackageLoader('r5comparison', 'templates'))
-    print(output_website_index(website_index, jinja, output_dir, analysis_dir))
+    output_website_index(website_index, jinja, output_dir, analysis_dir)
 
 if __name__ == '__main__':
     main()

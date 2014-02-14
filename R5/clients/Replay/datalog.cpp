@@ -64,8 +64,7 @@ double TimeProviderReplay::currentTime()
     if (iter == m_log.end() || iter->isEmpty()) {
 
         if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
-            WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                        "WEBERA_TIME_DATA", "New access to the time API in best effort mode.", "");
+            WTF::WarningCollectorReport("WEBERA_TIME_DATA", "New access to the time API in best effort mode.", "");
             return time;
         }
 
@@ -125,8 +124,7 @@ double RandomProviderReplay::get()
     if (iter == m_double_log.end() || iter->isEmpty()) {
 
         if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
-            WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                        "WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
+            WTF::WarningCollectorReport("WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
             return random;
         }
 
@@ -160,8 +158,7 @@ unsigned RandomProviderReplay::getUint32()
     if (iter == m_unsigned_log.end() || iter->isEmpty()) {
 
         if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
-            WTF::WarningCollectorReport(WebCore::HBIsCurrentEventActionValid() ? WebCore::HBCurrentEventAction() : 0,
-                                        "WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
+            WTF::WarningCollectorReport("WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
             return random;
         }
 

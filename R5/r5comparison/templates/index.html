@@ -7,13 +7,42 @@
 <table class="table">
     <tr>
         <th>Website</th>
+        <th>Races/Success/Fail</th>
+        <th>Success/Timeout/Error</th>
+        <th>Total Execution Time</th>
     </tr>
 
     {% for item in website_index %}
     <tr>
-        <td><a href="{{ item.website }}/index.html">{{ item.website }}</a></td>
+        <td>
+            <a href="{{ item.handle }}/index.html">{{ item.handle }}</a>
+        </td>
+        <td class="{% if item.er_log.races_total == item.er_log.races_success %}success{% else %}danger{% endif %}">
+            {{ item.er_log.races_total }}/<b>{{ item.er_log.races_success }}</b>/{{ item.er_log.races_failure }}
+        </td>
+        <td class="{% if item.result.error == 0 %}success{% else %}danger{% endif %}">
+            {{ item.result.success }}/{{ item.result.timeout }}/{{ item.result.error }}
+        </td>
+        <td>
+            {{ item.er_log.execution_time // 60 }}m {{ item.er_log.execution_time % 60 }}s
+        </td>
     </tr>
     {% endfor %}
+
+    <tr>
+        <th>
+            Summary
+        </th>
+        <td>
+            {{ summary.execution_result.total }} / <b>{{ summary.execution_result.success }} ({{ (((summary.execution_result.success / summary.execution_result.total) | round(2)) * 100) | int }}%)</b> / {{ summary.execution_result.failure }}
+        </td>
+        <td>
+            {{ summary.race_result.success }} / {{ summary.race_result.timeout }} / {{ summary.race_result.error }}
+        </td>
+        <td>
+            {{ (summary.execution_time // 60) // 60 }}h {{ (summary.execution_time // 60) % 60 }}m {{ summary.execution_time % 60 }}s
+        </td>
+    </tr>
 
 </table>
 

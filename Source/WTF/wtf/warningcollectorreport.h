@@ -29,9 +29,9 @@
 
 namespace WTF {
 
-void WarningCollectorReport(EventActionId eventActionId, const std::string& module, const std::string& shortDescription, const std::string& details);
+void WarningCollectorReport(const std::string& module, const std::string& shortDescription, const std::string& details);
 void WarningCollecterWriteToLogFile(const std::string& filePath);
-
+void WarningCollectorSetCurrentEventAction(EventActionId eventActionId);
 }
 
 #endif // WARNINGCOLLECTORREPORT_H

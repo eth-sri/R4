@@ -2,25 +2,59 @@
 
 {% block content %}
 
-<h2><a href="../index.html">R4</a>: {{ website }}</h2>
+<h2><a href="../index.html">R4</a>: {{ website.handle }}</h2>
 
-<table class="table">
-    <tr>
-        <th>Race</th>
-        <th>Distance</th>
-        <th>HTML State Match</th>
-        <th>Replay</th>
-    </tr>
+ <!-- Nav tabs -->
+<ul class="nav nav-tabs">
+  <li class="active"><a href="#races" data-toggle="tab">Races</a></li>
+  <li><a href="#erlog" data-toggle="tab">Event Racer Log</a></li>
+</ul>
 
-    {% for race, base_data, race_data, comparison in index %}
-    <tr class="{% if race_data.result == 'FINISHED' %}success{% elif race_data.result == 'TIMEOUT' %}warning{% else %}danger{% endif %}">
-        <td><a href="{{ race }}.html">{{ race }}</a></td>
-        <td>{{ comparison.errors_diff_distance }}</td>
-        <td>{{ comparison.html_state_match }}</td>
-        <td>{{ race_data.result }}</td>
-    </tr>
-    {% endfor %}
+<!-- Tab panes -->
+<div class="tab-content">
+  <div class="tab-pane active" id="races">
 
-</table>
+    <table class="table">
+        <tr>
+            <th>Race</th>
+            <th>Distance</th>
+            <th>HTML State Match</th>
+            <th>Visual State Match</th>
+            <th>Replay</th>
+        </tr>
+
+        {% for race in website.race_index %}
+        <tr>
+            <td>
+                <a href="{{ race.handle }}.html">{{ race.handle }}</a>
+            </td>
+            <td class="{% if race.comparison.errors_diff_distance == 0 %}success{% else %}danger{% endif %}">
+                {{ race.comparison.errors_diff_distance }}
+            </td>
+            <td class="{% if race.comparison.html_state_match %}success{% else %}danger{% endif %}">
+                {{ race.comparison.html_state_match }}
+            </td>
+            <td class="{% if race.comparison.visual_state_match.human == 'EXACT' %}success{% else %}danger{% endif %}">
+                {{ race.comparison.visual_state_match.human }} ({{ race.comparison.visual_state_match.distance }})
+            </td>
+            <td class="{% if race.race_data.result == 'FINISHED' %}success{% elif race.race_data.result == 'TIMEOUT' %}warning{% else %}danger{% endif %}">
+                {{ race.race_data.result }}
+            </td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+  </div>
+
+  <div class="tab-pane" id="erlog">
+
+      <h3>Event Racer stdout</h3>
+
+      <pre>{{ website.er_log.stdout }}</pre>
+
+  </div>
+
+</div>
 
 {% endblock %}
