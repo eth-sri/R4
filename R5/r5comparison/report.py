@@ -52,6 +52,8 @@ def parse_race(base_dir, handle):
 
     handle_dir = os.path.join(base_dir, handle)
 
+    # ERRORS
+
     errors_file = os.path.join(handle_dir, 'errors.log')
     errors = []
 
@@ -77,11 +79,14 @@ def parse_race(base_dir, handle):
 
             errors.append(HashableDict(
                 event_action_id=event_action_id,
+                type='error',
                 module=module,
                 description=description,
                 details=details,
-                _ignore_properties=['event_action_id']
+                _ignore_properties=['event_action_id', 'type']
             ))
+
+    # STDOUT
 
     stdout_file = os.path.join(handle_dir, 'stdout.txt')
 
@@ -91,9 +96,69 @@ def parse_race(base_dir, handle):
     result_match = re.compile('Result: ([A-Z]+)').search(stdout)
     state_match = re.compile('HTML-hash: ([0-9]+)').search(stdout)
 
+    # SCHEDULE
+
+    schedule_file = os.path.join(handle_dir, 'new_schedule.data')
+    schedule = []
+
+    with open(schedule_file, 'rb') as fp:
+
+        for line in fp.readlines():
+
+            line = line.decode('utf8', 'ignore')
+
+            if line == '':
+                break
+
+            if '<relax>' in line or '<change>' in line:
+                event_action_id = -1
+                event_action_descriptor = line
+            else:
+                event_action_id, event_action_descriptor = line.split(';', 1)
+
+            schedule.append(HashableDict(
+                event_action_id=event_action_id,
+                type='schedule',
+                event_action_descriptor=event_action_descriptor,
+                _ignore_properties=['event_action_id', 'type']
+            ))
+
+    # ZIP ERRORS AND SCHEDULE
+
+    zip_errors_schedule = []
+    errors_index = 0
+    schedule_index = 0
+    current_event_action_id = None
+
+    while True:
+
+        if current_event_action_id is None:
+            zip_errors_schedule.append(schedule[schedule_index])
+
+            current_event_action_id = zip_errors_schedule[-1]['event_action_id']
+            schedule_index += 1
+
+        elif errors_index < len(errors) and \
+                errors[errors_index]['event_action_id'] == current_event_action_id:
+
+            zip_errors_schedule.append(errors[errors_index])
+
+            errors_index += 1
+
+        elif schedule_index < len(schedule):
+            zip_errors_schedule.append(schedule[schedule_index])
+
+            current_event_action_id = zip_errors_schedule[-1]['event_action_id']
+            schedule_index += 1
+
+        else:
+            break
+
     return {
         'handle': handle,
         'errors': errors,
+        'schedule': schedule,
+        'zip_errors_schedule': zip_errors_schedule,
         'stdout': stdout,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
         'html_state': state_match.group(1),
@@ -225,7 +290,6 @@ def compare_race(base_data, race_data, executor):
                 'human': cimage_human(match.group(2), float(match.group(1)))
             }
 
-
     # Errors diff
 
     base_errors = base_data['errors']
@@ -246,11 +310,41 @@ def compare_race(base_data, race_data, executor):
 
     distance = sum(1 for opcode in opcodes if opcode[0] != 'equal')
 
+    # Race and Errors Diff
+
+    base_zip = base_data['zip_errors_schedule']
+    race_zip = race_data['zip_errors_schedule']
+
+    zip_diff = difflib.SequenceMatcher(None, base_zip, race_zip)
+    zip_opcodes = zip_diff.get_opcodes()
+    zip_opcodes_human = []
+
+    unequal_seen = False
+
+    for zip_opcode in zip_opcodes:
+        tag, i1, i2, j1, j2 = zip_opcode
+
+        if not unequal_seen and tag != 'equal':
+            unequal_seen = True
+            first_unequal = True
+        else:
+            first_unequal = False
+
+        zip_opcodes_human.append({
+            'base': base_zip[i1:i2],
+            'tag': tag,
+            'race': race_zip[j1:j2],
+            'first_unequal': first_unequal
+        })
+
     return {
         'errors_diff_count': abs(len(base_data['errors']) - len(race_data['errors'])),
         'errors_diff': opcodes,
         'errors_diff_human': opcodes_human,
         'errors_diff_distance': distance,
+        'zip_diff': zip_opcodes,
+        'zip_diff_human': zip_opcodes_human,
+        'zip_diff_has_unequal': unequal_seen,
         'html_state_match': base_data['html_state'] == race_data['html_state'],
         'visual_state_match': cimage
     }
@@ -305,7 +399,9 @@ def append_race_index(race_index, race, base_data, race_data, comparison):
     })
 
 
-def output_race_index(website, jinja, output_dir, input_dir):
+def output_race_index(website, output_dir, input_dir):
+
+    jinja = Environment(loader=PackageLoader('r5comparison', 'templates'))
 
     try:
         os.mkdir(output_dir)
@@ -356,10 +452,14 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
         'execution_time': 0,
     }
 
-    for website in website_index:
+    with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
+        for website in website_index:
+            website_dir = os.path.join(output_dir, website['handle'])
+            executor.submit(output_race_index, website, website_dir, input_dir)
 
-        website_dir = os.path.join(output_dir, website['handle'])
-        output_race_index(website, jinja, website_dir, input_dir)
+        executor.shutdown()
+
+    for website in website_index:
 
         result = {
             'success': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED']),

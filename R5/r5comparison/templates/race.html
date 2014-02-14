@@ -7,13 +7,42 @@
 <!-- Nav tabs -->
 <ul class="nav nav-tabs">
   <li class="active"><a href="#schedule" data-toggle="tab">Schedule</a></li>
-  <li><a href="#visual" data-toggle="tab">Visual</a></li>
+  <li><a href="#errors" data-toggle="tab">Errors</a></li>
+   <li><a href="#visual" data-toggle="tab">Visual</a></li>
   <li><a href="#stdout" data-toggle="tab">stdout</a></li>
 </ul>
 
 <!-- Tab panes -->
 <div class="tab-content">
   <div class="tab-pane active" id="schedule">
+
+      <h3>Schedule</h3>
+
+      {% if race.comparison.zip_diff_has_unequal %}
+      <a href="#unequal">Goto first unequal</a>
+      {% endif %}
+
+      <table class="table">
+
+          <tr>
+              <th class="col-lg-5"><h4>Base</h4></th>
+              <th class="col-lg-2"></th>
+              <th class="col-lg-5"><h4>{{ race.handle }}</h4></th>
+          </tr>
+
+          {% for item in race.comparison.zip_diff_human %}
+          <tr {% if item.first_unequal %}id="unequal"{% endif %} class="{% if item.tag == 'equal' %}success{% elif item.tag == 'replace' %}danger{% else %}warning{% endif %}">
+              <td>{% for error in item.base %}{% include "parts/error.html" with context %}{% endfor %}</td>
+              <td>{{ item.tag }}</td>
+              <td>{% for error in item.race %}{% include "parts/error.html" with context %}{% endfor %}</td>
+          </tr>
+          {% endfor %}
+
+      </table>
+
+  </div>
+
+  <div class="tab-pane" id="errors">
 
       <h3>Errors</h3>
 
