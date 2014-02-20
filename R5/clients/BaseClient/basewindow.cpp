@@ -30,6 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <iostream>
+
 #include "basewindow.h"
 
 #include "locationedit.h"
@@ -178,6 +180,15 @@ void BaseWindow::takeScreenshot(const QString &destinationFile)
     page()->setViewportSize(page()->mainFrame()->contentsSize());
 
     QSize size = page()->mainFrame()->contentsSize();
+
+    if (size.width() == 0) {
+        size.setWidth(1024);
+    }
+
+    if (size.height() == 0) {
+        size.setHeight(1024);
+    }
+
     QImage image(size, QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
 
