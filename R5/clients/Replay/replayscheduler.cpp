@@ -173,6 +173,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             unsigned long sequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser") ? QString::fromStdString(nextToSchedule.getParameter(1)).toULong() : 0;
             unsigned long sequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(2)).toULong() : 0;
             unsigned long sequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(3)).toULong() : 0;
+            unsigned long sequenceNumber4 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(4)).toULong() : 0;
+            unsigned long sequenceNumber5 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(5)).toULong() : 0;
 
             FuzzyUrlMatcher* matcher = new FuzzyUrlMatcher(QUrl(url));
 
@@ -193,8 +195,10 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                 unsigned long candidateSequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser") ? QString::fromStdString(candidate.getParameter(1)).toULong() : 0;
                 unsigned long candidateSequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(2)).toULong() : 0;
                 unsigned long candidateSequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(3)).toULong() : 0;
+                unsigned long candidateSequenceNumber4 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(4)).toULong() : 0;
+                unsigned long candidateSequenceNumber5 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(5)).toULong() : 0;
 
-                if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2 || candidateSequenceNumber3 != sequenceNumber3) {
+                if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2 || candidateSequenceNumber3 != sequenceNumber3 || candidateSequenceNumber4 != sequenceNumber4 || candidateSequenceNumber5 != sequenceNumber5) {
                     continue;
                 }
 

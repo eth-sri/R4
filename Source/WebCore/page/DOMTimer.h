@@ -71,7 +71,7 @@ namespace WebCore {
         // to events like moving a tab to the background.
         void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
 
-        static unsigned int getNextSameUrlSequenceNumber(const std::string& url);
+        static unsigned int getNextSameUrlSequenceNumber(const std::string& url, uint line);
 
     private:
         DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
