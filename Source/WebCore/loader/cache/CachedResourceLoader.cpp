@@ -566,7 +566,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     
     // Alwaus use preloads.
     if (existingResource->isPreloaded())
-        return Use;
+        return Reload; // Use // WebERA: Change such that moving the DocumentLoad event around does not affect the request/caching mechanism of static files
     
     // CachePolicyHistoryBuffer uses the cache no matter what.
     if (cachePolicy() == CachePolicyHistoryBuffer)
@@ -591,7 +591,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
 
     // During the initial load, avoid loading the same resource multiple times for a single document, even if the cache policies would tell us to.
     if (!document()->loadEventFinished() && m_validatedURLs.contains(existingResource->url()))
-        return Use;
+        return Reload; // Use // WebERA: Change such that moving the DocumentLoad event around does not affect the request/caching mechanism of static files
 
     // CachePolicyReload always reloads
     if (cachePolicy() == CachePolicyReload) {
