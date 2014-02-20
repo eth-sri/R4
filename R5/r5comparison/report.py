@@ -508,7 +508,7 @@ def main():
 
         for website in websites:
 
-            print ("PROCESSING %s", website)
+            print ("PROCESSING", website)
 
             website_dir = os.path.join(analysis_dir, website)
 
