@@ -37,6 +37,8 @@
 #include <wtf/EventActionDescriptor.h>
 #include <wtf/ActionLogReport.h>
 
+#include <wtf/text/CString.h>
+
 namespace WebCore {
 
 DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script, Document *document, unsigned int scriptRunnerId, unsigned int scriptOffset)
@@ -47,9 +49,9 @@ DeferAsyncScriptExecution::DeferAsyncScriptExecution(const PendingScript& script
 {
 
     std::stringstream params;
-    params << scriptRunnerId << ",";
+    params << WTF::EventActionDescriptor::escapeParam(script.cachedScript()->url().string().ascii().data()) << ",";
     params << "Async" << ",";
-    params << scriptOffset;
+    params << scriptRunnerId;
 
     WTF::EventActionDescriptor descriptor(WTF::PARSING, "ScriptRunner", params.str());
 
