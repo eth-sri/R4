@@ -47,13 +47,16 @@
 
 #include "utils.h"
 #include "clientapplication.h"
-#include "network.h"
 #include "specificationscheduler.h"
 #include "datalog.h"
 #include "autoexplorer.h"
 
 #include "wtf/ActionLogReport.h"
 
+/**
+ * () ->
+ *  schedule.data log.network.data log.random.data log.time.data ER_actionlog errors.log record.png
+ */
 class RecordClientApplication : public ClientApplication {
     Q_OBJECT
 
@@ -84,7 +87,7 @@ private:
 
     bool m_showWindow;
 
-    QNetworkReplyControllableFactoryRecord* m_controllableFactory;
+    WebCore::QNetworkReplyControllableFactoryLive* m_controllableFactory;
     TimeProviderRecord* m_timeProvider;
     RandomProviderRecord* m_randomProvider;
     //SpecificationScheduler* m_scheduler;
@@ -121,17 +124,26 @@ RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
 
-    // Recording specific setup
+    // ER log
 
     ActionLogSetLogFile(m_erLogPath.toStdString());
 
-    m_controllableFactory = new QNetworkReplyControllableFactoryRecord(m_networkPath);
+    // Network
 
-    m_timeProvider->attach();
+    m_controllableFactory = new WebCore::QNetworkReplyControllableFactoryLive();
+    WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
+
+    // Random
+
     m_randomProvider->attach();
 
+    // Time
+
+    m_timeProvider->attach();
+
+    // Scheduler
+
     WebCore::ThreadTimers::setScheduler(m_scheduler);
-    WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
 
     // Cookies support
 
@@ -216,9 +228,11 @@ void RecordClientApplication::handleUserOptions()
         m_networkPath = outdir + "/log.network.data";
         m_logTimePath = outdir + "/log.time.data";
         m_logRandomPath = outdir + "/log.random.data";
+
+        m_erLogPath = outdir + "/ER_actionlog";
         m_logErrorsPath = outdir + "/errors.log";
         m_arcsLogPath = outdir + "/arcs.log";
-        m_erLogPath = outdir + "/ER_actionlog";
+
         m_screenshotPath = outdir + "/record.png";
     }
 
@@ -291,7 +305,7 @@ void RecordClientApplication::slOnCloseEvent()
 
     // network
 
-    m_controllableFactory->writeNetworkFile();
+    m_controllableFactory->writeNetworkFile(m_networkPath);
 
     // log
 

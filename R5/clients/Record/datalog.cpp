@@ -37,69 +37,15 @@
 double TimeProviderRecord::currentTime()
 {
     double time = JSC::TimeProviderDefault::currentTime();
-
-    const WTF::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
-
-    if (descriptor.isNull()) {
-        return time;
-    }
-
-    QString ident = QString::fromStdString(descriptor.toString());
-
-    Log::iterator iter = m_log.find(ident);
-
-    if (iter == m_log.end()) {
-        LogEntries logEntries;
-        logEntries.append(time);
-        m_log.insert(ident, logEntries);
-
-    } else {
-        iter->append(time);
-    }
+    logTimeAccess(time);
 
     return time;
-}
-
-void TimeProviderRecord::attach()
-{
-    JSC::TimeProvider::setInstance(this);
-}
-
-void TimeProviderRecord::writeLogFile(QString path)
-{
-    QFile fp(path);
-    fp.open(QIODevice::WriteOnly);
-
-    ASSERT(fp.isOpen());
-
-    QDataStream out(&fp);
-    out << m_log;
-
-    fp.close();
 }
 
 double RandomProviderRecord::get()
 {
     double random = JSC::RandomProviderDefault::get();
-
-    const WTF::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
-
-    if (descriptor.isNull()) {
-        return random;
-    }
-
-    QString ident = QString::fromStdString(descriptor.toString());
-
-    DLog::iterator iter = m_double_log.find(ident);
-
-    if (iter == m_double_log.end()) {
-        DLogEntries logEntries;
-        logEntries.append(random);
-        m_double_log.insert(ident, logEntries);
-
-    } else {
-        iter->append(random);
-    }
+    logRandomAccess(random);
 
     return random;
 }
@@ -107,44 +53,7 @@ double RandomProviderRecord::get()
 unsigned RandomProviderRecord::getUint32()
 {
     unsigned random = JSC::RandomProviderDefault::getUint32();
-
-    const WTF::EventActionDescriptor descriptor = WebCore::threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
-
-    if (descriptor.isNull()) {
-        return random;
-    }
-
-    QString ident = QString::fromStdString(descriptor.toString());
-
-    ULog::iterator iter = m_unsigned_log.find(ident);
-
-    if (iter == m_unsigned_log.end()) {
-        ULogEntries logEntries;
-        logEntries.append(random);
-        m_unsigned_log.insert(ident, logEntries);
-
-    } else {
-        iter->append(random);
-    }
+    logRandomAccessUint32(random);
 
     return random;
-}
-
-void RandomProviderRecord::attach()
-{
-    JSC::RandomProvider::setInstance(this);
-}
-
-void RandomProviderRecord::writeLogFile(QString path)
-{
-    QFile fp(path);
-    fp.open(QIODevice::WriteOnly);
-
-    ASSERT(fp.isOpen());
-
-    QDataStream out(&fp);
-    out << m_double_log;
-    out << m_unsigned_log;
-
-    fp.close();
 }

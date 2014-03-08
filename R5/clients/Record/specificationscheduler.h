@@ -31,11 +31,11 @@
 #include <wtf/ExportMacros.h>
 #include <WebCore/platform/Timer.h>
 #include <WebCore/platform/schedule/Scheduler.h>
+#include <JavaScriptCore/runtime/JSExportMacros.h>
+#include <WebCore/platform/network/qt/QNetworkReplyHandler.h>
 
 #include "wtf/EventActionSchedule.h"
 #include "wtf/EventActionDescriptor.h"
-
-#include "network.h"
 
 #ifndef SPECIFICATION_SCHEDULER_H
 #define SPECIFICATION_SCHEDULER_H
@@ -45,7 +45,7 @@ class SpecificationScheduler : public QObject, public WebCore::Scheduler
     Q_OBJECT
 
 public:
-    SpecificationScheduler(QNetworkReplyControllableFactoryRecord* network);
+    SpecificationScheduler(WebCore::QNetworkReplyControllableFactory* network);
     ~SpecificationScheduler();
 
     void eventActionScheduled(const WTF::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);
@@ -71,7 +71,7 @@ private:
     std::queue<WTF::EventActionDescriptor> m_networkQueue;
     std::queue<WTF::EventActionDescriptor> m_otherQueue;
 
-    QNetworkReplyControllableFactoryRecord* m_network;
+    WebCore::QNetworkReplyControllableFactory* m_network;
 
     bool m_stopped;
 

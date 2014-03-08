@@ -36,13 +36,13 @@
 
 #include "network.h"
 
-QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(QNetworkReply* reply, WebCore::QNetworkReplyInitialSnapshot* snapshot, QObject* parent)
-    : QNetworkReplyControllable(reply, parent)
+QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(WebCore::QNetworkReplyControllableFactory* factory, QNetworkReply* reply, WebCore::QNetworkReplyInitialSnapshot* snapshot, QObject* parent)
+    : QNetworkReplyControllable(factory, reply, parent)
 {
     m_initialSnapshot = snapshot;
 
     WebCore::QNetworkReplyInitialSnapshot::QNetworkReplySnapshotEntry entry;
-    QList<WebCore::QNetworkReplyInitialSnapshot::QNetworkReplySnapshotEntry>* snapshots = snapshot->getSnapshots();
+    QList<WebCore::QNetworkReplyInitialSnapshot::QNetworkReplySnapshotEntry>* snapshots = snapshot->getSnapshotsCopy();
 
     entry = snapshots->takeFirst();
     ASSERT(entry.first == WebCore::QNetworkReplyInitialSnapshot::INITIAL);
@@ -84,7 +84,7 @@ QNetworkReplyControllableFactoryReplay::QNetworkReplyControllableFactoryReplay(Q
 WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::construct(QNetworkReply* reply, QObject* parent)
 {
     if (m_mode == STOP) {
-        return new WebCore::QNetworkReplyControllableLive(reply, parent);
+        return new WebCore::QNetworkReplyControllableLive(this, reply, parent);
     }
 
     SnapshotMap::const_iterator iter = m_snapshots.find(reply->url().toString());
@@ -95,7 +95,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
         // It could be that we have replayed all known instances of this URL
         // If that is the case let it flow through the relaxedReplayMode logic or error out
         if (!(*iter)->isEmpty()) {
-            return new QNetworkReplyControllableReplay(reply, (*iter)->takeFirst(), parent);
+            return new QNetworkReplyControllableReplay(this, reply, (*iter)->takeFirst(), parent);
         }
     }
 
@@ -140,7 +140,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
             std::cout << "Fuzzy match found (" << bestSnapshot->getUrl().toString().toStdString() << ")" << std::endl;
 
             (*bestList)->pop_front();
-            return new QNetworkReplyControllableReplay(reply, bestSnapshot, parent);
+            return new QNetworkReplyControllableReplay(this, reply, bestSnapshot, parent);
         }
 
         std::stringstream details;
@@ -149,7 +149,7 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
         WTF::WarningCollectorReport("WEBERA_NETWORK_DATA", "New network request in best effort mode.", details.str());
 
         std::cout << "Fuzzy match not found, using a live connection (relaxed mode)" << std::endl;
-        return new WebCore::QNetworkReplyControllableLive(reply, parent);
+        return new WebCore::QNetworkReplyControllableLive(this, reply, parent);
     }
 
     std::cerr << "Error: unknown network request (" << reply->url().toString().toStdString() << ") (exact mode)." << std::endl;

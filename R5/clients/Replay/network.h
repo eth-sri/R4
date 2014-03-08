@@ -40,7 +40,7 @@ class QNetworkReplyControllableReplay : public WebCore::QNetworkReplyControllabl
     Q_OBJECT
 
 public:
-    QNetworkReplyControllableReplay(QNetworkReply*, WebCore::QNetworkReplyInitialSnapshot*, QObject* parent = 0);
+    QNetworkReplyControllableReplay(WebCore::QNetworkReplyControllableFactory* factory, QNetworkReply*, WebCore::QNetworkReplyInitialSnapshot*, QObject* parent = 0);
 
 };
 

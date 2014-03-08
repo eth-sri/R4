@@ -24,74 +24,63 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DATALOG_H
-#define DATALOG_H
-
-#include <limits>
+#ifndef BASEDATALOG_H
+#define BASEDATALOG_H
 
 #include <QHash>
 #include <QList>
 
-#include "basedatalog.h"
+#include "JavaScriptCore/runtime/timeprovider.h"
+#include "JavaScriptCore/runtime/randomprovider.h"
 
-#include "replaymode.h"
-
-class TimeProviderReplay : public TimeProviderBase {
-
-public:
-    TimeProviderReplay(QString logPath);
-
-    double currentTime();
-
-    void setCurrentDescriptorString(QString ident) {
-        m_currentDescriptorString = ident;
-    }
-
-    void unsetCurrentDescriptorString() {
-        m_currentDescriptorString = QString();
-    }
-
-    void setMode(ReplayMode value) {
-        m_mode = value;
-    }
-
-private:
-    void deserialize(QString logPath);
-
-    Log m_in_log;
-
-    ReplayMode m_mode;
-    QString m_currentDescriptorString;
-};
-
-class RandomProviderReplay : public RandomProviderBase {
+class TimeProviderBase : public JSC::TimeProviderDefault {
 
 public:
-    RandomProviderReplay(QString logPath);
-
-    double get();
-    unsigned getUint32();
-
-    void setCurrentDescriptorString(QString ident) {
-        m_currentDescriptorString = ident;
+    TimeProviderBase()
+        : JSC::TimeProviderDefault()
+    {
     }
 
-    void unsetCurrentDescriptorString() {
-        m_currentDescriptorString = QString();
-    }
+    void attach();
 
-    void setMode(ReplayMode value) {
-        m_mode = value;
-    }
+    void logTimeAccess(double value);
+    void writeLogFile(QString path);
+
+protected:
+    typedef QList<double> LogEntries;
+    typedef QHash<QString, LogEntries> Log;
 
 private:
-    void deserialize(QString logPath);
-
-    DLog m_in_double_log;
-    ULog m_in_unsigned_log;
-
-    ReplayMode m_mode;
-    QString m_currentDescriptorString;
+    Log m_log;
 };
 
-#endif // DATALOG_H
+class RandomProviderBase : public JSC::RandomProviderDefault {
+
+public:
+    RandomProviderBase()
+        : JSC::RandomProviderDefault()
+    {
+    }
+
+    void attach();
+
+    void logRandomAccess(double value);
+    void logRandomAccessUint32(unsigned value);
+    void writeLogFile(QString path);
+
+protected:
+    typedef QList<double> DLogEntries;
+    typedef QHash<QString, DLogEntries> DLog;
+
+private:
+    DLog m_double_log;
+
+protected:
+    typedef QList<unsigned> ULogEntries;
+    typedef QHash<QString, ULogEntries> ULog;
+
+private:
+    ULog m_unsigned_log;
+};
+
+#endif // BASEDATALOG_H

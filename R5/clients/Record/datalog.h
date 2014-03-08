@@ -30,51 +30,29 @@
 #include <QHash>
 #include <QList>
 
-#include "JavaScriptCore/runtime/timeprovider.h"
-#include "JavaScriptCore/runtime/randomprovider.h"
+#include "basedatalog.h"
 
-class TimeProviderRecord : public JSC::TimeProviderDefault {
+class TimeProviderRecord : public TimeProviderBase {
 
 public:
     TimeProviderRecord()
-        : JSC::TimeProviderDefault()
+        : TimeProviderBase()
     {
     }
 
-    void attach();
     double currentTime();
-
-    void writeLogFile(QString path);
-
-private:
-    typedef QList<double> LogEntries;
-    typedef QHash<QString, LogEntries> Log;
-    Log m_log;
 };
 
-class RandomProviderRecord : public JSC::RandomProviderDefault {
+class RandomProviderRecord : public RandomProviderBase {
 
 public:
     RandomProviderRecord()
-        : JSC::RandomProviderDefault()
+        : RandomProviderBase()
     {
     }
 
-    void attach();
-
     double get();
     unsigned getUint32();
-
-    void writeLogFile(QString path);
-
-private:
-    typedef QList<double> DLogEntries;
-    typedef QHash<QString, DLogEntries> DLog;
-    DLog m_double_log;
-
-    typedef QList<unsigned> ULogEntries;
-    typedef QHash<QString, ULogEntries> ULog;
-    ULog m_unsigned_log;
 };
 
 #endif // DATALOG_H

@@ -24,14 +24,16 @@ SOURCES += \
     ../BaseClient/toolwindow.cpp \
     ../BaseClient/basewindow.cpp \
     ../BaseClient/utils.cpp \
-    ../BaseClient/clientapplication.cpp
+    ../BaseClient/clientapplication.cpp \
+    ../BaseClient/basedatalog.cpp
 
 HEADERS += \
     ../BaseClient/locationedit.h \
     ../BaseClient/toolwindow.h \
     ../BaseClient/basewindow.h \
     ../BaseClient/utils.h \
-    ../BaseClient/clientapplication.h
+    ../BaseClient/clientapplication.h \
+    ../BaseClient/basedatalog.h
 
 RESOURCES += \
     ../BaseClient/baseclient.qrc

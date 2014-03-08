@@ -30,6 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <fstream>
 #include <iostream>
 
 #include <QObject>
@@ -67,7 +68,12 @@ private:
     QString m_logNetworkPath;
     QString m_logRandomPath;
     QString m_logTimePath;
+    QString m_outSchedulePath;
+    QString m_outLogNetworkPath;
+    QString m_outLogRandomPath;
+    QString m_outLogTimePath;
     QString m_logErrorsPath;
+    QString m_outErLogPath;
 
     QString m_screenshotPath;
 
@@ -84,19 +90,32 @@ public slots:
     void slTimeout();
 };
 
+/**
+ * schedule.data log.network.data log.random.data log.time.data ->
+ *  schedule.out.data log.network.out.data log.random.out.data log.time.out.data ER_actionlog errors.log replay.png
+ */
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_schedulePath("/tmp/schedule.data")
     , m_logNetworkPath("/tmp/log.network.data")
     , m_logRandomPath("/tmp/log.random.data")
     , m_logTimePath("/tmp/log.time.data")
+    , m_outSchedulePath("/tmp/schedule.out.data")
+    , m_outLogNetworkPath("/tmp/log.network.out.data")
+    , m_outLogRandomPath("/tmp/log.random.out.data")
+    , m_outLogTimePath("/tmp/log.time.out.data")
     , m_logErrorsPath("/tmp/errors.log")
+    , m_outErLogPath("/tmp/ER_out_actionlog")
     , m_screenshotPath("/tmp/replay.png")
     , m_isStopping(false)
     , m_showWindow(true)
 {
 
     handleUserOptions();
+
+    // ER log
+
+    ActionLogSetLogFile(m_outErLogPath.toStdString().c_str());
 
     // Network
 
@@ -163,6 +182,14 @@ void ReplayClientApplication::handleUserOptions()
         m_logNetworkPath = outdir + "/log.network.data";
         m_logTimePath = outdir + "/log.time.data";
         m_logRandomPath = outdir + "/log.random.data";
+
+        m_outSchedulePath = outdir + "/schedule.out.data";
+        m_outLogNetworkPath = outdir + "/log.network.out.data";
+        m_outLogTimePath = outdir + "/log.time.out.data";
+        m_outLogRandomPath = outdir + "/log.random.out.data";
+
+        m_outErLogPath = outdir + "/ER_out_actionlog";
+
         m_logErrorsPath = outdir + "/errors.log";
         m_screenshotPath = outdir + "/replay.png";
     }
@@ -227,6 +254,29 @@ void ReplayClientApplication::slSchedulerDone()
             htmlHash += qHash(current->toHtml());
             queue.append(current->childFrames());
         }
+
+        // happens before
+
+        ActionLogSave();
+        ActionLogStrictMode(false);
+
+        // schedule
+
+        std::ofstream schedulefile;
+        schedulefile.open(m_outSchedulePath.toStdString().c_str());
+
+        WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
+
+        schedulefile.close();
+
+        // network
+
+        m_network->writeNetworkFile(m_outLogNetworkPath.toStdString().c_str());
+
+        // log
+
+        m_timeProvider->writeLogFile(m_outLogTimePath);
+        m_randomProvider->writeLogFile(m_outLogRandomPath);
 
         // Screenshot
 

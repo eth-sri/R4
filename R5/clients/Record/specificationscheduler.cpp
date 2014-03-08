@@ -31,7 +31,7 @@
 
 #include "specificationscheduler.h"
 
-SpecificationScheduler::SpecificationScheduler(QNetworkReplyControllableFactoryRecord* network)
+SpecificationScheduler::SpecificationScheduler(WebCore::QNetworkReplyControllableFactory* network)
     : QObject(NULL)
     , Scheduler()
     , m_network(network)

@@ -20,6 +20,8 @@
 #define QNetworkReplyHandler_h
 
 #include <algorithm>
+#include <set>
+#include <list>
 
 #include <QObject>
 #include <QList>
@@ -142,6 +144,10 @@ public:
         return &m_snapshots;
     }
 
+    QList<QNetworkReplySnapshotEntry>* getSnapshotsCopy() {
+        return new QList<QNetworkReplySnapshotEntry>(m_snapshots);
+    }
+
     void serialize(QIODevice* stream) const;
     static QNetworkReplyInitialSnapshot* deserialize(QIODevice* stream);
 
@@ -244,14 +250,18 @@ private:
  * (replaying). Change the QNetworkReplyControllableFactory to inject alternative subclasses.
  *
  */
+
+class QNetworkReplyControllableFactory;
+
 class QNetworkReplyControllable : public QObject {
     Q_OBJECT
 
 public:
-    QNetworkReplyControllable(QNetworkReply* reply, QObject* parent = 0);
+    QNetworkReplyControllable(QNetworkReplyControllableFactory* factory, QNetworkReply* reply, QObject* parent = 0);
     ~QNetworkReplyControllable();
 
     QNetworkReplySnapshot* snapshot() { return m_currentSnapshot; }
+    QNetworkReplyInitialSnapshot* initialSnapshot() { return m_initialSnapshot; }
 
     // Subclasses should use this as an early dereference
     virtual QNetworkReply* release();
@@ -283,6 +293,8 @@ protected:
 
     WTF::EventActionId m_lastNetworkEventAction;
 
+    QNetworkReplyControllableFactory* m_factory;
+
 protected slots:
     void scheduleNextSnapshotUpdate();
 
@@ -295,7 +307,7 @@ class QNetworkReplyControllableLive : public QNetworkReplyControllable {
     Q_OBJECT
 
 public:
-    QNetworkReplyControllableLive(QNetworkReply*, QObject* parent = 0);
+    QNetworkReplyControllableLive(QNetworkReplyControllableFactory* factory, QNetworkReply*, QObject* parent = 0);
     virtual ~QNetworkReplyControllableLive();
 
 protected:
@@ -314,12 +326,28 @@ class QNetworkReplyControllableFactory
 
 public:
     virtual QNetworkReplyControllable* construct(QNetworkReply* reply, QObject* parent=0) = 0;
+
+    QNetworkReplyControllableFactory();
     virtual ~QNetworkReplyControllableFactory();
+
+    void controllableDone(QNetworkReplyControllable* controllable);
+    void controllableConstructed(QNetworkReplyControllable* controllable);
+    void writeNetworkFile(QString networkFilePath);
+
+    unsigned int doneCounter() const {
+        return m_doneCounter;
+    }
 
     static QNetworkReplyControllableFactory* getFactory();
     static void setFactory(QNetworkReplyControllableFactory* factory);
 
+protected:
+    std::set<QNetworkReplyControllable*> m_openNetworkSessions;
+
 private:
+    unsigned int m_doneCounter;
+    std::list<WebCore::QNetworkReplyInitialSnapshot*> m_networkHistory;
+
     static QNetworkReplyControllableFactory* m_factory;
 };
 
@@ -329,7 +357,7 @@ class QNetworkReplyControllableFactoryLive : public QNetworkReplyControllableFac
 
 public:
     QNetworkReplyControllableLive* construct(QNetworkReply* reply, QObject* parent=0) {
-        return new QNetworkReplyControllableLive(reply, parent);
+        return new QNetworkReplyControllableLive(this, reply, parent);
     }
 };
 

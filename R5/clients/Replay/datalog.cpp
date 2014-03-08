@@ -37,7 +37,7 @@
 #include "datalog.h"
 
 TimeProviderReplay::TimeProviderReplay(QString logPath)
-    : JSC::TimeProviderDefault()
+    : TimeProviderBase()
     , m_mode(STRICT)
 {
     deserialize(logPath);
@@ -49,6 +49,7 @@ double TimeProviderReplay::currentTime()
     double time = JSC::TimeProviderDefault::currentTime();
 
     if (m_mode == STOP) {
+        logTimeAccess(time);
         return time;
     }
 
@@ -56,30 +57,31 @@ double TimeProviderReplay::currentTime()
         std::cerr << "Error: Time requested by non-schedulable event action." << std::endl;
         std::exit(1);
 
+        logTimeAccess(time);
         return time;
     }
 
-    Log::iterator iter = m_log.find(m_currentDescriptorString);
+    Log::iterator iter = m_in_log.find(m_currentDescriptorString);
 
-    if (iter == m_log.end() || iter->isEmpty()) {
+    if (iter == m_in_log.end() || iter->isEmpty()) {
 
         if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
             WTF::WarningCollectorReport("WEBERA_TIME_DATA", "New access to the time API in best effort mode.", "");
+
+            logTimeAccess(time);
             return time;
         }
 
         std::cerr << "Error: Time requested but time log is empty (exact mode)." << std::endl;
         std::exit(1);
 
+        logTimeAccess(time);
         return time;
     }
 
-    return iter->takeFirst();
-}
-
-void TimeProviderReplay::attach()
-{
-    JSC::TimeProvider::setInstance(this);
+    time = iter->takeFirst();
+    logTimeAccess(time);
+    return time;
 }
 
 void TimeProviderReplay::deserialize(QString path)
@@ -90,14 +92,13 @@ void TimeProviderReplay::deserialize(QString path)
     ASSERT(fp.isOpen());
 
     QDataStream in(&fp);
-    in >> m_log;
+    in >> m_in_log;
 
     fp.close();
 }
 
-
 RandomProviderReplay::RandomProviderReplay(QString logPath)
-    : JSC::RandomProviderDefault()
+    : RandomProviderBase()
     , m_mode(STRICT)
 {
     deserialize(logPath);
@@ -109,6 +110,7 @@ double RandomProviderReplay::get()
     double random = JSC::RandomProviderDefault::get();
 
     if (m_mode == STOP) {
+        logRandomAccess(random);
         return random;
     }
 
@@ -116,25 +118,30 @@ double RandomProviderReplay::get()
         std::cerr << "Error: Random number requested by non-schedulable event action." << std::endl;
         std::exit(1);
 
+        logRandomAccess(random);
         return random;
     }
 
-    DLog::iterator iter = m_double_log.find(m_currentDescriptorString);
+    DLog::iterator iter = m_in_double_log.find(m_currentDescriptorString);
 
-    if (iter == m_double_log.end() || iter->isEmpty()) {
+    if (iter == m_in_double_log.end() || iter->isEmpty()) {
 
         if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
             WTF::WarningCollectorReport("WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
+            logRandomAccess(random);
             return random;
         }
 
         std::cerr << "Error: Random number requested but random log is empty (exact mode)." << std::endl;
         std::exit(1);
 
+        logRandomAccess(random);
         return random;
     }
 
-    return iter->takeFirst();
+    random = iter->takeFirst();
+    logRandomAccess(random);
+    return random;
 }
 
 unsigned RandomProviderReplay::getUint32()
@@ -143,6 +150,7 @@ unsigned RandomProviderReplay::getUint32()
     unsigned random = JSC::RandomProviderDefault::getUint32();
 
     if (m_mode == STOP) {
+        logRandomAccessUint32(random);
         return random;
     }
 
@@ -150,30 +158,30 @@ unsigned RandomProviderReplay::getUint32()
         std::cerr << "Error: Random number requested by non-schedulable event action." << std::endl;
         std::exit(1);
 
+        logRandomAccessUint32(random);
         return random;
     }
 
-    ULog::iterator iter = m_unsigned_log.find(m_currentDescriptorString);
+    ULog::iterator iter = m_in_unsigned_log.find(m_currentDescriptorString);
 
-    if (iter == m_unsigned_log.end() || iter->isEmpty()) {
+    if (iter == m_in_unsigned_log.end() || iter->isEmpty()) {
 
         if (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND) {
             WTF::WarningCollectorReport("WEBERA_RANDOM_DATA", "New access to the random API in best effort mode.", "");
+            logRandomAccessUint32(random);
             return random;
         }
 
         std::cerr << "Error: Random number requested but random log is empty (exact mode)." << std::endl;
         std::exit(1);
 
+        logRandomAccessUint32(random);
         return random;
     }
 
-    return iter->takeFirst();
-}
-
-void RandomProviderReplay::attach()
-{
-    JSC::RandomProvider::setInstance(this);
+    random = iter->takeFirst();
+    logRandomAccessUint32(random);
+    return random;
 }
 
 void RandomProviderReplay::deserialize(QString path)
@@ -184,8 +192,8 @@ void RandomProviderReplay::deserialize(QString path)
     ASSERT(fp.isOpen());
 
     QDataStream in(&fp);
-    in >> m_double_log;
-    in >> m_unsigned_log;
+    in >> m_in_double_log;
+    in >> m_in_unsigned_log;
 
     fp.close();
 }
