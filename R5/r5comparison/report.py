@@ -290,10 +290,25 @@ def compare_race(base_data, race_data, executor):
                 'human': cimage_human(match.group(2), float(match.group(1)))
             }
 
+    def remove_new_event_action(base_list, race_list):
+        # Remove "new event action" error at the end of error reports if they both have it
+        # Often, this is not an error, just a side effect of the system, and this side effect
+        # is different from execution to execution. Filter it away
+        if len(base_list) > 0 and len(base_list) > 0 and \
+            base_list[-1]['type'] == 'error' and race_list[-1]['type'] == 'error' and \
+            'event action observed' in base_list[-1]['description'] and \
+            'event action observed' in race_list[-1]['description']:
+
+            return base_list[:-1], race_list[:-1]
+
+        return base_list, race_list
+
     # Errors diff
 
     base_errors = base_data['errors']
     race_errors = race_data['errors']
+
+    base_errors, race_errors = remove_new_event_action(base_errors, race_errors)
 
     diff = difflib.SequenceMatcher(None, base_errors, race_errors)
     opcodes = diff.get_opcodes()
@@ -314,6 +329,8 @@ def compare_race(base_data, race_data, executor):
 
     base_zip = base_data['zip_errors_schedule']
     race_zip = race_data['zip_errors_schedule']
+
+    base_zip, race_zip = remove_new_event_action(base_zip, race_zip)
 
     zip_diff = difflib.SequenceMatcher(None, base_zip, race_zip)
     zip_opcodes = zip_diff.get_opcodes()
@@ -346,7 +363,8 @@ def compare_race(base_data, race_data, executor):
         'zip_diff_human': zip_opcodes_human,
         'zip_diff_has_unequal': unequal_seen,
         'html_state_match': base_data['html_state'] == race_data['html_state'],
-        'visual_state_match': cimage
+        'visual_state_match': cimage,
+        'is_equal': base_data['html_state'] == race_data['html_state'] and 'human' in cimage and cimage['human'] == 'EXACT' and distance == 0
     }
 
 
@@ -440,7 +458,8 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
     website_statistics = []
     summary = {
         'race_result': {
-            'success': 0,
+            'equal': 0,
+            'diff': 0,
             'timeout': 0,
             'error': 0
         },
@@ -462,7 +481,10 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
     for website in website_index:
 
         result = {
-            'success': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED']),
+            'equal': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and
+                                                                    race['comparison']['is_equal']]),
+            'diff': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and
+                                                                   not race['comparison']['is_equal']]),
             'timeout': len([race for race in website['race_index'] if race['race_data']['result'] == 'TIMEOUT']),
             'error': len([race for race in website['race_index'] if race['race_data']['result'] == 'ERROR'])
         }
@@ -474,7 +496,8 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
             'result': result
         })
 
-        summary['race_result']['success'] += result['success']
+        summary['race_result']['equal'] += result['equal']
+        summary['race_result']['diff'] += result['diff']
         summary['race_result']['timeout'] += result['timeout']
         summary['race_result']['error'] += result['error']
 

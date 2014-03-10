@@ -9,7 +9,7 @@
         <th style="width: 3em"></th>
         <th>Website</th>
         <th>Races/Success/Fail</th>
-        <th>Success/Timeout/Error</th>
+        <th>Equal/Diff/Timeout/Error</th>
         <th>Total Execution Time</th>
     </tr>
 
@@ -25,7 +25,7 @@
             {{ item.er_log.races_total }}/<b>{{ item.er_log.races_success }}</b>/{{ item.er_log.races_failure }}
         </td>
         <td class="{% if item.result.error == 0 and item.result.timeout == 0 %}success{% elif item.result.timeout > 0 %}warning{% else %}danger{% endif %}">
-            {{ item.result.success }}/{{ item.result.timeout }}/{{ item.result.error }}
+            {{ item.result.equal }}/{{ item.result.diff }}/{{ item.result.timeout }}/{{ item.result.error }}
         </td>
         <td>
             {{ item.er_log.execution_time // 60 }}m {{ item.er_log.execution_time % 60 }}s
@@ -44,7 +44,7 @@
             {{ summary.execution_result.total }} / <b>{{ summary.execution_result.success }} ({{ (((summary.execution_result.success / summary.execution_result.total) | round(2)) * 100) | int }}%)</b> / {{ summary.execution_result.failure }}
         </td>
         <td>
-            {{ summary.race_result.success }} / {{ summary.race_result.timeout }} / {{ summary.race_result.error }}
+            {{ summary.race_result.equal }} / {{ summary.race_result.diff }} / {{ summary.race_result.timeout }} / {{ summary.race_result.error }}
         </td>
         <td>
             {{ (summary.execution_time // 60) // 60 }}h {{ (summary.execution_time // 60) % 60 }}m {{ summary.execution_time % 60 }}s

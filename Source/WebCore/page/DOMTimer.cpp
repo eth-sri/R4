@@ -108,7 +108,7 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
 
     // WebERA: DOMTimer chain pattern
 
-    if (strcmp(callee.getType(), "DOMTimer") == 0) {
+    if (!callee.isNull() && strcmp(callee.getType(), "DOMTimer") == 0) {
 
         std::string calleeUrl = callee.getParameter(0);
 
@@ -124,10 +124,10 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
         std::string calleeChain = callee.getParameter(5);
         int calleeChainInt = atoi(calleeChain.c_str());
 
-        if (calleeUrl == url  &&
+        if (calleeUrl.compare(url) == 0  &&
             calleeLineInt == action->getCalledLine() &&
             calleeTimeoutInt == timeout &&
-            calleeSingleShot == singleShotStr) {
+            calleeSingleShot.compare(singleShotStr) == 0) {
 
             params << calleeUrl << ","
                    << calleeLine << ","
