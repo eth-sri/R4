@@ -21,6 +21,7 @@
             <th>HTML State Match</th>
             <th>Visual State Match</th>
             <th>Replay</th>
+            <th>ERC</th>
         </tr>
 
         {% for race in website.race_index %}
@@ -39,6 +40,9 @@
             </td>
             <td class="{% if race.race_data.result == 'FINISHED' %}success{% elif race.race_data.result == 'TIMEOUT' %}warning{% else %}danger{% endif %}">
                 {{ race.race_data.result }}
+            </td>
+            <td>
+              {{ race.race_data.er_classification }}{% if race.race_data.er_classification_details %}: {{ race.race_data.er_classification_details }}{% endif %}
             </td>
         </tr>
         {% endfor %}

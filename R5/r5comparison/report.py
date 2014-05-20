@@ -9,8 +9,50 @@ from jinja2 import Environment, PackageLoader
 import subprocess
 from builtins import FileNotFoundError, NotADirectoryError
 import concurrent.futures
+from bs4 import BeautifulSoup
 
 NUM_PROC = 7
+
+
+class ERRaceClassifier(object):
+
+    CLASSIFICATION = {
+        'rs': 'HIGH',
+        'ru': 'NORMAL',
+        'rk': 'LOW'
+    }
+
+    def __init__(self, website_dir):
+
+        try:
+            with open(os.path.join(website_dir, 'record', 'varlist'), 'r') as fp:
+                self.soup = BeautifulSoup(fp)
+        except FileNotFoundError:
+            self.soup = None
+
+    def inject_classification(self, race_data):
+
+        if self.soup is not None:
+
+            try:
+                id = race_data['handle'][4:]
+                race_row = self.soup\
+                    .find('a', href='race?id=%s' % id)\
+                    .find_parent('tr')\
+                    .previous_sibling.previous_sibling
+
+                classification = self.CLASSIFICATION[race_row['class'][0][:2]]
+                details = race_row.find_all('td')[-1].a.text
+
+                race_data['er_classification'] = classification
+                race_data['er_classification_details'] = details
+            except Exception as ex:
+                raise ex
+                race_data['er_classification'] = 'PARSE_ERROR'
+                race_data['er_classification_details'] = ''
+        else:
+            race_data['er_classification'] = 'UNKNOWN'
+            race_data['er_classification_details'] = ''
 
 
 class RaceParseException(Exception):
@@ -557,17 +599,25 @@ def main():
             try:
                 base_data = parse_race(website_dir, 'base')
 
+                er_race_classifier = ERRaceClassifier(website_dir)
+
                 for race in races:
+                    if race in ['ER_out_actionlog', 'schedule.out.data', 'log.network.out.data', 'log.time.out.data', 'log.random.out.data']:
+                        continue
+                    
                     try:
                         race_data = parse_race(website_dir, race)
+                        er_race_classifier.inject_classification(race_data)
+
                         comparison = compare_race(base_data, race_data, executor)
+
                         append_race_index(race_index, race, base_data, race_data, comparison)
 
                     except RaceParseException:
                         print("Error parsing %s :: %s" % (website, race))
 
                 er_log = parse_er_log(website_dir)
-
+                
                 append_website_index(website_index, website, er_log, race_index)
 
             except RaceParseException:
