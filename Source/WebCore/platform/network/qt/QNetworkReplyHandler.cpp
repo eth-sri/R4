@@ -384,6 +384,7 @@ QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReplyControllableFa
     , m_nextSnapshotUpdateTimer(this, &QNetworkReplyControllable::updateSnapshot)
     , m_reply(reply)
     , m_lastNetworkEventAction(0)
+    , m_creatingEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
     , m_factory(factory)
 {
     Q_ASSERT(m_reply);
@@ -444,6 +445,10 @@ void QNetworkReplyControllable::updateSnapshot(Timer<QNetworkReplyControllable>*
     } else {
         HBAddExplicitArc(HBQNetworkRequestGetEventAction(m_reply->request(), ORIGIN), HBCurrentEventAction());
         HBAddExplicitArc(HBQNetworkRequestGetEventAction(m_reply->request(), SENDER), HBCurrentEventAction());
+
+        if (m_creatingEventAction != 0) {
+            HBAddExplicitArc(m_creatingEventAction, HBCurrentEventAction());
+        }
     }
 
     m_lastNetworkEventAction = HBCurrentEventAction();

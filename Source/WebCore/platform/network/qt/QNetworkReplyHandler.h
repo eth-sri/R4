@@ -292,6 +292,7 @@ protected:
     QNetworkReply* m_reply;
 
     WTF::EventActionId m_lastNetworkEventAction;
+    WTF::EventActionId m_creatingEventAction;
 
     QNetworkReplyControllableFactory* m_factory;
 
