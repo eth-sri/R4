@@ -22,6 +22,7 @@
             <th>Visual State Match</th>
             <th>Replay</th>
             <th>ERC</th>
+            <th>R4C</th>
         </tr>
 
         {% for race in website.race_index %}
@@ -44,6 +45,10 @@
             <td>
               {{ race.race_data.er_classification }}{% if race.race_data.er_classification_details %}: {{ race.race_data.er_classification_details }}{% endif %}
             </td>
+            <td>
+              {{ race.comparison.r4_classification }}{% if race.comparison.r4_classification_details %}: {{ race.comparison.r4_classification_details }}{% endif %}
+            </td>
+
         </tr>
         {% endfor %}
 

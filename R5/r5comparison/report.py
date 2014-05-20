@@ -46,8 +46,7 @@ class ERRaceClassifier(object):
 
                 race_data['er_classification'] = classification
                 race_data['er_classification_details'] = details
-            except Exception as ex:
-                raise ex
+            except:
                 race_data['er_classification'] = 'PARSE_ERROR'
                 race_data['er_classification_details'] = ''
         else:
@@ -396,17 +395,38 @@ def compare_race(base_data, race_data, executor):
             'first_unequal': first_unequal
         })
 
+    # R4 race classification
+
+    html_state_match = base_data['html_state'] == race_data['html_state']
+    visual_state_match = cimage.get('human', None) == 'EXACT'
+    errors_diff_count = abs(len(base_data['errors']) - len(race_data['errors']))
+
+    classification = 'UNKNOWN'
+    classification_details = None
+
+    if not html_state_match \
+            or not visual_state_match \
+            or errors_diff_count > 0:
+
+        classification = 'HIGH'
+
+    else:
+
+        classification = 'LOW'
+
     return {
-        'errors_diff_count': abs(len(base_data['errors']) - len(race_data['errors'])),
+        'errors_diff_count': errors_diff_count,
         'errors_diff': opcodes,
         'errors_diff_human': opcodes_human,
         'errors_diff_distance': distance,
         'zip_diff': zip_opcodes,
         'zip_diff_human': zip_opcodes_human,
         'zip_diff_has_unequal': unequal_seen,
-        'html_state_match': base_data['html_state'] == race_data['html_state'],
+        'html_state_match': html_state_match,
         'visual_state_match': cimage,
-        'is_equal': base_data['html_state'] == race_data['html_state'] and 'human' in cimage and cimage['human'] == 'EXACT' and distance == 0
+        'is_equal': base_data['html_state'] == race_data['html_state'] and 'human' in cimage and cimage['human'] == 'EXACT' and distance == 0,
+        'r4_classification': classification,
+        'r4_classification_details': classification_details
     }
 
 
