@@ -398,20 +398,22 @@ def compare_race(base_data, race_data, executor):
     # R4 race classification
 
     html_state_match = base_data['html_state'] == race_data['html_state']
-    visual_state_match = cimage.get('human', None) == 'EXACT'
+    visual_state_match = cimage.get('human', 'FAIL') == 'EXACT'
     errors_diff_count = abs(len(base_data['errors']) - len(race_data['errors']))
 
     classification = 'UNKNOWN'
     classification_details = None
 
-    if not html_state_match \
-            or not visual_state_match \
-            or errors_diff_count > 0:
-
+    if not html_state_match:
         classification = 'HIGH'
-
+        classification_details = 'HTML state mismatch'
+    elif not visual_state_match:
+        classification = 'HIGH'
+        classification_details = 'Visual state mismatch'
+    elif errors_diff_count > 0:
+        classification = 'HIGH'
+        classification_details = 'Error diff'
     else:
-
         classification = 'LOW'
 
     return {

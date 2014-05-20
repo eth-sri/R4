@@ -90,11 +90,14 @@ class NetworkingContext;
         PassOwnPtr<CrossThreadResourceRequestData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceRequestData> data) const { return data; }
         void doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData>) { }
 
-        // WebERA: Notice, this value can be 0
-        // In some cases network requests are constructed before any UI events exist. In that case
-        // we set the value to 0.
+        // WebERA:
+
+        // Notice, this value can be 0 - In some cases network requests are constructed before
+        // any UI events exist. In that case we set the value to 0.
+        // This value represents the event action creating this particular request
         WTF::EventActionId m_calleeEventAction;
-        // And for this one, if no explicit sender event action has been set, then it is 0
+        // This value represents the event action initiating the actual request. We can see
+        // multiple senders in the lifetime of a page. We assume that senders do not overlap.
         WTF::EventActionId m_senderEventAction;
     };
 

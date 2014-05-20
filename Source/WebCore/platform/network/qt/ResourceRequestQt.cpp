@@ -91,9 +91,9 @@ QNetworkRequest ResourceRequest::toNetworkRequest(NetworkingContext *context) co
     if (!allowCookies())
         request.setAttribute(QNetworkRequest::AuthenticationReuseAttribute, QNetworkRequest::Manual);
 
-    HBQNetworkRequestAnnotate(&request, SENDER, m_senderEventAction != 0 ?
-                                  m_senderEventAction : (HBIsCurrentEventActionValid() ? \
-                                                             HBCurrentEventAction() : HBLastUIEventAction()));
+    HBQNetworkRequestAnnotate(&request, SENDER, (HBIsCurrentEventActionValid() ? \
+                                                    HBCurrentEventAction() : HBLastUIEventAction()));
+
     HBQNetworkRequestAnnotate(&request, ORIGIN, m_calleeEventAction != 0 ? \
                                   m_calleeEventAction : HBLastUIEventAction());
 
