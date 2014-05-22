@@ -41,6 +41,8 @@
 
 namespace WebCore {
     
+std::map<std::string, unsigned int> DocumentEventQueue::m_seqNumber = std::map<std::string, unsigned int>();
+
 static inline bool shouldDispatchScrollEventSynchronously(Document* document)
 {
     ASSERT_ARG(document, document);
@@ -76,10 +78,39 @@ DocumentEventQueue::~DocumentEventQueue()
 {
 }
 
+unsigned int DocumentEventQueue::getAndIncSeqNumber(const std::string& type) {
+    std::map<std::string, unsigned int>::iterator iter;
+
+    iter = DocumentEventQueue::m_seqNumber.find(type);
+    if (iter == DocumentEventQueue::m_seqNumber.end()) {
+        DocumentEventQueue::m_seqNumber.insert(std::pair<std::string, unsigned int>(type, 1));
+        return 0;
+    } else {
+        return iter->second++;
+    }
+}
+unsigned int DocumentEventQueue::getSeqNumber(const std::string& type) {
+    std::map<std::string, unsigned int>::iterator iter;
+
+    iter = DocumentEventQueue::m_seqNumber.find(type);
+    if (iter == DocumentEventQueue::m_seqNumber.end()) {
+        return 0;
+    } else {
+        return iter->second;
+    }
+}
+
 bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
 {
     if (m_isClosed)
         return false;
+
+    // WebERA:
+    // Filter out resize events caused by repaints (experimental), the appearence of these are not controllable right now
+    const char* type = event->type().string().ascii().data();
+    if (strcmp(type, "resize") == 0 && DocumentEventQueue::getSeqNumber(type) > 0) {
+        return true;
+    }
 
     ASSERT(event->target());
     bool wasAdded = m_queuedEvents.add(event).isNewEntry;
@@ -151,14 +182,15 @@ void DocumentEventQueue::close()
     m_queuedEvents.clear();
 }
 
-unsigned int DocumentEventQueue::m_seqNumber = 0;
-
 void DocumentEventQueue::tryUpdateAndStartTimer()
 {
     if (!m_pendingEventTimer->isActive()) {
 
+        const std::string type = m_queuedEvents.first()->type().string().ascii().data();
+
         std::stringstream params;
-        params << DocumentEventQueue::getSeqNumber();
+        params << type << ",";
+        params << DocumentEventQueue::getAndIncSeqNumber(type);
 
         WTF::EventActionDescriptor descriptor(WTF::OTHER, "DocumentEventQueue", params.str());
 

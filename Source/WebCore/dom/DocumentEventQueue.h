@@ -36,6 +36,8 @@
 #include <wtf/EventActionDescriptor.h>
 
 #include <list>
+#include <map>
+#include <string>
 
 namespace WebCore {
 
@@ -76,10 +78,9 @@ private:
     friend class DocumentEventQueueTimer;    
 
     // WebERA:
-    static unsigned int getSeqNumber() {
-        return DocumentEventQueue::m_seqNumber++;
-    }
-    static unsigned int m_seqNumber;
+    static unsigned int getAndIncSeqNumber(const std::string& type);
+    static unsigned int getSeqNumber(const std::string& type);
+    static std::map<std::string, unsigned int> m_seqNumber;
 
     void tryUpdateAndStartTimer();
 
