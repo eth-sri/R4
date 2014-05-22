@@ -202,7 +202,7 @@ void ImageLoader::updateFromElement()
             if (!m_element->document()->hasListenerType(Document::BEFORELOAD_LISTENER))
                 dispatchPendingBeforeLoadEvent();
             else
-                beforeLoadEventSender().dispatchEventSoon(this, "Image", attr.string().ascii().data());
+                beforeLoadEventSender().dispatchEventSoon(this, "ImageLoadBegin", attr.string().ascii().data());
 
             // If newImage is cached, addClient() will result in the load event
             // being queued to fire. Ensure this happens after beforeload is
@@ -245,7 +245,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         setImage(0);
 
         m_hasPendingErrorEvent = true;
-        errorEventSender().dispatchEventSoon(this, "Image", src.string().ascii().data());
+        errorEventSender().dispatchEventSoon(this, "ImageLoadError", src.string().ascii().data());
 
         DEFINE_STATIC_LOCAL(String, consoleMessage, ("Cross-origin image load denied by Cross-Origin Resource Sharing policy."));
         m_element->document()->addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, consoleMessage);
@@ -259,7 +259,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         return;
     }
 
-    loadEventSender().dispatchEventSoon(this, "Image", src.string().ascii().data());
+    loadEventSender().dispatchEventSoon(this, "ImageLoad", src.string().ascii().data());
 }
 
 RenderImageResource* ImageLoader::renderImageResource()
