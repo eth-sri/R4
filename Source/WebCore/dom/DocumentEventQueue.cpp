@@ -107,9 +107,14 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
 
     // WebERA:
     // Filter out resize events caused by repaints (experimental), the appearence of these are not controllable right now
-    const char* type = event->type().string().ascii().data();
-    if (strcmp(type, "resize") == 0 && DocumentEventQueue::getSeqNumber(type) > 0) {
-        return true;
+    const std::string type = event->type().string().ascii().data();
+    if (type == "resize") {
+        if (DocumentEventQueue::getSeqNumber(type) > 0) {
+            return true;
+        } else {
+            // allow the first resize to happen (increment it now and block subsequent resizes)
+            DocumentEventQueue::getAndIncSeqNumber(type);
+        }
     }
 
     ASSERT(event->target());
