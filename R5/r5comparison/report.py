@@ -243,6 +243,7 @@ def parse_er_log(base_dir):
 
 def generate_comparison_file(record_file, replay_file, comparison_file):
     try:
+        print('compare -metric RMSE %s %s %s' % (record_file, replay_file, comparison_file))
         stdout = subprocess.check_output('compare -metric RMSE %s %s %s' % (record_file, replay_file, comparison_file), stderr=subprocess.STDOUT, shell=True)
         type = 'normal'
     except subprocess.CalledProcessError as e:
@@ -483,7 +484,7 @@ def append_race_index(race_index, race, base_data, race_data, comparison):
 
 def output_race_index(website, output_dir, input_dir):
 
-    jinja = Environment(loader=PackageLoader('r5comparison', 'templates'))
+    jinja = Environment(loader=PackageLoader('templates', ''))
 
     try:
         os.mkdir(output_dir)
@@ -624,6 +625,8 @@ def main():
                 er_race_classifier = ERRaceClassifier(website_dir)
 
                 for race in races:
+                    print('race %s' % race)
+
                     if race in ['ER_out_actionlog', 'schedule.out.data', 'log.network.out.data', 'log.time.out.data', 'log.random.out.data']:
                         continue
                     
@@ -647,7 +650,7 @@ def main():
 
         executor.shutdown()
 
-    jinja = Environment(loader=PackageLoader('r5comparison', 'templates'))
+    jinja = Environment(loader=PackageLoader('templates', ''))
     output_website_index(website_index, jinja, output_dir, analysis_dir)
 
 if __name__ == '__main__':
