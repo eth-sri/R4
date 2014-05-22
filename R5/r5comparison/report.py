@@ -336,7 +336,7 @@ def compare_race(base_data, race_data, executor):
         # Remove "new event action" error at the end of error reports if they both have it
         # Often, this is not an error, just a side effect of the system, and this side effect
         # is different from execution to execution. Filter it away
-        if len(base_list) > 0 and len(base_list) > 0 and \
+        if len(base_list) > 0 and len(race_list) > 0 and \
             base_list[-1]['type'] == 'error' and race_list[-1]['type'] == 'error' and \
             'event action observed' in base_list[-1]['description'] and \
             'event action observed' in race_list[-1]['description']:
