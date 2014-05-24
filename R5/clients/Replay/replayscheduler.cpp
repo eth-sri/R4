@@ -49,7 +49,9 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_state(RUNNING)
     , m_doneEmitted(false)
     , m_skipEventActionsUntilHit(false)
+    , m_timeout_use_aggressive(false)
     , m_timeout_miliseconds(20000)
+    , m_timeout_aggressive_miliseconds(500)
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -107,6 +109,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             m_randomProvider->setMode(BEST_EFFORT);
             m_networkProvider->setMode(BEST_EFFORT);
             m_mode = BEST_EFFORT;
+            m_eventActionTimeoutTimer.setInterval(m_timeout_aggressive_miliseconds);
         }
 
         m_schedule->remove(0);

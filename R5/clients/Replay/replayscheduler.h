@@ -114,7 +114,9 @@ private:
     QTimer m_eventActionTimeoutTimer;
     bool m_skipEventActionsUntilHit;
 
+    bool m_timeout_use_aggressive;
     unsigned int m_timeout_miliseconds;
+    unsigned int m_timeout_aggressive_miliseconds;
 
 private slots:
     void slEventActionTimeout();
