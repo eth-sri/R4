@@ -16,8 +16,6 @@
 #include <set>
 #include <queue>
 
-static std::string LOG_FILE_PATH = "/tmp/ER_actionlog";
-
 ActionLogScope::ActionLogScope(const char* name) {
 	ActionLogScopeStart(name);
 }
@@ -144,7 +142,7 @@ int ActionLogScopeDepth() {
 void ActionLogAddArc(int earlierId, int laterId, int duration) {
 	if (laterId <= earlierId) {
 		fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
-		ActionLogSave();
+        ActionLogSave("/tmp/ER_actionlog");
 		CRASH();
 	}
 	wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
@@ -173,18 +171,14 @@ bool ActionLogWillAddCommand(ActionLog::CommandType cmd) {
 	return wtfThreadData().actionLog()->willLogCommand(cmd);
 }
 
-void ActionLogSave() {
-    FILE* f = fopen(LOG_FILE_PATH.c_str(), "wb");
+void ActionLogSave(const std::string& path) {
+    FILE* f = fopen(path.c_str(), "wb");
 	wtfThreadData().variableSet()->saveToFile(f);
 	wtfThreadData().scopeSet()->saveToFile(f);
 	wtfThreadData().actionLog()->saveToFile(f);
 	wtfThreadData().jsSet()->saveToFile(f);
 	wtfThreadData().dataSet()->saveToFile(f);
 	fclose(f);
-}
-
-void ActionLogSetLogFile(const std::string& file_path) {
-    LOG_FILE_PATH = file_path;
 }
 
 const std::vector<ActionLog::Arc>& ActionLogReportArcs() {

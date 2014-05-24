@@ -95,7 +95,7 @@ def parse_race(base_dir, handle):
 
     # ERRORS
 
-    errors_file = os.path.join(handle_dir, 'errors.log')
+    errors_file = os.path.join(handle_dir, 'out.errors.log')
     errors = []
 
     try:
@@ -139,7 +139,7 @@ def parse_race(base_dir, handle):
 
     # SCHEDULE
 
-    schedule_file = os.path.join(handle_dir, 'new_schedule.data')
+    schedule_file = os.path.join(handle_dir, 'out.schedule.data')
     schedule = []
 
     with open(schedule_file, 'rb') as fp:
@@ -314,8 +314,8 @@ def compare_race(base_data, race_data, executor):
                 ])
 
         visual_state_match = executor.submit(generate_comparison_file,
-                                             os.path.join(base_data['race_dir'], 'replay.png'),
-                                             os.path.join(race_data['race_dir'], 'replay.png'),
+                                             os.path.join(base_data['race_dir'], 'out.screenshot.png'),
+                                             os.path.join(race_data['race_dir'], 'out.screenshot.png'),
                                              os.path.join(race_data['race_dir'], 'comparison.png'))
 
         visual_state_match.add_done_callback(finished_callback)
@@ -438,18 +438,18 @@ def output_race_report(website, race, jinja, output_dir, input_dir):
     Outputs filename of written report
     """
 
-    record_file = os.path.join(output_dir, 'record.png')
+    record_file = os.path.join(output_dir, 'screenshot.png')
     replay_file = os.path.join(output_dir, '%s-replay.png' % race['handle'])
     comparison_file = os.path.join(output_dir, '%s-comparison.png' % race['handle'])
 
     try:
         if not os.path.isfile(record_file):
-            shutil.copy(os.path.join(input_dir, website, 'base', 'replay.png'), record_file)
+            shutil.copy(os.path.join(input_dir, website, 'base', 'out.screenshot.png'), record_file)
     except FileNotFoundError:
         pass
 
     try:
-        shutil.copy(os.path.join(input_dir, website, race['handle'], 'replay.png'), replay_file)
+        shutil.copy(os.path.join(input_dir, website, race['handle'], 'out.screenshot.png'), replay_file)
     except FileNotFoundError:
         pass
 
@@ -592,7 +592,7 @@ def main():
     websites = os.listdir(analysis_dir)
     website_index = init_website_index()
 
-    ignore_files = ['runner', 'new_schedule.data', 'stdout.txt', 'ER_out_actionlog', 'schedule.out.data', 'log.network.out.data', 'log.time.out.data', 'log.random.out.data']
+    ignore_files = ['runner', 'out.schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.schedule.data', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
 

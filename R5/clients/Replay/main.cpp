@@ -38,6 +38,7 @@
 #include <QList>
 #include <QTimer>
 #include <QNetworkProxy>
+#include <QString>
 
 #include <config.h>
 
@@ -62,20 +63,15 @@ public:
 
 private:
     void handleUserOptions();
+    void snapshotState(QString id);
 
     QString m_url;
+    QString m_outdir;
+
     QString m_schedulePath;
     QString m_logNetworkPath;
     QString m_logRandomPath;
     QString m_logTimePath;
-    QString m_outSchedulePath;
-    QString m_outLogNetworkPath;
-    QString m_outLogRandomPath;
-    QString m_outLogTimePath;
-    QString m_logErrorsPath;
-    QString m_outErLogPath;
-
-    QString m_screenshotPath;
 
     ReplayScheduler* m_scheduler;
     TimeProviderReplay* m_timeProvider;
@@ -96,26 +92,12 @@ public slots:
  */
 ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
-    , m_schedulePath("/tmp/schedule.data")
-    , m_logNetworkPath("/tmp/log.network.data")
-    , m_logRandomPath("/tmp/log.random.data")
-    , m_logTimePath("/tmp/log.time.data")
-    , m_outSchedulePath("/tmp/schedule.out.data")
-    , m_outLogNetworkPath("/tmp/log.network.out.data")
-    , m_outLogRandomPath("/tmp/log.random.out.data")
-    , m_outLogTimePath("/tmp/log.time.out.data")
-    , m_logErrorsPath("/tmp/errors.log")
-    , m_outErLogPath("/tmp/ER_out_actionlog")
-    , m_screenshotPath("/tmp/replay.png")
+    , m_outdir("/tmp/")
     , m_isStopping(false)
     , m_showWindow(true)
 {
 
     handleUserOptions();
-
-    // ER log
-
-    ActionLogSetLogFile(m_outErLogPath.toStdString().c_str());
 
     // Network
 
@@ -164,6 +146,7 @@ void ReplayClientApplication::handleUserOptions()
                  << "[-hidewindow]"
                  << "[-timeout]"
                  << "[-out_dir]"
+                 << "[-in_dir]"
                  << "[-proxy URL:PORT]"
                  << "<URL> [<schedule>|<schedule> <log.network.data> <log.random.data> <log.time.data>]";
         std::exit(0);
@@ -174,26 +157,23 @@ void ReplayClientApplication::handleUserOptions()
         m_showWindow = false;
     }
 
+    QString indir = "/tmp/";
+
     int outdirIndex = args.indexOf("-out_dir");
     if (outdirIndex != -1) {
-        QString outdir = takeOptionValue(&args, outdirIndex);
-
-        m_schedulePath = outdir + "/schedule.data";
-        m_logNetworkPath = outdir + "/log.network.data";
-        m_logTimePath = outdir + "/log.time.data";
-        m_logRandomPath = outdir + "/log.random.data";
-
-        m_outSchedulePath = outdir + "/schedule.out.data";
-        m_outLogNetworkPath = outdir + "/log.network.out.data";
-        m_outLogTimePath = outdir + "/log.time.out.data";
-        m_outLogRandomPath = outdir + "/log.random.out.data";
-
-        m_outErLogPath = outdir + "/ER_out_actionlog";
-
-        m_logErrorsPath = outdir + "/errors.log";
-        m_screenshotPath = outdir + "/replay.png";
+         m_outdir = takeOptionValue(&args, outdirIndex);
+         indir = m_outdir;
     }
 
+    int indirIndex = args.indexOf("-in_dir");
+    if (indirIndex != -1) {
+         indir = takeOptionValue(&args, indirIndex);
+    }
+
+    m_schedulePath = indir + "s/chedule.data";
+    m_logNetworkPath = indir + "/log.network.data";
+    m_logTimePath = indir + "/log.time.data";
+    m_logRandomPath = indir + "/log.random.data";
 
     int proxyUrlIndex = args.indexOf("-proxy");
     if (proxyUrlIndex != -1) {
@@ -240,50 +220,93 @@ void ReplayClientApplication::slTimeout() {
     m_scheduler->timeout();
 }
 
+void ReplayClientApplication::snapshotState(QString id) {
+
+    // Set paths
+
+    QString outStatusPath = m_outdir + "/" + id + "status.data";
+    QString outSchedulePath = m_outdir + "/" + id + "schedule.data";
+    QString outLogNetworkPath = m_outdir + "/" + id + "log.network.data";
+    QString outLogTimePath = m_outdir + "/" + id + "log.time.data";
+    QString outLogRandomPath = m_outdir + "/" + id + "log.random.data";
+    QString outErLogPath = m_outdir + "/" + id + "ER_actionlog";
+    QString logErrorsPath = m_outdir + "/" + id + "errors.log";
+    QString screenshotPath = m_outdir + "/" + id + "screenshot.png";
+
+    // HTML Hash & scheduler state
+
+    std::ofstream statusfile;
+    statusfile.open(outStatusPath.toStdString().c_str());
+
+    switch (m_scheduler->getState()) {
+    case FINISHED:
+        statusfile << "Result: FINISHED" << std::endl;
+        break;
+
+    case TIMEOUT:
+        statusfile << "Result: TIMEOUT" << std::endl;
+        break;
+
+    case ERROR:
+        statusfile << "Result: ERROR" << std::endl;
+        break;
+
+    default:
+        statusfile << "Result: ERROR" << std::endl;
+        break;
+    }
+
+    uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
+
+    QList<QWebFrame*> queue;
+    queue.append(m_window->page()->mainFrame());
+
+    while (!queue.empty()) {
+        QWebFrame* current = queue.takeFirst();
+        htmlHash += qHash(current->toHtml());
+        queue.append(current->childFrames());
+    }
+
+    statusfile << "HTML-hash: " << htmlHash << std::endl;
+
+    statusfile.close();
+
+    // happens before
+
+    ActionLogSave(outErLogPath.toStdString());
+
+    // schedule
+
+    std::ofstream schedulefile;
+    schedulefile.open(outSchedulePath.toStdString().c_str());
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
+    schedulefile.close();
+
+    // network
+
+    m_network->writeNetworkFile(outLogNetworkPath);
+
+    // log
+
+    m_timeProvider->writeLogFile(outLogTimePath);
+    m_randomProvider->writeLogFile(outLogRandomPath);
+
+    // Screenshot
+
+    m_window->takeScreenshot(screenshotPath);
+
+    // Errors
+    WTF::WarningCollecterWriteToLogFile(logErrorsPath.toStdString());
+
+}
+
 void ReplayClientApplication::slSchedulerDone()
 {
     if (m_isStopping == false) {
 
-        uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
+        snapshotState(QString::fromStdString("out."));
 
-        QList<QWebFrame*> queue;
-        queue.append(m_window->page()->mainFrame());
-
-        while (!queue.empty()) {
-            QWebFrame* current = queue.takeFirst();
-            htmlHash += qHash(current->toHtml());
-            queue.append(current->childFrames());
-        }
-
-        // happens before
-
-        ActionLogSave();
         ActionLogStrictMode(false);
-
-        // schedule
-
-        std::ofstream schedulefile;
-        schedulefile.open(m_outSchedulePath.toStdString().c_str());
-
-        WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
-
-        schedulefile.close();
-
-        // network
-
-        m_network->writeNetworkFile(m_outLogNetworkPath.toStdString().c_str());
-
-        // log
-
-        m_timeProvider->writeLogFile(m_outLogTimePath);
-        m_randomProvider->writeLogFile(m_outLogRandomPath);
-
-        // Screenshot
-
-        m_window->takeScreenshot(m_screenshotPath);
-
-        // Errors
-        WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
 
         switch (m_scheduler->getState()) {
         case FINISHED:
@@ -305,6 +328,17 @@ void ReplayClientApplication::slSchedulerDone()
             std::cout << "Scheduler stopped for an unknown reason." << std::endl;
             std::cout << "Result: ERROR" << std::endl;
             break;
+        }
+
+        uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
+
+        QList<QWebFrame*> queue;
+        queue.append(m_window->page()->mainFrame());
+
+        while (!queue.empty()) {
+            QWebFrame* current = queue.takeFirst();
+            htmlHash += qHash(current->toHtml());
+            queue.append(current->childFrames());
         }
 
         std::cout << "HTML-hash: " << htmlHash << std::endl;

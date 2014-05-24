@@ -588,14 +588,16 @@ void QNetworkReplyControllableFactory::writeNetworkFile(QString networkFilePath)
 
     ASSERT(fp.isOpen());
 
-    while (!m_networkHistory.empty()) {
-        WebCore::QNetworkReplyInitialSnapshot* snapshot = m_networkHistory.front();
-        m_networkHistory.pop_front();
+    std::list<WebCore::QNetworkReplyInitialSnapshot*> networkHistory = m_networkHistory;
+    while (!networkHistory.empty()) {
+        WebCore::QNetworkReplyInitialSnapshot* snapshot = networkHistory.front();
+        networkHistory.pop_front();
         snapshot->serialize(&fp);
     }
 
-    std::set<QNetworkReplyControllable*>::iterator iter = m_openNetworkSessions.begin();
-    while (iter != m_openNetworkSessions.end()) {
+    std::set<QNetworkReplyControllable*> openNetworkSessions = m_openNetworkSessions;
+    std::set<QNetworkReplyControllable*>::iterator iter = openNetworkSessions.begin();
+    while (iter != openNetworkSessions.end()) {
         (*iter)->initialSnapshot()->serialize(&fp);
         iter++;
     }

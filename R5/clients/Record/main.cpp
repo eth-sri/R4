@@ -67,19 +67,12 @@ private:
     void handleUserOptions();
 
 private:
+    void snapshotState(QString id);
+
     bool m_running;
 
-    QString m_schedulePath;
-    QString m_networkPath;
-    QString m_logTimePath;
-    QString m_logRandomPath;
-    QString m_logErrorsPath;
-    QString m_arcsLogPath;
-    QString m_erLogPath;
-
-    QString m_screenshotPath;
-
     QString m_url;
+    QString m_outdir;
 
     unsigned int m_autoExplorePreTimout;
     unsigned int m_autoExploreTimout;
@@ -87,7 +80,7 @@ private:
 
     bool m_showWindow;
 
-    WebCore::QNetworkReplyControllableFactoryLive* m_controllableFactory;
+    WebCore::QNetworkReplyControllableFactoryLive* m_network;
     TimeProviderRecord* m_timeProvider;
     RandomProviderRecord* m_randomProvider;
     //SpecificationScheduler* m_scheduler;
@@ -103,35 +96,24 @@ public slots:
 RecordClientApplication::RecordClientApplication(int& argc, char** argv)
     : ClientApplication(argc, argv)
     , m_running(true)
-    , m_schedulePath("/tmp/schedule.data")
-    , m_networkPath("/tmp/log.network.data")
-    , m_logTimePath("/tmp/log.time.data")
-    , m_logRandomPath("/tmp/log.random.data")
-    , m_logErrorsPath("/tmp/errors.log")
-    , m_arcsLogPath("/tmp/arcs.log")
-    , m_erLogPath("/tmp/ER_actionlog")
-    , m_screenshotPath("/tmp/record.png")
+    , m_outdir("/tmp/")
     , m_autoExplorePreTimout(30)
     , m_autoExploreTimout(30)
     , m_autoExplore(false)
     , m_showWindow(true)
     , m_timeProvider(new TimeProviderRecord())
     , m_randomProvider(new RandomProviderRecord())
-    //, m_scheduler(new SpecificationScheduler(m_controllableFactory))
+    //, m_scheduler(new SpecificationScheduler(m_network))
     , m_scheduler(new WebCore::DefaultScheduler())
     , m_autoExplorer(new AutoExplorer(m_window, m_window->page()->mainFrame()))
 {
     QObject::connect(m_window, SIGNAL(sigOnCloseEvent()), this, SLOT(slOnCloseEvent()));
     handleUserOptions();
 
-    // ER log
-
-    ActionLogSetLogFile(m_erLogPath.toStdString());
-
     // Network
 
-    m_controllableFactory = new WebCore::QNetworkReplyControllableFactoryLive();
-    WebCore::QNetworkReplyControllableFactory::setFactory(m_controllableFactory);
+    m_network = new WebCore::QNetworkReplyControllableFactoryLive();
+    WebCore::QNetworkReplyControllableFactory::setFactory(m_network);
 
     // Random
 
@@ -194,11 +176,6 @@ void RecordClientApplication::handleUserOptions()
         std::exit(0);
     }
 
-    int schedulePathIndex = args.indexOf("-schedule-path");
-    if (schedulePathIndex != -1) {
-        this->m_schedulePath = takeOptionValue(&args, schedulePathIndex);
-    }
-
     int proxyUrlIndex = args.indexOf("-proxy");
     if (proxyUrlIndex != -1) {
 
@@ -222,18 +199,7 @@ void RecordClientApplication::handleUserOptions()
 
     int outdirIndex = args.indexOf("-out_dir");
     if (outdirIndex != -1) {
-        QString outdir = takeOptionValue(&args, outdirIndex);
-
-        m_schedulePath = outdir + "/schedule.data";
-        m_networkPath = outdir + "/log.network.data";
-        m_logTimePath = outdir + "/log.time.data";
-        m_logRandomPath = outdir + "/log.random.data";
-
-        m_erLogPath = outdir + "/ER_actionlog";
-        m_logErrorsPath = outdir + "/errors.log";
-        m_arcsLogPath = outdir + "/arcs.log";
-
-        m_screenshotPath = outdir + "/record.png";
+         m_outdir = takeOptionValue(&args, outdirIndex);
     }
 
     int timeoutIndex = args.indexOf("-autoexplore-timeout");
@@ -281,6 +247,87 @@ void RecordClientApplication::handleUserOptions()
     m_url = urls.at(0);
 }
 
+void RecordClientApplication::snapshotState(QString id) {
+
+    // Set paths
+
+    QString outStatusPath = m_outdir + "/" + id + "status.data";
+    QString outSchedulePath = m_outdir + "/" + id + "schedule.data";
+    QString outLogNetworkPath = m_outdir + "/" + id + "log.network.data";
+    QString outLogTimePath = m_outdir + "/" + id + "log.time.data";
+    QString outLogRandomPath = m_outdir + "/" + id + "log.random.data";
+    QString outErLogPath = m_outdir + "/" + id + "ER_actionlog";
+    QString logErrorsPath = m_outdir + "/" + id + "errors.log";
+    QString screenshotPath = m_outdir + "/" + id + "screenshot.png";
+
+    // HTML Hash & scheduler state
+
+    std::ofstream statusfile;
+    statusfile.open(outStatusPath.toStdString().c_str());
+
+//    switch (m_scheduler->getState()) {
+//    case FINISHED:
+//        statusfile << "Result: FINISHED" << std::endl;
+//        break;
+
+//    case TIMEOUT:
+//        statusfile << "Result: TIMEOUT" << std::endl;
+//        break;
+
+//    case ERROR:
+//        statusfile << "Result: ERROR" << std::endl;
+//        break;
+
+//    default:
+//        statusfile << "Result: ERROR" << std::endl;
+//        break;
+//    }
+
+    uint htmlHash = 0; // this will overflow as we are using it, but that is as exptected
+
+    QList<QWebFrame*> queue;
+    queue.append(m_window->page()->mainFrame());
+
+    while (!queue.empty()) {
+        QWebFrame* current = queue.takeFirst();
+        htmlHash += qHash(current->toHtml());
+        queue.append(current->childFrames());
+    }
+
+    statusfile << "HTML-hash: " << htmlHash << std::endl;
+
+    statusfile.close();
+
+    // happens before
+
+    ActionLogSave(outErLogPath.toStdString());
+
+    // schedule
+
+    std::ofstream schedulefile;
+    schedulefile.open(outSchedulePath.toStdString().c_str());
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
+    schedulefile.close();
+
+    // network
+
+    m_network->writeNetworkFile(outLogNetworkPath);
+
+    // log
+
+    m_timeProvider->writeLogFile(outLogTimePath);
+    m_randomProvider->writeLogFile(outLogRandomPath);
+
+    // Screenshot
+
+    m_window->takeScreenshot(screenshotPath);
+
+    // Errors
+    WTF::WarningCollecterWriteToLogFile(logErrorsPath.toStdString());
+
+
+}
+
 void RecordClientApplication::slOnCloseEvent()
 {
     if (!m_running) {
@@ -289,40 +336,15 @@ void RecordClientApplication::slOnCloseEvent()
 
     m_running = false;
 
-    // happens before
+    snapshotState("");
 
-    ActionLogSave();
     ActionLogStrictMode(false);
 
-    // schedule
-
-    std::ofstream schedulefile;
-    schedulefile.open(m_schedulePath.toStdString().c_str());
-
-    WebCore::threadGlobalData().threadTimers().eventActionRegister()->dispatchHistory()->serialize(schedulefile);
-
-    schedulefile.close();
-
-    // network
-
-    m_controllableFactory->writeNetworkFile(m_networkPath);
-
-    // log
-
-    m_timeProvider->writeLogFile(m_logTimePath);
-    m_randomProvider->writeLogFile(m_logRandomPath);
-
-    // Screenshot
-
-    m_window->takeScreenshot(m_screenshotPath);
-
-    // errors
-    WTF::WarningCollecterWriteToLogFile(m_logErrorsPath.toStdString());
-
     // Write human readable HB relation dump (DEBUG)
+    std::string arcsLogPath = m_outdir.toStdString() + "/arcs.log";
     std::vector<ActionLog::Arc> arcs = ActionLogReportArcs();
     std::ofstream arcslog;
-    arcslog.open(m_arcsLogPath.toStdString().c_str());
+    arcslog.open(arcsLogPath.c_str());
 
     for (std::vector<ActionLog::Arc>::iterator it = arcs.begin(); it != arcs.end(); ++it) {
         arcslog << (*it).m_tail << " -> " << (*it).m_head << std::endl;
