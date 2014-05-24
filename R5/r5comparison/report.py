@@ -592,6 +592,8 @@ def main():
     websites = os.listdir(analysis_dir)
     website_index = init_website_index()
 
+    ignore_files = ['runner', 'new_schedule.data', 'stdout.txt', 'ER_out_actionlog', 'schedule.out.data', 'log.network.out.data', 'log.time.out.data', 'log.random.out.data']
+
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
 
         for website in websites:
@@ -610,14 +612,9 @@ def main():
                 print('Error, missing base or record directory in output dir for %s' % website)
                 continue
 
-            if 'runner' in races:
-                races.remove('runner')
-
-            if 'new_schedule.data' in races:
-                races.remove('new_schedule.data')
-
-            if 'stdout.txt' in races:
-                races.remove('stdout.txt')
+            for ignore_file in ignore_files:
+                if ignore_file in races:
+                    races.remove(ignore_file)
 
             try:
                 base_data = parse_race(website_dir, 'base')
@@ -625,11 +622,7 @@ def main():
                 er_race_classifier = ERRaceClassifier(website_dir)
 
                 for race in races:
-                    print('race %s' % race)
 
-                    if race in ['ER_out_actionlog', 'schedule.out.data', 'log.network.out.data', 'log.time.out.data', 'log.random.out.data']:
-                        continue
-                    
                     try:
                         race_data = parse_race(website_dir, race)
                         er_race_classifier.inject_classification(race_data)
