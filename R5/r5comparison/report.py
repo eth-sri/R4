@@ -438,7 +438,7 @@ def output_race_report(website, race, jinja, output_dir, input_dir):
     Outputs filename of written report
     """
 
-    record_file = os.path.join(output_dir, 'screenshot.png')
+    record_file = os.path.join(output_dir, 'record.png')
     replay_file = os.path.join(output_dir, '%s-replay.png' % race['handle'])
     comparison_file = os.path.join(output_dir, '%s-comparison.png' % race['handle'])
 
