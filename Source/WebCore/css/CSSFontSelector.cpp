@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "CSSFontSelector.h"
+#include <sstream>
 
 #include "CachedFont.h"
 #include "CSSFontFace.h"
@@ -68,8 +69,6 @@ CSSFontSelector::CSSFontSelector(Document* document)
     // FIXME: An old comment used to say there was no need to hold a reference to m_document
     // because "we are guaranteed to be destroyed before the document". But there does not
     // seem to be any such guarantee.
-
-    m_beginLoadingTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::PARSING, "CSSFontSelector", ""));
 
     ASSERT(m_document);
     fontCache()->addClient(this);
@@ -555,12 +554,11 @@ void CSSFontSelector::clearDocument()
     m_beginLoadingTimer.stop();
 
     CachedResourceLoader* cachedResourceLoader = m_document->cachedResourceLoader();
-    for (size_t i = 0; i < m_fontsToBeginLoading.size(); ++i) {
+    while (m_fontsToBeginLoading.size() != 0) {
         // Balances incrementRequestCount() in beginLoadingFontSoon().
-        cachedResourceLoader->decrementRequestCount(m_fontsToBeginLoading[i].get());
+        cachedResourceLoader->decrementRequestCount(m_fontsToBeginLoading.front().get());
+        m_fontsToBeginLoading.pop();
     }
-
-    m_fontsToBeginLoading.clear();
 
     m_document = 0;
 }
@@ -570,27 +568,53 @@ void CSSFontSelector::beginLoadingFontSoon(CachedFont* font)
     if (!m_document)
         return;
 
-    m_fontsToBeginLoading.append(font);
+    m_fontsToBeginLoading.push(font);
     // Increment the request count now, in order to prevent didFinishLoad from being dispatched
     // after this font has been requested but before it began loading. Balanced by
     // decrementRequestCount() in beginLoadTimerFired() and in clearDocument().
     m_document->cachedResourceLoader()->incrementRequestCount(font);
-    m_beginLoadingTimer.startOneShot(0);
+
+    loadNextFont();
+}
+
+void CSSFontSelector::loadNextFont()
+{
+    if (!m_beginLoadingTimer.isActive() && m_fontsToBeginLoading.size() > 0) {
+
+        std::stringstream params;
+        params << WTF::EventActionDescriptor::escapeParam(m_fontsToBeginLoading.front().get()->url().string().ascii().data());
+
+        m_beginLoadingTimer.setEventActionDescriptor(WTF::EventActionDescriptor(WTF::PARSING, "CSSFontSelector", params.str()));
+        m_beginLoadingTimer.startOneShot(0);
+    }
 }
 
 void CSSFontSelector::beginLoadTimerFired(Timer<WebCore::CSSFontSelector>*)
 {
-    Vector<CachedResourceHandle<CachedFont> > fontsToBeginLoading;
-    fontsToBeginLoading.swap(m_fontsToBeginLoading);
+    //Vector<CachedResourceHandle<CachedFont> > fontsToBeginLoading;
+    //fontsToBeginLoading.swap(m_fontsToBeginLoading);
 
     CachedResourceLoader* cachedResourceLoader = m_document->cachedResourceLoader();
-    for (size_t i = 0; i < fontsToBeginLoading.size(); ++i) {
-        fontsToBeginLoading[i]->beginLoadIfNeeded(cachedResourceLoader);
-        // Balances incrementRequestCount() in beginLoadingFontSoon().
-        cachedResourceLoader->decrementRequestCount(fontsToBeginLoading[i].get());
+
+    if (m_fontsToBeginLoading.size() > 0) {
+
+        m_fontsToBeginLoading.front()->beginLoadIfNeeded(cachedResourceLoader);
+        cachedResourceLoader->decrementRequestCount(m_fontsToBeginLoading.front().get());
+        m_fontsToBeginLoading.pop();
     }
+
+    //for (size_t i = 0; i < fontsToBeginLoading.size(); ++i) {
+    //    fontsToBeginLoading[i]->beginLoadIfNeeded(cachedResourceLoader);
+        // Balances incrementRequestCount() in beginLoadingFontSoon().
+    //    cachedResourceLoader->decrementRequestCount(fontsToBeginLoading[i].get());
+    //}
     // Ensure that if the request count reaches zero, the frame loader will know about it.
-    cachedResourceLoader->loadDone();
+
+    if (m_fontsToBeginLoading.size() == 0) {
+        cachedResourceLoader->loadDone();
+    } else {
+        loadNextFont();
+    }
 }
 
 }

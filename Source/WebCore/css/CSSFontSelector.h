@@ -34,6 +34,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/StringHash.h>
+#include <queue>
 
 namespace WebCore {
 
@@ -72,6 +73,7 @@ public:
     Document* document() const { return m_document; }
 
     void beginLoadingFontSoon(CachedFont*);
+    void loadNextFont();
 
 private:
     CSSFontSelector(Document*);
@@ -86,7 +88,7 @@ private:
     HashMap<String, OwnPtr<HashMap<unsigned, RefPtr<CSSSegmentedFontFace> > >, CaseFoldingHash> m_fonts;
     HashSet<FontSelectorClient*> m_clients;
 
-    Vector<CachedResourceHandle<CachedFont> > m_fontsToBeginLoading;
+    std::queue<CachedResourceHandle<CachedFont> > m_fontsToBeginLoading;
     Timer<CSSFontSelector> m_beginLoadingTimer;
     
     unsigned m_version;
