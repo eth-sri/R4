@@ -42,6 +42,7 @@ EventActionsHB::EventActionsHB()
     : m_currentEventActionId(0) // 0 is reserved as invalid event action
     , m_nextEventActionId(1) // 0 is reserved as an empty value in e.g. hashtables
     , m_lastUIEventAction(0)
+    , m_lastEventAction(0)
     , m_numDisabledInstrumentationRequests(0)
 {
 }
@@ -91,8 +92,12 @@ void EventActionsHB::setCurrentEventAction(WTF::EventActionId newEventActionId, 
     }
 }
 
-void EventActionsHB::setCurrentEventActionInvalid() {
+void EventActionsHB::setCurrentEventActionInvalid(bool commit) {
     ActionLogExitOperation();
+
+    if (commit) {
+        m_lastEventAction = m_currentEventActionId;
+    }
     m_currentEventActionId = 0;
 }
 
@@ -100,6 +105,16 @@ void EventActionsHB::checkInValidEventAction() {
     if (m_currentEventActionId == 0) {
         if (ActionLogInStrictMode()) {
             fprintf(stderr, "Not in a valid event action.\n");
+            fflush(stderr);
+            CRASH();
+        }
+    }
+}
+
+void EventActionsHB::checkValidLastEventAction() {
+    if (m_lastEventAction == 0) {
+        if (ActionLogInStrictMode()) {
+            fprintf(stderr, "Last event action is not valid.\n");
             fflush(stderr);
             CRASH();
         }

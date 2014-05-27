@@ -35,6 +35,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/text/StringHash.h>
 #include <queue>
+#include <wtf/EventActionDescriptor.h>
 
 namespace WebCore {
 
@@ -89,6 +90,9 @@ private:
     HashSet<FontSelectorClient*> m_clients;
 
     std::queue<CachedResourceHandle<CachedFont> > m_fontsToBeginLoading;
+    std::queue<WTF::EventActionId> m_fontsToBeginLoadingCallers;
+    WTF::EventActionId m_lastFontLoad;
+
     Timer<CSSFontSelector> m_beginLoadingTimer;
     
     unsigned m_version;

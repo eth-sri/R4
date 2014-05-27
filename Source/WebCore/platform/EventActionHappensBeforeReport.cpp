@@ -28,6 +28,18 @@
 
 namespace WebCore {
 
+WTF::EventActionId HBCurrentOrLastEventAction()
+{
+
+    if (HBIsCurrentEventActionValid()) {
+        return threadGlobalData().threadTimers().happensBefore().currentEventAction();
+    } else {
+        threadGlobalData().threadTimers().happensBefore().checkValidLastEventAction();
+        return threadGlobalData().threadTimers().happensBefore().lastEventAction();
+    }
+
+}
+
 WTF::EventActionId HBCurrentEventAction()
 {
     threadGlobalData().threadTimers().happensBefore().checkInValidEventAction();
@@ -44,9 +56,9 @@ void HBEnterEventAction(WTF::EventActionId id, ActionLog::EventActionType type)
     threadGlobalData().threadTimers().happensBefore().setCurrentEventAction(id, type);
 }
 
-void HBExitEventAction()
+void HBExitEventAction(bool commit)
 {
-    threadGlobalData().threadTimers().happensBefore().setCurrentEventActionInvalid();
+    threadGlobalData().threadTimers().happensBefore().setCurrentEventActionInvalid(commit);
 }
 
 bool HBIsCurrentEventActionValid()

@@ -57,8 +57,15 @@ public:
         return m_currentEventActionId;
     }
 
+    WTF::EventActionId lastEventAction() const {
+        if (m_lastEventAction == 0) {
+            CRASH();
+        }
+        return m_lastEventAction;
+    }
+
     void setCurrentEventAction(WTF::EventActionId newId, ActionLog::EventActionType type);
-    void setCurrentEventActionInvalid();
+    void setCurrentEventActionInvalid(bool commit);
 
     bool isCurrentEventActionValid() const {
         return m_currentEventActionId != 0;
@@ -79,6 +86,7 @@ public:
     }
 
     void checkInValidEventAction();
+    void checkValidLastEventAction();
 
     void addDisableInstrumentationRequest() {
         ++m_numDisabledInstrumentationRequests;
@@ -97,6 +105,7 @@ private:
     WTF::EventActionId m_nextEventActionId;
 
     WTF::EventActionId m_lastUIEventAction;
+    WTF::EventActionId m_lastEventAction;
 
     int m_numDisabledInstrumentationRequests;
 

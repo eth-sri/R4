@@ -51,6 +51,7 @@
 #include "WebKitFontFamilyNames.h"
 #include <wtf/text/AtomicString.h>
 #include <wtf/EventActionDescriptor.h>
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
 
 #if ENABLE(SVG)
 #include "SVGFontFaceElement.h"
@@ -63,12 +64,15 @@ namespace WebCore {
 
 CSSFontSelector::CSSFontSelector(Document* document)
     : m_document(document)
+    , m_lastFontLoad(-1)
     , m_beginLoadingTimer(this, &CSSFontSelector::beginLoadTimerFired)
     , m_version(0)
 {
     // FIXME: An old comment used to say there was no need to hold a reference to m_document
     // because "we are guaranteed to be destroyed before the document". But there does not
     // seem to be any such guarantee.
+
+    m_beginLoadingTimer.disableImplicitHappensBeforeRelations();
 
     ASSERT(m_document);
     fontCache()->addClient(this);
@@ -558,6 +562,7 @@ void CSSFontSelector::clearDocument()
         // Balances incrementRequestCount() in beginLoadingFontSoon().
         cachedResourceLoader->decrementRequestCount(m_fontsToBeginLoading.front().get());
         m_fontsToBeginLoading.pop();
+        m_fontsToBeginLoadingCallers.pop();
     }
 
     m_document = 0;
@@ -569,6 +574,7 @@ void CSSFontSelector::beginLoadingFontSoon(CachedFont* font)
         return;
 
     m_fontsToBeginLoading.push(font);
+    m_fontsToBeginLoadingCallers.push(HBCurrentOrLastEventAction());
     // Increment the request count now, in order to prevent didFinishLoad from being dispatched
     // after this font has been requested but before it began loading. Balanced by
     // decrementRequestCount() in beginLoadTimerFired() and in clearDocument().
@@ -600,7 +606,20 @@ void CSSFontSelector::beginLoadTimerFired(Timer<WebCore::CSSFontSelector>*)
 
         m_fontsToBeginLoading.front()->beginLoadIfNeeded(cachedResourceLoader);
         cachedResourceLoader->decrementRequestCount(m_fontsToBeginLoading.front().get());
+
+        // WebERA: Add happens before relation between the event action registering this font, and the font event action
+        HBAddExplicitArc(m_fontsToBeginLoadingCallers.front(), HBCurrentEventAction());
+
+        // WebERA: Add happens before relation between font loads
+        // TODO: Remove this such that the order of font loads can change
+        if (m_lastFontLoad != -1) {
+            HBAddExplicitArc(m_lastFontLoad, HBCurrentEventAction());
+        }
+
+        m_lastFontLoad = HBCurrentEventAction();
+
         m_fontsToBeginLoading.pop();
+        m_fontsToBeginLoadingCallers.pop();
     }
 
     //for (size_t i = 0; i < fontsToBeginLoading.size(); ++i) {

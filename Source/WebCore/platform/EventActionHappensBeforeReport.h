@@ -33,11 +33,13 @@
 
 namespace WebCore {
 
+WTF::EventActionId HBCurrentOrLastEventAction();
+
 WTF::EventActionId HBCurrentEventAction();
 WTF::EventActionId HBAllocateEventActionId();
 
 void HBEnterEventAction(WTF::EventActionId id, ActionLog::EventActionType type);
-void HBExitEventAction();
+void HBExitEventAction(bool commit);
 
 bool HBIsCurrentEventActionValid();
 bool HBIsLastUIEventActionValid();

@@ -116,7 +116,7 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
             std::cout << "Running " << descriptor.toString() << std::endl; // DEBUG(WebERA)
             bool found = (it2->function)(it2->object, descriptor);
 
-            HBExitEventAction();
+            HBExitEventAction(found);
             eventActionDispatchEnd(found);
 
             if (found) {
@@ -166,7 +166,7 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
 
     // Post-Execution
 
-    HBExitEventAction();
+    HBExitEventAction(true);
     eventActionDispatchEnd(true);
 
     return true;
@@ -179,7 +179,7 @@ void EventActionRegister::enterGhostEventAction(WTF::EventActionId id, ActionLog
 
 void EventActionRegister::exitGhostEventAction()
 {
-    HBExitEventAction();
+    HBExitEventAction(true);
 }
 
 void EventActionRegister::enterImmediateEventAction(ActionLog::EventActionType type, const WTF::EventActionDescriptor& descriptor)
@@ -194,7 +194,7 @@ void EventActionRegister::enterImmediateEventAction(ActionLog::EventActionType t
 
 void EventActionRegister::exitImmediateEventAction()
 {
-    HBExitEventAction();
+    HBExitEventAction(true);
     eventActionDispatchEnd(true);
 }
 
