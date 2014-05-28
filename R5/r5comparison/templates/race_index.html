@@ -43,10 +43,10 @@
                 {{ race.race_data.result }}
             </td>
             <td>
-              {{ race.race_data.er_classification }}{% if race.race_data.er_classification_details %}: {{ race.race_data.er_classification_details }}{% endif %}
+              {{ race.race_data.er_classification }}{% if race.race_data.er_classification_details %}: <small><i>{{ race.race_data.er_classification_details }}</i></small>{% endif %}
             </td>
             <td>
-              {{ race.comparison.r4_classification }}{% if race.comparison.r4_classification_details %}: {{ race.comparison.r4_classification_details }}{% endif %}
+              {{ race.comparison.r4_classification }}{% if race.comparison.r4_classification_details %}: <small><i>{{ race.comparison.r4_classification_details }}</i></small>{% endif %}
             </td>
 
         </tr>

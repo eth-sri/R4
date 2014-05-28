@@ -10,6 +10,7 @@
         <th>Website</th>
         <th>Races/Success/Fail</th>
         <th>Equal/Diff/Timeout/Error</th>
+        <th>HIGH/NORMAL/LOW</th>
         <th>Total Execution Time</th>
     </tr>
 
@@ -26,6 +27,10 @@
         </td>
         <td class="{% if item.result.error == 0 and item.result.timeout == 0 %}success{% elif item.result.timeout > 0 %}warning{% else %}danger{% endif %}">
             {{ item.result.equal }}/{{ item.result.diff }}/{{ item.result.timeout }}/{{ item.result.error }}
+        </td>
+        <td>
+            ER: H-{{ item.result.er_high }} /  N-{{ item.result.er_normal }} / L-{{ item.result.er_low }} <br/>
+            R4: H-{{ item.result.r4_high }} /  N-{{ item.result.r4_normal }} / L-{{ item.result.r4_low }} 
         </td>
         <td>
             {{ item.er_log.execution_time // 60 }}m {{ item.er_log.execution_time % 60 }}s
@@ -45,6 +50,10 @@
         </td>
         <td>
             {{ summary.race_result.equal }} / {{ summary.race_result.diff }} / {{ summary.race_result.timeout }} / {{ summary.race_result.error }}
+        </td>
+        <td>
+            ER: H-{{ summary.er_classification_result.high }} / N-{{ summary.er_classification_result.normal }} / L-{{ summary.er_classification_result.low }} <br/>
+            R4: H-{{ summary.r4_classification_result.high }} / N-{{ summary.r4_classification_result.normal }} / L-{{ summary.r4_classification_result.low }} 
         </td>
         <td>
             {{ (summary.execution_time // 60) // 60 }}h {{ (summary.execution_time // 60) % 60 }}m {{ summary.execution_time % 60 }}s

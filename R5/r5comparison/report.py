@@ -36,17 +36,20 @@ class ERRaceClassifier(object):
 
             try:
                 id = race_data['handle'][4:]
+
                 race_row = self.soup\
                     .find('a', href='race?id=%s' % id)\
                     .find_parent('tr')\
                     .previous_sibling.previous_sibling
 
                 classification = self.CLASSIFICATION[race_row['class'][0][:2]]
-                details = race_row.find_all('td')[-1].a.text
+                details = race_row.find_all('td')[-1].text
+                details = details.strip()
 
                 race_data['er_classification'] = classification
                 race_data['er_classification_details'] = details
-            except:
+            except: #Exception as e:
+                #raise e
                 race_data['er_classification'] = 'PARSE_ERROR'
                 race_data['er_classification_details'] = ''
         else:
@@ -140,8 +143,11 @@ def parse_race(base_dir, handle):
     # SCHEDULE
 
     schedule_file = os.path.join(handle_dir, 'out.schedule.data')
-    schedule = []
+    if not os.path.isfile(schedule_file):
+        schedule_file = os.path.join(handle_dir, 'new_schedule.data')        
 
+    schedule = []
+    
     with open(schedule_file, 'rb') as fp:
 
         for line in fp.readlines():
@@ -226,12 +232,15 @@ def parse_er_log(base_dir):
         stdout = fp.read().decode('utf8', 'ignore')
         result['stdout'] = stdout
 
-        result_match = re.compile('Tried ([0-9]+) schedules. ([0-9]+) generated, ([0-9]+) successful').search(stdout)
+        result_match = re.compile('Tried ([0-9]+) schedules. ([0-9]+) generated, ([0-9]+)').search(stdout)
 
         if result_match is not None:
             result['races_total'] = int(result_match.group(1))
             result['races_success'] = int(result_match.group(3))
             result['races_failure'] = result['races_total'] - result['races_success']
+        else:
+            print('FAIL')
+            print(stdout)
 
         time_match = re.compile('real ([0-9]+)\.[0-9]+').search(stdout)
 
@@ -416,6 +425,15 @@ def compare_race(base_data, race_data, executor):
         classification = 'HIGH'
         classification_details = 'Visual state mismatch'
 
+    if 'LATE_EVENT_ATTACH ' in race_data['er_classification_details']:
+        classification = 'LOW'
+        classification_details = 'LATE_EVENT_ATTACH' 
+
+    if 'COOKIE_OR_CLASSNAME' in race_data['er_classification_details']:
+        classification = 'LOW'
+        classification_details = 'COOKIE_OR_CLASSNAME'
+
+
     return {
         'errors_diff_count': errors_diff_count,
         'errors_diff': opcodes,
@@ -532,6 +550,16 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
             'success': 0,
             'failure': 0
         },
+        'er_classification_result': {
+            'high': 0,
+            'normal': 0,
+            'low': 0
+        },
+        'r4_classification_result': {
+            'high': 0,
+            'normal': 0,
+            'low': 0
+        },
         'execution_time': 0,
     }
 
@@ -550,7 +578,13 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
             'diff': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and
                                                                    not race['comparison']['is_equal']]),
             'timeout': len([race for race in website['race_index'] if race['race_data']['result'] == 'TIMEOUT']),
-            'error': len([race for race in website['race_index'] if race['race_data']['result'] == 'ERROR'])
+            'error': len([race for race in website['race_index'] if race['race_data']['result'] == 'ERROR']),
+            'er_high': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'HIGH']),
+            'er_normal': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'NORMAL']),
+            'er_low': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'LOW']),
+            'r4_high': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'HIGH']),
+            'r4_normal': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'NORMAL']),
+            'r4_low': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'LOW'])
         }
 
         website_statistics.append({
@@ -570,6 +604,13 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
         summary['execution_result']['failure'] += website['er_log']['races_failure']
 
         summary['execution_time'] += website['er_log']['execution_time']
+
+        summary['er_classification_result']['high'] += result['er_high']
+        summary['er_classification_result']['normal'] += result['er_normal']
+        summary['er_classification_result']['low'] += result['er_low']
+        summary['r4_classification_result']['high'] += result['r4_high']
+        summary['r4_classification_result']['normal'] += result['r4_normal']
+        summary['r4_classification_result']['low'] += result['r4_low']
 
     with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
@@ -591,7 +632,7 @@ def main():
     websites = os.listdir(analysis_dir)
     website_index = init_website_index()
 
-    ignore_files = ['runner', 'out.schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.schedule.data', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
+    ignore_files = ['runner', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
 
