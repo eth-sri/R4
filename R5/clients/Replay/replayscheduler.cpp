@@ -201,7 +201,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                 unsigned long candidateSequenceNumber4 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(4)).toULong() : 0;
                 unsigned long candidateSequenceNumber5 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(5)).toULong() : 0;
 
-                if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2 || candidateSequenceNumber3 != sequenceNumber3 || candidateSequenceNumber4 != sequenceNumber4 || candidateSequenceNumber5 != sequenceNumber5) {
+                if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2 || candidateSequenceNumber3 != sequenceNumber3 ||
+                        candidateSequenceNumber4 != sequenceNumber4 || candidateSequenceNumber5 != sequenceNumber5) {
                     continue;
                 }
 
@@ -304,6 +305,15 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     }
 
     if (!m_eventActionTimeoutTimer.isActive()) {
+
+        if (eventActionType == "DOMTimer") {
+            std::cout << "CHECKING " << nextToSchedule.toString() << std::endl;
+            // set timeout to match expected time to trigger the next DOMTimer
+            m_eventActionTimeoutTimer.setInterval(QString::fromStdString(nextToSchedule.getParameter(2)).toULong() + m_timeout_aggressive_miliseconds);
+        } else {
+            m_eventActionTimeoutTimer.setInterval(m_mode == BEST_EFFORT ? m_timeout_aggressive_miliseconds : m_timeout_miliseconds);
+        }
+
         m_eventActionTimeoutTimer.start(); // start timeout for this event action
     }
 
