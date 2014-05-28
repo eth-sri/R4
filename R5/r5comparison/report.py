@@ -402,8 +402,12 @@ def compare_race(base_data, race_data, executor):
     visual_state_match = cimage.get('human', 'FAIL') == 'EXACT'
     errors_diff_count = abs(len(base_data['errors']) - len(race_data['errors']))
 
-    classification = 'UNKNOWN'
+    classification = 'LOW'
     classification_details = None
+
+    if errors_diff_count > 0:
+        classification = 'NORMAL'
+        classification_details = 'Error count diff'
 
     if not html_state_match:
         classification = 'HIGH'
@@ -411,11 +415,6 @@ def compare_race(base_data, race_data, executor):
     elif not visual_state_match:
         classification = 'HIGH'
         classification_details = 'Visual state mismatch'
-    elif errors_diff_count > 0:
-        classification = 'HIGH'
-        classification_details = 'Error diff'
-    else:
-        classification = 'LOW'
 
     return {
         'errors_diff_count': errors_diff_count,
