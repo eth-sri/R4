@@ -112,7 +112,7 @@ private:
     bool m_doneEmitted;
 
     QTimer m_eventActionTimeoutTimer;
-    bool m_skipEventActionsUntilHit;
+    bool m_runUsingBestEffort;
 
     bool m_timeout_use_aggressive;
     unsigned int m_timeout_miliseconds;

@@ -48,7 +48,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_mode(STRICT)
     , m_state(RUNNING)
     , m_doneEmitted(false)
-    , m_skipEventActionsUntilHit(false)
+    , m_runUsingBestEffort(false)
     , m_timeout_use_aggressive(false)
     , m_timeout_miliseconds(20000)
     , m_timeout_aggressive_miliseconds(500)
@@ -141,8 +141,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     // Relaxed non-deterministic execution
 
-    if (!found && (m_mode == BEST_EFFORT || m_mode == BEST_EFFORT_NOND)) {
-
+    if (!found && (m_runUsingBestEffort || m_mode == BEST_EFFORT_NOND)) {
 
         // Try to do a fuzzy match
 
@@ -217,7 +216,9 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             if (bestScore > 0) {
 
                 std::stringstream details;
-                details << nextToSchedule.toString() << " fuzzy matched with " << bestDescriptor.toString() << " (score " << bestScore << ")";
+                details << nextToSchedule.toString() << " (expected) fuzzy matched with " << bestDescriptor.toString() << " (score " << bestScore << ")";
+                details << "This is the current queue of events" << std::endl;
+                debugPrintTimers(details, WebCore::threadGlobalData().threadTimers().eventActionRegister());
 
                 std::cout << "Fuzzy match: " << details.str() << std::endl;
                 WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
@@ -234,9 +235,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     } // End fuzzy non-deterministic match
 
-    // Relaxed execution
-
-    if (!found && m_mode == BEST_EFFORT) {
+    if (!found && m_runUsingBestEffort) {
 
         /**
           * Relaxed execution, when we did not find anything using a fuzzy match.
@@ -253,13 +252,6 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
           *
           */
 
-        // This step is implemented partially in the shutdown logic (see the next
-        // code block for detection of new events) and in the timeout handler
-        // (see slEventActionTimeout for deletion of missing event actions).
-
-    }
-
-    if (!found && m_skipEventActionsUntilHit) {
         // We could not find the current event action in the replay schedule. Skip
         // it and emit a warning.
 
@@ -279,7 +271,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     if (found) {
 
         m_schedule->remove(0);
-        m_skipEventActionsUntilHit = false;
+        m_runUsingBestEffort = false;
         m_eventActionTimeoutTimer.stop();
 
         if (m_schedule->isEmpty()) {
@@ -358,7 +350,7 @@ void ReplayScheduler::slEventActionTimeout()
         // Skip this event action, and enter fast forward mode (skipping any subsequent event actions
         // in the replay schedule that are not enabled.
 
-        m_skipEventActionsUntilHit = true;
+        m_runUsingBestEffort = true;
 
         break;
 
