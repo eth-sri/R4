@@ -29,7 +29,7 @@
             {{ item.result.equal }}/{{ item.result.diff }}/{{ item.result.timeout }}/{{ item.result.error }}
         </td>
         <td>
-            ER: H-{{ item.result.er_high }} /  N-{{ item.result.er_normal }} / L-{{ item.result.er_low }} <br/>
+            ER: H-{{ item.result.er_high }} /  N-{{ item.result.er_normal }} / L-{{ item.result.er_low }} / <b>{{ item.result.er_unknown }}</b> <br/>
             R4: H-{{ item.result.r4_high }} /  N-{{ item.result.r4_normal }} / L-{{ item.result.r4_low }} 
         </td>
         <td>
@@ -52,7 +52,7 @@
             {{ summary.race_result.equal }} / {{ summary.race_result.diff }} / {{ summary.race_result.timeout }} / {{ summary.race_result.error }}
         </td>
         <td>
-            ER: H-{{ summary.er_classification_result.high }} / N-{{ summary.er_classification_result.normal }} / L-{{ summary.er_classification_result.low }} <br/>
+            ER: H-{{ summary.er_classification_result.high }} / N-{{ summary.er_classification_result.normal }} / L-{{ summary.er_classification_result.low }} / U-{{ summary.er_classification_result.unknown }}<br/>
             R4: H-{{ summary.r4_classification_result.high }} / N-{{ summary.r4_classification_result.normal }} / L-{{ summary.r4_classification_result.low }} 
         </td>
         <td>

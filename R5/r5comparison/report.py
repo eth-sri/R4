@@ -26,7 +26,7 @@ class ERRaceClassifier(object):
 
         try:
             with open(os.path.join(website_dir, 'record', 'varlist'), 'r') as fp:
-                self.soup = BeautifulSoup(fp)
+                self.soup = BeautifulSoup(fp, 'html5lib')
         except FileNotFoundError:
             self.soup = None
 
@@ -553,7 +553,8 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
         'er_classification_result': {
             'high': 0,
             'normal': 0,
-            'low': 0
+            'low': 0,
+            'unknown': 0
         },
         'r4_classification_result': {
             'high': 0,
@@ -582,6 +583,7 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
             'er_high': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'HIGH']),
             'er_normal': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'NORMAL']),
             'er_low': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'LOW']),
+            'er_unknown': len([race for race in website['race_index'] if race['race_data']['er_classification'] in ['UNKNOWN', 'PARSE_ERROR']]),
             'r4_high': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'HIGH']),
             'r4_normal': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'NORMAL']),
             'r4_low': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'LOW'])
@@ -608,6 +610,7 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
         summary['er_classification_result']['high'] += result['er_high']
         summary['er_classification_result']['normal'] += result['er_normal']
         summary['er_classification_result']['low'] += result['er_low']
+        summary['er_classification_result']['unknown'] += result['er_unknown']
         summary['r4_classification_result']['high'] += result['r4_high']
         summary['r4_classification_result']['normal'] += result['r4_normal']
         summary['r4_classification_result']['low'] += result['r4_low']
