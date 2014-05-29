@@ -64,8 +64,6 @@ private:
     Timer<EventSenderEvent<T> > m_timer;
     bool m_dispatched;
     WTF::EventActionId m_parentEventAction;
-
-    std::string m_params;
 };
 
 template<typename T> class EventSender {
@@ -107,8 +105,6 @@ template<typename T> EventSenderEvent<T>::EventSenderEvent(void* parent, T* send
 
     m_timer.setEventActionDescriptor(descriptor);
     m_timer.startOneShot(0);
-
-    m_params = params.str();
 }
 
 template<typename T> void EventSenderEvent<T>::dispatchEvent()
