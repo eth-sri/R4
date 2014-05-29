@@ -283,6 +283,8 @@ public:
     NetworkingContext* networkingContext() const;
 
 private:
+    static unsigned int m_documentLoadSequence;
+
     bool allChildrenAreComplete() const; // immediate children, not all descendants
 
     void checkTimerFired(Timer<FrameLoader>*);

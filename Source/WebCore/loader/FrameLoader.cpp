@@ -34,6 +34,7 @@
 
 #include "config.h"
 #include "FrameLoader.h"
+#include <sstream>
 
 #include "AXObjectCache.h"
 #include "ApplicationCacheHost.h"
@@ -680,6 +681,8 @@ bool FrameLoader::allAncestorsAreComplete() const
     return true;
 }
 
+unsigned int FrameLoader::m_documentLoadSequence = 0;
+
 void FrameLoader::checkCompleted(bool async)
 {
     m_shouldCallCheckCompleted = false;
@@ -714,7 +717,16 @@ void FrameLoader::checkCompleted(bool async)
 
     // WebERA: We allow non-async calls such that the checkCompleted call to the parent frame (of a completed child) is done sync. as is normal behaviour
     if (async) {
-        WTF::EventActionDescriptor descriptor(WTF::PARSING, "DocumentLoaded", m_lastLoadUrl);
+
+        std::stringstream params;
+
+        if (m_lastLoadUrl != "") {
+            params << m_lastLoadUrl;
+        } else {
+            params << FrameLoader::m_documentLoadSequence++;
+        }
+
+        WTF::EventActionDescriptor descriptor(WTF::PARSING, "DocumentLoaded", params.str());
         m_documentLoadedTimer.setEventActionDescriptor(descriptor);
         m_documentLoadedTimer.startOneShot(0);
     } else {
