@@ -226,6 +226,7 @@ void ImageLoader::updateFromElementIgnoringPreviousError()
 
 void ImageLoader::notifyFinished(CachedResource* resource)
 {
+
     ASSERT(m_failedLoadURL.isEmpty());
     ASSERT(resource == m_image.get());
 
@@ -259,7 +260,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         return;
     }
 
-    loadEventSender().dispatchEventSoon(this, "ImageLoad", src.string().ascii().data());
+    loadEventSender().dispatchEventSoon(this, "ImageLoad", resource->url().string().ascii().data());
 }
 
 RenderImageResource* ImageLoader::renderImageResource()
