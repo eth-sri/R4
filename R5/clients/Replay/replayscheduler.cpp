@@ -299,7 +299,6 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     if (!m_eventActionTimeoutTimer.isActive()) {
 
         if (eventActionType == "DOMTimer") {
-            std::cout << "CHECKING " << nextToSchedule.toString() << std::endl;
             // set timeout to match expected time to trigger the next DOMTimer
             m_eventActionTimeoutTimer.setInterval(QString::fromStdString(nextToSchedule.getParameter(2)).toULong() + m_timeout_aggressive_miliseconds);
         } else {
