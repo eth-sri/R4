@@ -35,7 +35,7 @@ EventActionDescriptor EventActionDescriptor::null;
 EventActionDescriptor::EventActionDescriptor(EventActionCategory category, const std::string& type, const std::string& params)
     : m_category(category)
     , m_type(type)
-	, m_params(params)
+    , m_params(params)
     , m_isNull(false)
 {
 }

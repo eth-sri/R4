@@ -134,7 +134,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     m_timeProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
     m_randomProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
 
-    bool found = eventActionRegister->runEventAction(nextToSchedule);
+    bool found = eventActionRegister->runEventAction(nextToScheduleId, nextToSchedule);
 
     m_timeProvider->unsetCurrentDescriptorString();
     m_randomProvider->unsetCurrentDescriptorString();
@@ -226,7 +226,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                 m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
                 m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
 
-                found = eventActionRegister->runEventAction(bestDescriptor);
+                found = eventActionRegister->runEventAction(nextToScheduleId, bestDescriptor);
 
                 m_timeProvider->unsetCurrentDescriptorString();
                 m_randomProvider->unsetCurrentDescriptorString();

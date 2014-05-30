@@ -102,52 +102,15 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
 
     std::string url = action->getCalledUrl().empty() ? std::string("-") : WTF::EventActionDescriptor::escapeParam(action->getCalledUrl());
     std::string singleShotStr = (singleShot ? "true" : "false");
+    WTF::EventActionId calleeEventActionId = HBIsCurrentEventActionValid() ? HBCurrentEventAction() : -1;
 
     std::stringstream params;
-    WTF::EventActionDescriptor callee = threadGlobalData().threadTimers().eventActionRegister()->currentEventActionDispatching();
-
-    // WebERA: DOMTimer chain pattern
-
-    if (!callee.isNull() && strcmp(callee.getType(), "DOMTimer") == 0) {
-
-        std::string calleeUrl = callee.getParameter(0);
-
-        std::string calleeLine = callee.getParameter(1);
-        int calleeLineInt = atoi(calleeLine.c_str());
-
-        std::string calleeTimeout = callee.getParameter(2);
-        int calleeTimeoutInt = atoi(calleeTimeout.c_str());
-
-        std::string calleeSingleShot = callee.getParameter(3);
-        std::string calleeSequence = callee.getParameter(4);
-
-        std::string calleeChain = callee.getParameter(5);
-        int calleeChainInt = atoi(calleeChain.c_str());
-
-        if (calleeUrl.compare(url) == 0  &&
-            calleeLineInt == action->getCalledLine() &&
-            calleeTimeoutInt == timeout &&
-            calleeSingleShot.compare(singleShotStr) == 0) {
-
-            params << calleeUrl << ","
-                   << calleeLine << ","
-                   << calleeTimeout << ","
-                   << calleeSingleShot << ","
-                   << calleeSequence << ","
-                   << calleeChainInt+1;
-
-        }
-    }
-
-    if (params.str().size() == 0) {
-
-        params << url << ","
-               << action->getCalledLine() << ","
-               << timeout << ","
-               << singleShotStr << ","
-               << DOMTimer::getNextSameUrlSequenceNumber(url, action->getCalledLine()) << ","
-               << "0";
-    }
+    params << url << ","
+           << action->getCalledLine() << ","
+           << timeout << ","
+           << singleShotStr << ","
+           << calleeEventActionId << ","
+           << DOMTimer::getNextSameUrlSequenceNumber(url, action->getCalledLine(), calleeEventActionId);
 
     // DOMTimer constructor links the new timer into a list of ActiveDOMObjects held by the 'context'.
     // The timer is deleted when context is deleted (DOMTimer::contextDestroyed) or explicitly via DOMTimer::removeById(),
@@ -264,10 +227,10 @@ void DOMTimer::adjustMinimumTimerInterval(double oldMinimumTimerInterval)
 
 std::map<std::string, unsigned int> DOMTimer::m_nextSameUrlSequenceNumber;
 
-unsigned int DOMTimer::getNextSameUrlSequenceNumber(const std::string& url, uint line)
+unsigned int DOMTimer::getNextSameUrlSequenceNumber(const std::string& url, uint line, WTF::EventActionId eventActionId)
 {
     std::stringstream ident;
-    ident << url << "-" << line;
+    ident << url << "-" << line << (int)eventActionId;
 
     std::map<std::string, unsigned int>::iterator iter = DOMTimer::m_nextSameUrlSequenceNumber.find(ident.str());
 

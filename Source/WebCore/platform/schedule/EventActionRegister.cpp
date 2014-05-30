@@ -87,6 +87,10 @@ void EventActionRegister::deregisterEventActionHandler(const WTF::EventActionDes
 }
 
 bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descriptor) {
+        runEventAction(-1, descriptor);
+}
+
+bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const WTF::EventActionDescriptor& descriptor) {
 
     std::string descriptorString = descriptor.toString();
 
@@ -106,10 +110,9 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
             // Note, it is a bit undefined how well the happens before relations are applied if we
             // abort an event action. Thus, HB relations should not be used if event action providers are used.
 
-            WTF::EventActionId id = HBAllocateEventActionId();
+            WTF::EventActionId id = eventActionId == -1 ? HBAllocateEventActionId() : eventActionId;
 
             eventActionDispatchStart(id, descriptor);
-
             HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
             ActionLogEventTriggered(l[0].object);
 
@@ -138,10 +141,9 @@ bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descr
 
     // Pre-Execution
 
-    WTF::EventActionId id = HBAllocateEventActionId();
+    WTF::EventActionId id = eventActionId == -1 ? HBAllocateEventActionId() : eventActionId;
 
     eventActionDispatchStart(id, descriptor);
-
     HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
     ActionLogEventTriggered(l.front().object);
 

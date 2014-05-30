@@ -140,7 +140,7 @@ int ActionLogScopeDepth() {
 }
 
 void ActionLogAddArc(int earlierId, int laterId, int duration) {
-	if (laterId <= earlierId) {
+	if (laterId <= earlierId && strict_mode) {
 		fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
         ActionLogSave("/tmp/ER_actionlog");
 		CRASH();

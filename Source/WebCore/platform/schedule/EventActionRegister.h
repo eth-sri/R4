@@ -51,6 +51,7 @@ public:
 
     // Attempts to execute an event action. Returns true on success.
     bool runEventAction(const WTF::EventActionDescriptor& descriptor);
+    bool runEventAction(WTF::EventActionId forceEventActionId, const WTF::EventActionDescriptor& descriptor);
 
     // TODO(WebERA): We should not use ghost operations anywere, it is a bit unclear how well we can replay them / reorder them
 
