@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 2 and os.path.isfile(sys.argv[1]):
         with open(sys.argv[1]) as fp:
-            sites = [line for line in fp]
+            sites = [line.strip() for line in fp]
 
     results = []
 
@@ -38,15 +38,19 @@ if __name__ == '__main__':
 
         try:
             print('Testing %s' % site)
+
+            record_cmd = [abs_path('clients/Record/bin/record'), "-autoexplore", "-autoexplore-timeout", "10", "-hidewindow", 'http://%s' % site]
         
-            print(' recording...')
+            print(' recording... (%s)' % ' '.join(record_cmd))
             record_log = subprocess.check_output(
-                [abs_path('clients/Record/bin/record'), "-autoexplore", "-pre-autoexplore-timeout", "40",  "-autoexplore-timeout", "40", "-hidewindow", site], 
+                record_cmd,
                 stderr=subprocess.STDOUT)
+
+            replay_cmd = [abs_path('clients/Replay/bin/replay'), "-timeout", "60", "-hidewindow", 'http://%s' % site, "/tmp/schedule.data"]
         
-            print(' replaying...')
+            print(' replaying... (%s)' % ' '.join(replay_cmd))
             replay_log = subprocess.check_output(
-                [abs_path('clients/Replay/bin/replay'), "-timeout", "180", "-hidewindow", site, "/tmp/schedule.data"],
+                replay_cmd,
                 stderr=subprocess.STDOUT)
 
             success = True
