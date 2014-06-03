@@ -352,7 +352,19 @@ static const char* unknownTypeSniffingProcedure(const char* data, size_t dataSiz
 {
     const char* mimeType = 0;
 
-    mimeType = findMIMEType(data, dataSize, securityConstrainedTypes, securityConstrainedTypesSize);
+    // WebERA: HACK/FIX
+    // For some unknown reason (a bug in the network replay wrapper), we sometimes get
+    // a couple of extra non-ascii characters in the beginning of the network responses.
+
+    const char* stripdata = data;
+    size_t stripdataSize = dataSize;
+
+    while (stripdataSize > 0 && (*stripdata < 0 || *stripdata > 127)) {
+        stripdataSize--;
+        stripdata++;
+    }
+
+    mimeType = findMIMEType(stripdata, stripdataSize, securityConstrainedTypes, securityConstrainedTypesSize);
     if (mimeType)
         return mimeType;
 
