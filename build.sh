@@ -1,7 +1,7 @@
 #!/bin/bash
 
 Tools/Scripts/build-webkit --no-netscape-plugin --qt --makeargs="-j8" --minimal
-cd R5/clients
+cd R4/clients
 cd Record
 echo "Compiling R5/clients/Record..."
 qmake
