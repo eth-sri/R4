@@ -257,7 +257,7 @@ class QNetworkReplyControllable : public QObject {
     Q_OBJECT
 
 public:
-    QNetworkReplyControllable(QNetworkReplyControllableFactory* factory, QNetworkReply* reply, QObject* parent = 0);
+    QNetworkReplyControllable(QNetworkReplyControllableFactory* factory, QNetworkReply* reply, QNetworkReplyInitialSnapshot* initialSnapshot, QObject* parent = 0);
     ~QNetworkReplyControllable();
 
     QNetworkReplySnapshot* snapshot() { return m_currentSnapshot; }

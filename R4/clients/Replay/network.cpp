@@ -37,16 +37,13 @@
 #include "network.h"
 
 QNetworkReplyControllableReplay::QNetworkReplyControllableReplay(WebCore::QNetworkReplyControllableFactory* factory, QNetworkReply* reply, WebCore::QNetworkReplyInitialSnapshot* snapshot, QObject* parent)
-    : QNetworkReplyControllable(factory, reply, parent)
+    : QNetworkReplyControllable(factory, reply, snapshot, parent)
 {
-    m_initialSnapshot = snapshot;
 
     WebCore::QNetworkReplyInitialSnapshot::QNetworkReplySnapshotEntry entry;
     QList<WebCore::QNetworkReplyInitialSnapshot::QNetworkReplySnapshotEntry>* snapshots = snapshot->getSnapshotsCopy();
 
-    entry = snapshots->takeFirst();
-    ASSERT(entry.first == WebCore::QNetworkReplyInitialSnapshot::INITIAL);
-    m_currentSnapshot = entry.second;
+    entry = snapshots->takeFirst(); // remove the current snapshot
 
     while (!snapshots->empty()) {
         entry = snapshots->takeFirst();

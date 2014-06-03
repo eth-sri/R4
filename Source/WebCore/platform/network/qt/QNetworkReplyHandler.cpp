@@ -377,17 +377,21 @@ QByteArray QNetworkReplySnapshot::rawHeader(const QByteArray &headerName) const
 
 /****************** QNetworkReplyControllable ******************/
 
-QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReplyControllableFactory* factory, QNetworkReply* reply, QObject* parent)
+QNetworkReplyControllable::QNetworkReplyControllable(QNetworkReplyControllableFactory* factory, QNetworkReply* reply, QNetworkReplyInitialSnapshot* initialSnapshot, QObject* parent)
     : QObject(parent)
     , m_sequenceNumber(0)
     , m_nextSnapshotUpdateTimerRunning(false)
     , m_nextSnapshotUpdateTimer(this, &QNetworkReplyControllable::updateSnapshot)
+    , m_initialSnapshot(initialSnapshot)
+    , m_currentSnapshot(m_initialSnapshot->getSnapshots()->first().second)
     , m_reply(reply)
     , m_lastNetworkEventAction(0)
     , m_creatingEventAction(HBIsCurrentEventActionValid() ? HBCurrentEventAction() : 0)
     , m_factory(factory)
 {
     Q_ASSERT(m_reply);
+
+    ASSERT(m_initialSnapshot->getSnapshots()->first().first == WebCore::QNetworkReplyInitialSnapshot::INITIAL);
 
     m_nextSnapshotUpdateTimer.disableImplicitHappensBeforeRelations();
 
@@ -504,13 +508,10 @@ void QNetworkReplyControllable::scheduleNextSnapshotUpdate()
 }
 
 QNetworkReplyControllableLive::QNetworkReplyControllableLive(QNetworkReplyControllableFactory* factory, QNetworkReply* reply, QObject* parent)
-    : QNetworkReplyControllable(factory, reply, parent)
+    : QNetworkReplyControllable(factory, reply, new QNetworkReplyInitialSnapshot(reply), parent)
 {
     connect(m_reply, SIGNAL(finished()), this, SLOT(slFinished()));
     connect(m_reply, SIGNAL(readyRead()), this, SLOT(slReadyRead()));
-
-    m_initialSnapshot = new QNetworkReplyInitialSnapshot(reply);
-    m_currentSnapshot = m_initialSnapshot->getSnapshots()->first().second;
 }
 
 QNetworkReplyControllableLive::~QNetworkReplyControllableLive()
@@ -571,14 +572,12 @@ QNetworkReplyControllableFactory::~QNetworkReplyControllableFactory()
 
 void QNetworkReplyControllableFactory::controllableDone(QNetworkReplyControllable* controllable)
 {
-    m_networkHistory.push_back(controllable->initialSnapshot());
-    m_openNetworkSessions.erase(controllable);
     m_doneCounter++;
 }
 
 void QNetworkReplyControllableFactory::controllableConstructed(QNetworkReplyControllable* controllable)
 {
-    m_openNetworkSessions.insert(controllable);
+    m_networkHistory.push_back(controllable->initialSnapshot());
 }
 
 void QNetworkReplyControllableFactory::writeNetworkFile(QString networkFilePath)
@@ -593,13 +592,6 @@ void QNetworkReplyControllableFactory::writeNetworkFile(QString networkFilePath)
         WebCore::QNetworkReplyInitialSnapshot* snapshot = networkHistory.front();
         networkHistory.pop_front();
         snapshot->serialize(&fp);
-    }
-
-    std::set<QNetworkReplyControllable*> openNetworkSessions = m_openNetworkSessions;
-    std::set<QNetworkReplyControllable*>::iterator iter = openNetworkSessions.begin();
-    while (iter != openNetworkSessions.end()) {
-        (*iter)->initialSnapshot()->serialize(&fp);
-        iter++;
     }
 
     fp.close();
