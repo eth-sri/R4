@@ -60,7 +60,7 @@ do
             echo "> /usr/bin/time -p $ER_BIN $OUTRECORD/ER_actionlog -in_schedule_file=$OUTRECORD/schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/out.schedule.data -tmp_stdout=$OUTDIR/stdout.txt --site=$PROTOCOL://$site --replay_command=\"LD_LIBRARY_PATH=$LD_PATH $REPLAY_BIN -out_dir $OUTDIR -timeout 60 \"%s\" %s $OUTRECORD/log.network.data $OUTRECORD/log.random.data $OUTRECORD/log.time.data\" > $OUTRUNNER/stdout.txt 2> $OUTRUNNER/stdout.txt"
         fi
 
-        /usr/bin/time -p $ER_BIN $OUTRECORD/ER_actionlog -in_schedule_file=$OUTRECORD/schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/out.schedule.data -tmp_stdout=$OUTDIR/stdout.txt --site=$PROTOCOL://$site --replay_command="LD_LIBRARY_PATH=$LD_PATH $REPLAY_BIN -out_dir $OUTDIR -timeout 60 "%s" %s $OUTRECORD/log.network.data $OUTRECORD/log.random.data $OUTRECORD/log.time.data" > $OUTRUNNER/stdout.txt 2> $OUTRUNNER/stdout.txt
+        /usr/bin/time -p $ER_BIN $OUTRECORD/ER_actionlog -in_schedule_file=$OUTRECORD/schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/new_schedule.data -tmp_stdout=$OUTDIR/stdout.txt --site=$PROTOCOL://$site --replay_command="LD_LIBRARY_PATH=$LD_PATH $REPLAY_BIN -out_dir $OUTDIR -timeout 60 \"%s\" %s $OUTRECORD/log.network.data $OUTRECORD/log.random.data $OUTRECORD/log.time.data" > $OUTRUNNER/stdout.txt 2> $OUTRUNNER/stdout.txt
 
         if [[ ! $? == 0 ]] ; then
             cat $OUTRUNNER/stdout.txt
@@ -73,8 +73,9 @@ do
         fi
 
         if [ -f $OUTRECORD/schedule.data ]; then
+                killall --quiet -w webera
                 $BER_BIN $OUTRECORD/ER_actionlog -in_schedule_file=$OUTRECORD/schedule.data > /dev/null &
-                sleep 1
+                sleep 2
                 wget --quiet -P $OUTRECORD http://localhost:8000/varlist
                 killall --quiet -w webera
         fi
