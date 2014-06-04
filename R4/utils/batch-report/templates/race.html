@@ -9,7 +9,6 @@
   <li class="active"><a href="#schedule" data-toggle="tab">Schedule</a></li>
   <li><a href="#errors" data-toggle="tab">Errors</a></li>
    <li><a href="#visual" data-toggle="tab">Visual</a></li>
-  <li><a href="#stdout" data-toggle="tab">stdout</a></li>
 </ul>
 
 <!-- Tab panes -->
@@ -73,23 +72,6 @@
       <img src="{{ race.handle }}-comparison.png" /><br/>
       <img src="record.png" /><br/>
       <img src="{{ race.handle }}-replay.png" /><br/>
-
-  </div>
-
-  <div class="tab-pane" id="stdout">
-
-      <h3>stdout</h3>
-
-      <div class="row">
-          <div class="col-lg-6">
-              <h4>Base</h4>
-              <pre>{{ race.base_data.stdout }}</pre>
-          </div>
-          <div class="col-lg-6">
-              <h4>{{ race.handle }}</h4>
-              <pre>{{ race.race_data.stdout }}</pre>
-          </div>
-      </div>
 
   </div>
 

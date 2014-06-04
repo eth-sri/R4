@@ -206,7 +206,6 @@ def parse_race(base_dir, handle):
         'errors': errors,
         'schedule': schedule,
         'zip_errors_schedule': zip_errors_schedule,
-        'stdout': stdout,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
         'html_state': state_match.group(1),
         'race_dir': handle_dir
