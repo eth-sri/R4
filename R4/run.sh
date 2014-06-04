@@ -1,7 +1,7 @@
 #!/bin/bash
 
-RECORD_BIN=$WEBERA_DIR/R5/clients/Record/bin/record
-REPLAY_BIN=$WEBERA_DIR/R5/clients/Replay/bin/replay
+RECORD_BIN=$WEBERA_DIR/R4/clients/Record/bin/record
+REPLAY_BIN=$WEBERA_DIR/R4/clients/Replay/bin/replay
 LD_PATH=$WEBERA_DIR/WebKitBuild/Release/lib
 ER_BIN=$EVENTRACER_DIR/bin/eventracer/webera/run_schedules
 BER_BIN=$EVENTRACER_DIR/bin/eventracer/webera/webera
