@@ -417,11 +417,14 @@ def compare_race(base_data, race_data, executor):
         classification = 'NORMAL'
         classification_details = 'Error count diff'
 
-    if not html_state_match:
+    if not visual_state_match and not html_state_match:
         classification = 'HIGH'
+        classification_details = 'Visual and DOM state mismatch'
+    elif not html_state_match:
+        classification = 'NORMAL'
         classification_details = 'HTML state mismatch'
     elif not visual_state_match:
-        classification = 'HIGH'
+        classification = 'LOW'
         classification_details = 'Visual state mismatch'
 
     if 'LATE_EVENT_ATTACH ' in race_data['er_classification_details']:
