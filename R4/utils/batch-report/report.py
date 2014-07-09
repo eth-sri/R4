@@ -224,8 +224,6 @@ def parse_race(base_dir, handle):
         else:
             break
 
-    print("ZIP RESULT: ", len(schedule) == schedule_index, len(errors) == errors_index)
-
     return {
         'handle': handle,
         'errors': errors,
