@@ -148,11 +148,11 @@ def parse_race(base_dir, handle):
 
     # SCHEDULE
 
-    schedule_file = os.path.join(handle_dir, 'out.schedule.data')
+    schedule_file = os.path.join(handle_dir, 'new_schedule.data')
+    if not os.path.isfile(schedule_file):
+        schedule_file = os.path.join(handle_dir, 'out.schedule.data')        
     if not os.path.isfile(schedule_file):
         schedule_file = os.path.join(handle_dir, 'schedule.data')        
-    if not os.path.isfile(schedule_file):
-        schedule_file = os.path.join(handle_dir, 'new_schedule.data')        
 
     schedule = []
     
@@ -208,6 +208,8 @@ def parse_race(base_dir, handle):
 
         else:
             break
+
+    print("ZIP RESULT: ", len(schedule) == schedule_index, len(errors) == errors_index)
 
     return {
         'handle': handle,
