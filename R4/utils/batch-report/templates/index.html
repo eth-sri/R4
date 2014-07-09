@@ -46,7 +46,7 @@
             Summary
         </th>
         <td>
-            {{ summary.execution_result.total }} / <b>{{ summary.execution_result.success }} ({% if summary.execution_result.total > 0 %}{{ (((summary.execution_result.success / summary.execution_result.total) | round(2)) * 100) | int }}{% else %}0{% endif %}%)</b> / {{ summary.execution_result.failure }}
+            {{ summary.execution_result.total }} / <b>{{ summary.execution_result.success }} ({% if summary.execution_result.success > 0 %}{{ (((summary.execution_result.success / (summary.execution_result.success + summary.execution_result.failure)) | round(2)) * 100) | int }}{% else %}0{% endif %}%)</b> / {{ summary.execution_result.failure }}
         </td>
         <td>
             {{ summary.race_result.equal }} / {{ summary.race_result.diff }} / {{ summary.race_result.timeout }} / {{ summary.race_result.error }}

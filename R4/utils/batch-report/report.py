@@ -35,7 +35,8 @@ class ERRaceClassifier(object):
         if self.soup is not None:
 
             try:
-                id = race_data['handle'][4:]
+                id = race_data['handle']
+                id = id[id.rindex('race')+4:]
 
                 race_row = self.soup\
                     .find('a', href='race?id=%s' % id)\
@@ -99,6 +100,9 @@ def parse_race(base_dir, handle):
     # ERRORS
 
     errors_file = os.path.join(handle_dir, 'out.errors.log')
+    if not os.path.exists(errors_file):
+            errors_file = os.path.join(handle_dir, 'errors.log')
+
     errors = []
 
     try:
@@ -133,6 +137,8 @@ def parse_race(base_dir, handle):
     # STDOUT
 
     stdout_file = os.path.join(handle_dir, 'stdout.txt')
+    if not os.path.exists(stdout_file):
+        stdout_file = os.path.join(handle_dir, 'stdout')        
 
     with open(stdout_file, 'rb') as fp:
         stdout = fp.read().decode('utf8', 'ignore')
@@ -143,6 +149,8 @@ def parse_race(base_dir, handle):
     # SCHEDULE
 
     schedule_file = os.path.join(handle_dir, 'out.schedule.data')
+    if not os.path.isfile(schedule_file):
+        schedule_file = os.path.join(handle_dir, 'schedule.data')        
     if not os.path.isfile(schedule_file):
         schedule_file = os.path.join(handle_dir, 'new_schedule.data')        
 
@@ -236,7 +244,7 @@ def parse_er_log(base_dir):
         if result_match is not None:
             result['races_total'] = int(result_match.group(1))
             result['races_success'] = int(result_match.group(3))
-            result['races_failure'] = result['races_total'] - result['races_success']
+            result['races_failure'] = int(result_match.group(2)) - result['races_success']
         else:
             print('FAIL')
             print(stdout)
@@ -321,9 +329,17 @@ def compare_race(base_data, race_data, executor):
                     cimage['match_type']
                 ])
 
+        file1 = os.path.join(base_data['race_dir'], 'out.screenshot.png')
+        if not os.path.exists(file1):
+            file1 = os.path.join(base_data['race_dir'], 'screenshot.png')
+
+        file2 = os.path.join(race_data['race_dir'], 'out.screenshot.png')
+        if not os.path.exists(file2):
+            file2 = os.path.join(race_data['race_dir'], 'screenshot.png')
+
         visual_state_match = executor.submit(generate_comparison_file,
-                                             os.path.join(base_data['race_dir'], 'out.screenshot.png'),
-                                             os.path.join(race_data['race_dir'], 'out.screenshot.png'),
+                                             file1,
+                                             file2,
                                              os.path.join(race_data['race_dir'], 'comparison.png'))
 
         visual_state_match.add_done_callback(finished_callback)
@@ -463,12 +479,20 @@ def output_race_report(website, race, jinja, output_dir, input_dir):
 
     try:
         if not os.path.isfile(record_file):
-            shutil.copy(os.path.join(input_dir, website, 'base', 'out.screenshot.png'), record_file)
+            path = os.path.join(input_dir, website, 'base', 'out.screenshot.png')
+            if not os.path.exists(path):
+                path = os.path.join(input_dir, website, 'base', 'screenshot.png')
+
+            shutil.copy(path, record_file)
+
     except FileNotFoundError:
         pass
 
     try:
-        shutil.copy(os.path.join(input_dir, website, race['handle'], 'out.screenshot.png'), replay_file)
+        path = os.path.join(input_dir, website, race['handle'], 'out.screenshot.png')
+        if not os.path.exists(path):
+            path = os.path.join(input_dir, website, race['handle'], 'screenshot.png')
+        shutil.copy(path, replay_file)
     except FileNotFoundError:
         pass
 
