@@ -140,10 +140,14 @@ int ActionLogScopeDepth() {
 }
 
 void ActionLogAddArc(int earlierId, int laterId, int duration) {
-	if (laterId <= earlierId && strict_mode) {
-		fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
-        ActionLogSave("/tmp/ER_actionlog");
-		CRASH();
+    if (laterId <= earlierId) {
+        if (strict_mode) {
+            fprintf(stderr, "Invalid arc %d -> %d\n", earlierId, laterId);
+            ActionLogSave("/tmp/ER_actionlog");
+            CRASH();
+        } else {
+            return;
+        }
 	}
 	wtfThreadData().actionLog()->addArc(earlierId, laterId, duration);
 }

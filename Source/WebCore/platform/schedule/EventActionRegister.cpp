@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <WebCore/platform/EventActionHappensBeforeReport.h>
+#include <wtf/ActionLogReport.h>
 
 namespace WebCore {
 
@@ -176,11 +177,13 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
 
 void EventActionRegister::enterGhostEventAction(WTF::EventActionId id, ActionLog::EventActionType type)
 {
-    HBEnterEventAction(id, type);
+    ActionLogStrictMode(false);
+    HBEnterEventAction(id, ActionLog::UNKNOWN);
 }
 
 void EventActionRegister::exitGhostEventAction()
 {
+    ActionLogStrictMode(true);
     HBExitEventAction(true);
 }
 

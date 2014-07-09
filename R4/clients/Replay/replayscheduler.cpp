@@ -58,8 +58,6 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     m_schedule = WebCore::EventActionSchedule::deserialize(fp);
     fp.close();
 
-    ActionLogStrictMode(false); // replaying does not play well with the action log
-
     m_eventActionTimeoutTimer.setInterval(m_timeout_miliseconds); // an event action must be executed within x miliseconds
     m_eventActionTimeoutTimer.setSingleShot(true);
     connect(&m_eventActionTimeoutTimer, SIGNAL(timeout()), this, SLOT(slEventActionTimeout()));

@@ -308,6 +308,18 @@ void ReplayClientApplication::slSchedulerDone()
 
         ActionLogStrictMode(false);
 
+        // Write human readable HB relation dump (DEBUG)
+        std::string arcsLogPath = m_outdir.toStdString() + "/arcs.log";
+        std::vector<ActionLog::Arc> arcs = ActionLogReportArcs();
+        std::ofstream arcslog;
+        arcslog.open(arcsLogPath.c_str());
+
+        for (std::vector<ActionLog::Arc>::iterator it = arcs.begin(); it != arcs.end(); ++it) {
+            arcslog << (*it).m_tail << " -> " << (*it).m_head << std::endl;
+        }
+
+        arcslog.close();
+
         switch (m_scheduler->getState()) {
         case FINISHED:
             std::cout << "Schedule executed successfully" << std::endl;

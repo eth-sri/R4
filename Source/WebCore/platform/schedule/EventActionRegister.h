@@ -53,9 +53,10 @@ public:
     bool runEventAction(const WTF::EventActionDescriptor& descriptor);
     bool runEventAction(WTF::EventActionId forceEventActionId, const WTF::EventActionDescriptor& descriptor);
 
-    // TODO(WebERA): We should not use ghost operations anywere, it is a bit unclear how well we can replay them / reorder them
-
     // Ghost operations, used to simulate the execution of certain un-schedulable event actions
+    // TODO(WebERA) Ghost operations are disabled, and have no effect. Thus, event actions which use this feature are not detected
+    // and controlled. Until we find a good way to isolate and control these event actions (two at the moment), these functions will
+    // remain disabled.
     void enterGhostEventAction(WTF::EventActionId id, ActionLog::EventActionType type);
     void exitGhostEventAction();
 
