@@ -22,23 +22,38 @@ class ERRaceClassifier(object):
         'rk': 'LOW'
     }
 
-    def __init__(self, website_dir):
+    RACE_PARENT_RE = re.compile('.*(race[0-9]+)_race[0-9]+')
 
-        try:
-            with open(os.path.join(website_dir, 'record', 'varlist'), 'r') as fp:
-                self.soup = BeautifulSoup(fp, 'html5lib')
-        except FileNotFoundError:
-            self.soup = None
+    def __init__(self, website_dir):
+        
+        self.website_dir = website_dir
+        self._cache = {}
 
     def inject_classification(self, race_data):
+        
+        handle = race_data['handle']
+        id = handle[handle.rindex('race')+4:]
 
-        if self.soup is not None:
+        match = self.RACE_PARENT_RE.match(handle)
+        if match is None:
+            parent = 'base'
+        else:
+            parent = match.group(1)
+
+        if not parent in self._cache:
 
             try:
-                id = race_data['handle']
-                id = id[id.rindex('race')+4:]
+                with open(os.path.join(self.website_dir, parent, 'varlist'), 'r') as fp:
+                    self._cache[parent] = BeautifulSoup(fp, 'html5lib')
+            except FileNotFoundError:
+                self._cache[parent] = None
 
-                race_row = self.soup\
+        soup = self._cache.get(parent, None)
+
+        if soup is not None:
+
+            try:
+                race_row = soup\
                     .find('a', href='race?id=%s' % id)\
                     .find_parent('tr')\
                     .previous_sibling.previous_sibling

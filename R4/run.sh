@@ -72,13 +72,16 @@ do
             exit 1
         fi
 
-        if [ -f $OUTRECORD/schedule.data ]; then
+        for D in `find $OUTDIR -type d`
+        do
+            if [ -f $D/schedule.data ]; then
                 killall --quiet -w webera
-                $BER_BIN $OUTRECORD/ER_actionlog -in_schedule_file=$OUTRECORD/schedule.data > /dev/null &
+                $BER_BIN $D/ER_actionlog -in_schedule_file=$D/schedule.data > /dev/null &
                 sleep 2
-                wget --quiet -P $OUTRECORD http://localhost:8000/varlist
+                wget --quiet -P $D/ http://localhost:8000/varlist
                 killall --quiet -w webera
-        fi
+            fi
+        done
 
     else
         cat $OUTRECORD/out.log
