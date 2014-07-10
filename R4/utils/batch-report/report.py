@@ -22,7 +22,7 @@ class ERRaceClassifier(object):
         'rk': 'LOW'
     }
 
-    RACE_PARENT_RE = re.compile('.*(race[0-9]+)_race[0-9]+')
+    RACE_PARENT_RE = re.compile('(.*race[0-9]+)_race[0-9]+')
 
     def __init__(self, website_dir):
         
@@ -34,11 +34,15 @@ class ERRaceClassifier(object):
         handle = race_data['handle']
         id = handle[handle.rindex('race')+4:]
 
-        match = self.RACE_PARENT_RE.match(handle)
-        if match is None:
-            parent = 'base'
-        else:
-            parent = match.group(1)
+        parent = race_data['origin']
+
+        if parent is None:
+
+            match = self.RACE_PARENT_RE.match(handle)
+            if match is None:
+                parent = 'base'
+            else:
+                parent = match.group(1)
 
         if not parent in self._cache:
 
@@ -161,6 +165,15 @@ def parse_race(base_dir, handle):
     result_match = re.compile('Result: ([A-Z]+)').search(stdout)
     state_match = re.compile('HTML-hash: ([0-9]+)').search(stdout)
 
+    # Origin
+
+    origin = None
+    origin_file = os.path.join(handle_dir, 'origin')
+
+    if os.path.exists(origin_file):
+        with open(origin_file, 'rb') as fp:
+            origin = str(fp.read().decode('utf8', 'ignore')).strip()
+
     # SCHEDULE
 
     schedule_file = os.path.join(handle_dir, 'new_schedule.data')
@@ -231,7 +244,8 @@ def parse_race(base_dir, handle):
         'zip_errors_schedule': zip_errors_schedule,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
         'html_state': state_match.group(1),
-        'race_dir': handle_dir
+        'race_dir': handle_dir,
+        'origin': origin
     }
 
 
@@ -615,10 +629,8 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
     for website in website_index:
 
         result = {
-            'equal': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and
-                                                                    race['comparison']['is_equal']]),
-            'diff': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and
-                                                                   not race['comparison']['is_equal']]),
+            'equal': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and race['comparison']['is_equal']]),
+            'diff': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and not race['comparison']['is_equal']]),
             'timeout': len([race for race in website['race_index'] if race['race_data']['result'] == 'TIMEOUT']),
             'error': len([race for race in website['race_index'] if race['race_data']['result'] == 'ERROR']),
             'er_high': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'HIGH']),
@@ -676,7 +688,7 @@ def main():
     websites = os.listdir(analysis_dir)
     website_index = init_website_index()
 
-    ignore_files = ['runner', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
+    ignore_files = ['runner', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
 
