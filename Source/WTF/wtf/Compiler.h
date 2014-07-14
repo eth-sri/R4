@@ -101,6 +101,10 @@
 #define WTF_COMPILER_SUPPORTS_CXX_NULLPTR 1 
 #endif
 
+#if GCC_VERSION_AT_LEAST(4, 8, 0)
+#pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+#endif
+
 #else
 /* Define this for !GCC compilers, just so we can write things like GCC_VERSION_AT_LEAST(4, 1, 0). */
 #define GCC_VERSION_AT_LEAST(major, minor, patch) 0

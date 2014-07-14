@@ -1,3 +1,15 @@
+2013-04-04  Andras Becsi  <andras.becsi@digia.com>
+
+        Fix the build with GCC 4.8
+        https://bugs.webkit.org/show_bug.cgi?id=113147
+
+        Reviewed by NOBODY (OOPS!).
+
+        Disable diagnostic warning -Wunused-local-typedefs for GCC 4.8
+        since dummy typedefs are commonly used in the codebase.
+
+        * wtf/Compiler.h:
+
 2012-05-03  Yong Li  <yoli@rim.com>
 
         Mutex failure when HashTable is memory moved in debug build
