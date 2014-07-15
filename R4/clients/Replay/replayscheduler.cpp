@@ -31,9 +31,6 @@
 #include "wtf/ExportMacros.h"
 #include "platform/ThreadGlobalData.h"
 #include "platform/ThreadTimers.h"
-#include "platform/schedule/EventActionRegister.h"
-#include "wtf/ActionLogReport.h"
-#include "wtf/warningcollectorreport.h"
 
 #include "fuzzyurl.h"
 
@@ -83,7 +80,7 @@ void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* e
 bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* eventActionRegister)
 {
     if (m_schedule->isEmpty() || m_mode == STOP) {
-        stop(FINISHED);
+        stop(FINISHED, eventActionRegister);
         return false;
     }
 
@@ -113,7 +110,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         m_schedule->remove(0);
 
         if (m_schedule->isEmpty()) {
-            stop(FINISHED);
+            stop(FINISHED, eventActionRegister);
             return false;
         }
 
@@ -271,25 +268,6 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         m_schedule->remove(0);
         m_runUsingBestEffort = false;
         m_eventActionTimeoutTimer.stop();
-
-        if (m_schedule->isEmpty()) {
-
-            // Emit all remaining event actions as potential errors
-            // Notice, that we do not record the remaining event actions in the original
-            // exection. Thus, this will be an over approximation of the actual list of
-            // new event actions.
-
-            std::set<std::string> names = eventActionRegister->getWaitingNames();
-            std::set<std::string>::const_iterator iter;
-
-            for (iter = names.begin(); iter != names.end(); iter++) {
-                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "New event action observed.", (*iter));
-            }
-
-            // Stop scheduler and sub systems
-
-            stop(FINISHED);
-        }
 
         return true;
     }

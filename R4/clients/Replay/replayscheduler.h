@@ -38,6 +38,9 @@
 #include <WebCore/platform/Timer.h>
 #include <WebCore/platform/schedule/Scheduler.h>
 
+#include "platform/schedule/EventActionRegister.h"
+#include "wtf/ActionLogReport.h"
+#include "wtf/warningcollectorreport.h"
 #include "wtf/EventActionSchedule.h"
 #include "wtf/EventActionDescriptor.h"
 
@@ -63,6 +66,30 @@ public:
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
 
     bool isFinished();
+
+    void stop(ReplaySchedulerState state, WebCore::EventActionRegister* eventActionRegister) {
+        if (m_doneEmitted) {
+            return;
+        }
+
+        m_state = state;
+
+        if (state == FINISHED) {
+            // Emit all remaining event actions as potential errors
+            // Notice, that we do not record the remaining event actions in the original
+            // exection. Thus, this will be an over approximation of the actual list of
+            // new event actions.
+
+            std::set<std::string> names = eventActionRegister->getWaitingNames();
+            std::set<std::string>::const_iterator iter;
+
+            for (iter = names.begin(); iter != names.end(); iter++) {
+                WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Non-executed event action.", (*iter));
+            }
+        }
+
+        stop();
+    }
 
     void stop(ReplaySchedulerState state) {
         if (m_doneEmitted) {
