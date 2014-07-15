@@ -157,20 +157,26 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
           * HTMLDocumentParser event actions:
           *     A's segment number matches B's segment number
           *
+          * DOMTimer event actions:
+          *     A's line number, timeout, isSingleshot, [skip], and same url sequence matches B's ...
+          *
+          * ScriptRunner event actions:
+          *     A's async mode, and type matches B's ...
+          *
           * If we have multiple matches then we use the match score by fuzzyurl.
           *
           * This solves the problem of URLs with timestamps.
           *
           */
 
-        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer" || eventActionType == "BrowserLoadUrl") {
+        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer" || eventActionType == "BrowserLoadUrl" || eventActionType == "ScriptRunner") {
 
             QString url = QString::fromStdString(nextToSchedule.getParameter(0));
 
-            unsigned long sequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser") ? QString::fromStdString(nextToSchedule.getParameter(1)).toULong() : 0;
-            unsigned long sequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(2)).toULong() : 0;
+            unsigned long sequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser" || eventActionType == "ScriptRunner") ? QString::fromStdString(nextToSchedule.getParameter(1)).toULong() : 0;
+            unsigned long sequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "ScriptRunner") ? QString::fromStdString(nextToSchedule.getParameter(2)).toULong() : 0;
             unsigned long sequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(3)).toULong() : 0;
-            unsigned long sequenceNumber4 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(4)).toULong() : 0;
+            unsigned long sequenceNumber4 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(4)).toULong() : 0; // DOMTimer's parent ID, fuzzy match this one
             unsigned long sequenceNumber5 = (eventActionType == "DOMTimer") ? QString::fromStdString(nextToSchedule.getParameter(5)).toULong() : 0;
 
             FuzzyUrlMatcher* matcher = new FuzzyUrlMatcher(QUrl(url));
@@ -189,18 +195,26 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
                     continue;
                 }
 
-                unsigned long candidateSequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser") ? QString::fromStdString(candidate.getParameter(1)).toULong() : 0;
-                unsigned long candidateSequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(2)).toULong() : 0;
+                unsigned long candidateSequenceNumber1 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "HTMLDocumentParser" || eventActionType == "ScriptRunner") ? QString::fromStdString(candidate.getParameter(1)).toULong() : 0;
+                unsigned long candidateSequenceNumber2 = (eventActionType == "Network" || eventActionType == "DOMTimer" || eventActionType == "ScriptRunner") ? QString::fromStdString(candidate.getParameter(2)).toULong() : 0;
                 unsigned long candidateSequenceNumber3 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(3)).toULong() : 0;
                 unsigned long candidateSequenceNumber4 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(4)).toULong() : 0;
                 unsigned long candidateSequenceNumber5 = (eventActionType == "DOMTimer") ? QString::fromStdString(candidate.getParameter(5)).toULong() : 0;
 
                 if (candidateSequenceNumber1 != sequenceNumber1 || candidateSequenceNumber2 != sequenceNumber2 || candidateSequenceNumber3 != sequenceNumber3 ||
-                        candidateSequenceNumber4 != sequenceNumber4 || candidateSequenceNumber5 != sequenceNumber5) {
+                        candidateSequenceNumber5 != sequenceNumber5) {
                     continue;
                 }
 
                 unsigned int score = matcher->score(QUrl(QString::fromStdString(candidate.getParameter(0))));
+
+                if (sequenceNumber4 != 0) {
+                    score = score / 2;
+
+                    if (sequenceNumber4 == candidateSequenceNumber4) {
+                        score += UINT_MAX / 2;
+                    }
+                }
 
                 if (score > bestScore) {
                     bestScore = score;
