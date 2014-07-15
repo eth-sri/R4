@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.3
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -267,6 +267,9 @@ def parse_er_log(base_dir):
     with fp:
         stdout = fp.read().decode('utf8', 'ignore')
         result['stdout'] = stdout
+
+        if 'WARNING: Stopped iteration' in stdout:
+            print('Warning, iteration max reached.')
 
         result_match = re.compile('Tried ([0-9]+) schedules. ([0-9]+) generated, ([0-9]+)').search(stdout)
 
