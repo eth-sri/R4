@@ -29,7 +29,7 @@
 #ifndef DebuggerCallFrame_h
 #define DebuggerCallFrame_h
 
-#include "CallFrame.h"
+#include "JavaScriptCore/interpreter/CallFrame.h"
 
 namespace JSC {
     

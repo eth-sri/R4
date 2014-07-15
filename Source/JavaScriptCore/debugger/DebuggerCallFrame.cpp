@@ -29,6 +29,7 @@
 #include "config.h"
 #include "DebuggerCallFrame.h"
 
+#include "JavaScriptCore/runtime/ErrorInstance.h"
 #include "JSFunction.h"
 #include "CodeBlock.h"
 #include "Interpreter.h"
@@ -107,6 +108,20 @@ JSValue DebuggerCallFrame::evaluate(const UString& script, JSValue& exception) c
 
 UString DebuggerCallFrame::exceptionString() const
 {
+    if (m_exception.isObject()) {
+        JSObject* exception = asObject(m_exception);
+
+        if (exception->isErrorInstance() && static_cast<ErrorInstance*>(exception)->appendSourceToMessage()) {
+            JSValue value = exception->getDirect(m_callFrame->globalData(), m_callFrame->globalData().propertyNames->message);
+
+            if (value.isString()) {
+                return value.toString(m_callFrame)->getString(m_callFrame);
+            } else {
+                return value.getString(m_callFrame);
+            }
+        }
+    }
+
     return m_exception.getString(m_callFrame);
 }
 

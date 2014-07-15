@@ -147,10 +147,17 @@ void DebuggerListener::exception(const JSC::DebuggerCallFrame& callFrame, intptr
     std::stringstream detail;
 
     JSC::UString ex = callFrame.exceptionString();
+
+    std::string prefix = "";
+
+    if (!hasHandler) {
+        prefix = "Uncaught ";
+    }
+
     if (!ex.isNull()) {
-        detail << "Exception: " << ex.ascii().data() << std::endl;
+        detail << prefix << "Exception: " << ex.ascii().data() << std::endl;
     } else {
-        detail << "Exception: non-string exception (TODO improve identification)" << std::endl;
+        detail << prefix << "Exception: non-string exception (TODO improve identification)" << std::endl;
     }
 
     if (!sp->url().isNull()) {
