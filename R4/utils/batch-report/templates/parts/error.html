@@ -1,8 +1,8 @@
-    {% if error.type == 'error' %}
+{% if error.type == 'error' %}
 <div class="well well-sm">
     <p>{{ error.module }}<br/><b>{{ error.description }}</b></p>
     <p><i>{{ error.details|replace("\n", "<br/>") }}</i></p>
 </div>
-    {% else %}
-    <p>{{ error.event_action_descriptor }}</p>
-    {% endif %}
+{% else %}
+<p><i>{{ error.event_action_id }}</i>: {{ error.event_action_descriptor }}</p>
+{% endif %}
