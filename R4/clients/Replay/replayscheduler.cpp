@@ -31,6 +31,7 @@
 #include "wtf/ExportMacros.h"
 #include "platform/ThreadGlobalData.h"
 #include "platform/ThreadTimers.h"
+#include "wtf/ActionLogReport.h"
 
 #include "fuzzyurl.h"
 
@@ -45,7 +46,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_mode(STRICT)
     , m_state(RUNNING)
     , m_doneEmitted(false)
-    , m_runUsingBestEffort(false)
+    , m_skipAfterNextTry(false)
     , m_timeout_use_aggressive(false)
     , m_timeout_miliseconds(20000)
     , m_timeout_aggressive_miliseconds(500)
@@ -84,8 +85,90 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         return false;
     }
 
-    WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
-    WTF::EventActionId nextToScheduleId = m_schedule->first().first;
+    for (size_t i = 0; i < m_schedule_backlog.size(); ++i) {
+        ActionLogStrictMode(false);
+        bool success = tryExecuteEventActionDescriptor(eventActionRegister, m_schedule_backlog[i]);
+        ActionLogStrictMode(true);
+        if (success) {
+            m_schedule_backlog.remove(i);
+            WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action executed from pending schedule.", "");
+            return true;
+        }
+    }
+
+    bool success = tryExecuteEventActionDescriptor(eventActionRegister, m_schedule->first());
+
+    if (success) {
+
+        m_schedule->remove(0);
+
+        m_skipAfterNextTry = false;
+        m_eventActionTimeoutTimer.stop();
+
+        return true;
+
+    } else if (m_skipAfterNextTry) {
+
+        /**
+          * Relaxed execution, when we did not find anything using a fuzzy match.
+          *
+          * When a replay deviates, compared to the original execution, it is
+          * possible that previously unknown event actions are scheduled, and
+          * previously known event actions are never scheduled or delayed.
+          *
+          * Missing event actions we can skip (and monitor if they appear later).
+          *
+          * New event actions are ignored (with the hope that they are not needed
+          * to enable any of the old event actions).
+          * This can be the case if these new event actions e.g. block load events.
+          *
+          */
+
+        // We could not find the current event action in the replay schedule. Skip
+        // it and emit a warning.
+
+        // Notice that we will continue skipping event actions until we get a hit.
+
+        std::stringstream detail;
+        detail << "This is the current queue of events" << std::endl;
+        debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
+
+        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
+
+        m_schedule_backlog.append(m_schedule->first());
+        m_schedule->remove(0);
+
+        return true; // Go to the next event action now
+
+    }
+
+    if (!m_eventActionTimeoutTimer.isActive()) {
+
+        WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
+        std::string eventActionType = nextToSchedule.getType();
+
+        if (eventActionType == "DOMTimer") {
+            // set timeout to match expected time to trigger the next DOMTimer
+            m_eventActionTimeoutTimer.setInterval(QString::fromStdString(nextToSchedule.getParameter(2)).toULong() + m_timeout_aggressive_miliseconds);
+        } else {
+            m_eventActionTimeoutTimer.setInterval(m_mode == BEST_EFFORT ? m_timeout_aggressive_miliseconds : m_timeout_miliseconds);
+        }
+
+        m_eventActionTimeoutTimer.start(); // start timeout for this event action
+
+    }
+
+    return false;
+
+}
+
+bool ReplayScheduler::tryExecuteEventActionDescriptor(
+        WebCore::EventActionRegister* eventActionRegister,
+        const WebCore::EventActionScheduleItem& next)
+{
+
+    WTF::EventActionDescriptor nextToSchedule = next.second;
+    WTF::EventActionId nextToScheduleId = next.first;
 
     // Detect relax non-determinism token and relax token. We assume that the first occurrence of a token
     // is always the non-determinism one, and the second (and thrid and ...) are relax tokens.
@@ -107,15 +190,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
             m_eventActionTimeoutTimer.setInterval(m_timeout_aggressive_miliseconds);
         }
 
-        m_schedule->remove(0);
-
-        if (m_schedule->isEmpty()) {
-            stop(FINISHED, eventActionRegister);
-            return false;
-        }
-
-        nextToSchedule = m_schedule->first().second;
-        nextToScheduleId = m_schedule->first().first;
+        return true;
     }
 
     // Update the warning collecter such that all warnings are associated with this event action
@@ -136,7 +211,7 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     // Relaxed non-deterministic execution
 
-    if (!found && (m_runUsingBestEffort || m_mode == BEST_EFFORT_NOND)) {
+    if (!found && (m_skipAfterNextTry || m_mode == BEST_EFFORT_NOND)) {
 
         // Try to do a fuzzy match
 
@@ -169,7 +244,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
           *
           */
 
-        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer" || eventActionType == "BrowserLoadUrl" || eventActionType == "ScriptRunner") {
+        if (eventActionType == "Network" || eventActionType == "HTMLDocumentParser" || eventActionType == "DOMTimer" ||
+                eventActionType == "BrowserLoadUrl" || eventActionType == "ScriptRunner") {
 
             QString url = QString::fromStdString(nextToSchedule.getParameter(0));
 
@@ -244,61 +320,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     } // End fuzzy non-deterministic match
 
-    if (!found && m_runUsingBestEffort) {
+    return found;
 
-        /**
-          * Relaxed execution, when we did not find anything using a fuzzy match.
-          *
-          * When a replay deviates, compared to the original execution, it is
-          * possible that previously unknown event actions are scheduled, and
-          * previously known event actions are never scheduled or delayed.
-          *
-          * Missing event actions we can skip (and monitor if they appear later).
-          *
-          * New event actions are ignored (with the hope that they are not needed
-          * to enable any of the old event actions).
-          * This can be the case if these new event actions e.g. block load events.
-          *
-          */
-
-        // We could not find the current event action in the replay schedule. Skip
-        // it and emit a warning.
-
-        // Notice that we will continue skipping event actions until we get a hit.
-
-        std::stringstream detail;
-        detail << "This is the current queue of events" << std::endl;
-        debugPrintTimers(detail, WebCore::threadGlobalData().threadTimers().eventActionRegister());
-
-        WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
-
-        m_schedule->remove(0);
-
-        return true; // Go to the next event action now
-    }
-
-    if (found) {
-
-        m_schedule->remove(0);
-        m_runUsingBestEffort = false;
-        m_eventActionTimeoutTimer.stop();
-
-        return true;
-    }
-
-    if (!m_eventActionTimeoutTimer.isActive()) {
-
-        if (eventActionType == "DOMTimer") {
-            // set timeout to match expected time to trigger the next DOMTimer
-            m_eventActionTimeoutTimer.setInterval(QString::fromStdString(nextToSchedule.getParameter(2)).toULong() + m_timeout_aggressive_miliseconds);
-        } else {
-            m_eventActionTimeoutTimer.setInterval(m_mode == BEST_EFFORT ? m_timeout_aggressive_miliseconds : m_timeout_miliseconds);
-        }
-
-        m_eventActionTimeoutTimer.start(); // start timeout for this event action
-    }
-
-    return false;
 }
 
 void ReplayScheduler::slEventActionTimeout()
@@ -339,7 +362,7 @@ void ReplayScheduler::slEventActionTimeout()
         // Skip this event action, and enter fast forward mode (skipping any subsequent event actions
         // in the replay schedule that are not enabled.
 
-        m_runUsingBestEffort = true;
+        m_skipAfterNextTry = true;
 
         break;
 

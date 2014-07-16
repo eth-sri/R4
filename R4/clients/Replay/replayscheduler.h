@@ -64,6 +64,9 @@ public:
     void eventActionDescheduled(const WTF::EventActionDescriptor&, WebCore::EventActionRegister*) {}
 
     void executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister);
+    bool tryExecuteEventActionDescriptor(
+            WebCore::EventActionRegister* eventActionRegister,
+            const WebCore::EventActionScheduleItem& next);
 
     bool isFinished();
 
@@ -129,6 +132,7 @@ private:
     void debugPrintTimers(std::ostream& out, WebCore::EventActionRegister* eventActionRegister);
 
     WebCore::EventActionSchedule* m_schedule;
+    WTF::Vector<WebCore::EventActionScheduleItem> m_schedule_backlog;
 
     QNetworkReplyControllableFactoryReplay* m_networkProvider;
     TimeProviderReplay* m_timeProvider;
@@ -139,7 +143,7 @@ private:
     bool m_doneEmitted;
 
     QTimer m_eventActionTimeoutTimer;
-    bool m_runUsingBestEffort;
+    bool m_skipAfterNextTry;
 
     bool m_timeout_use_aggressive;
     unsigned int m_timeout_miliseconds;

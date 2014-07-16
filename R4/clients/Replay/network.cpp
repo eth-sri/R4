@@ -150,6 +150,16 @@ WebCore::QNetworkReplyControllable* QNetworkReplyControllableFactoryReplay::cons
     }
 
     std::cerr << "Error: unknown network request (" << reply->url().toString().toStdString() << ") (exact mode)." << std::endl;
+
+    SnapshotMap::iterator it = m_snapshots.begin();
+    while (it != m_snapshots.end()) {
+
+        std::cerr << it.key().toAscii().data() << std::endl;
+
+        ++it;
+    }
+
+
     std::exit(1);
 
 }
