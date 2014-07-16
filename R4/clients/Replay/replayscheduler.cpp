@@ -67,8 +67,11 @@ ReplayScheduler::~ReplayScheduler()
 }
 
 void ReplayScheduler::eventActionScheduled(const WTF::EventActionDescriptor&,
-                                           WebCore::EventActionRegister*)
+                                           WebCore::EventActionRegister* eventActionRegister)
 {
+    while (executeDelayedEventAction(eventActionRegister)) {
+        continue;
+    }
 }
 
 void ReplayScheduler::executeDelayedEventActions(WebCore::EventActionRegister* eventActionRegister)
