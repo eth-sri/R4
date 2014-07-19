@@ -26,6 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sstream>
+
 #include "config.h"
 #include "Console.h"
 
@@ -48,6 +50,7 @@
 #include <stdio.h>
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
+#include "wtf/warningcollectorreport.h"
 
 #if PLATFORM(CHROMIUM)
 #include "TraceEvent.h"
@@ -154,6 +157,60 @@ void Console::addMessage(MessageSource source, MessageType type, MessageLevel le
     else
         InspectorInstrumentation::addMessageToConsole(page, source, type, level, message, sourceURL, lineNumber);
 
+    const char* sourceString;
+    switch (source) {
+    case HTMLMessageSource:
+        sourceString = "HTML";
+        break;
+    case XMLMessageSource:
+        sourceString = "XML";
+        break;
+    case JSMessageSource:
+        sourceString = "JS";
+        break;
+    case NetworkMessageSource:
+        sourceString = "NETWORK";
+        break;
+    case ConsoleAPIMessageSource:
+        sourceString = "CONSOLEAPI";
+        break;
+    case OtherMessageSource:
+        sourceString = "OTHER";
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        sourceString = "UNKNOWN";
+        break;
+    }
+
+    const char* levelString;
+    switch (level) {
+    case TipMessageLevel:
+        levelString = "TIP";
+        break;
+    case LogMessageLevel:
+        levelString = "LOG";
+        break;
+    case WarningMessageLevel:
+        levelString = "WARN";
+        break;
+    case ErrorMessageLevel:
+        levelString = "ERROR";
+        break;
+    case DebugMessageLevel:
+        levelString = "DEBUG";
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        levelString = "UNKNOWN";
+        break;
+    }
+
+    std::stringstream name;
+    name << sourceString << " (" << levelString << ")";
+
+    WTF::WarningCollectorReport("console.log", name.str(), message.ascii().data());
+
     if (!Console::shouldPrintExceptions())
         return;
 
@@ -190,10 +247,41 @@ void Console::addMessage(MessageType type, MessageLevel level, PassRefPtr<Script
     }
 
     String message;
-    if (arguments->getFirstArgumentAsString(message))
+    if (arguments->getFirstArgumentAsString(message)) {
+
+        const char* levelString;
+        switch (level) {
+        case TipMessageLevel:
+            levelString = "TIP";
+            break;
+        case LogMessageLevel:
+            levelString = "LOG";
+            break;
+        case WarningMessageLevel:
+            levelString = "WARN";
+            break;
+        case ErrorMessageLevel:
+            levelString = "ERROR";
+            break;
+        case DebugMessageLevel:
+            levelString = "DEBUG";
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            levelString = "UNKNOWN";
+            break;
+        }
+
+        std::stringstream name;
+        name << "CONSOLE (" << levelString << ")";
+
+
+        WTF::WarningCollectorReport("console.log", name.str(), message.ascii().data());
         page->chrome()->client()->addMessageToConsole(ConsoleAPIMessageSource, type, level, message, lastCaller.lineNumber(), lastCaller.sourceURL());
+    }
 
     InspectorInstrumentation::addMessageToConsole(page, ConsoleAPIMessageSource, type, level, message, arguments, callStack);
+
 }
 
 void Console::debug(PassRefPtr<ScriptArguments> arguments, PassRefPtr<ScriptCallStack> callStack)
