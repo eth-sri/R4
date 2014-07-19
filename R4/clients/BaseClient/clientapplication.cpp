@@ -13,6 +13,9 @@ ClientApplication::ClientApplication(int& argc, char** argv)
     if (program.exists())
         m_programName = program.baseName();
 
+    // Important, accessible from the JS environment
+    this->setApplicationName("R4");
+
     m_window = new ToolWindow();
 }
 
