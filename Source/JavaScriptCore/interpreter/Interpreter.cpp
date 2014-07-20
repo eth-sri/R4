@@ -1256,11 +1256,12 @@ JSValue Interpreter::execute(ProgramExecutable* program, CallFrame* callFrame, S
                         // SRL log a field access to the global object
                         JSCellFieldAccess(ActionLog::READ_MEMORY, globalObject, JSONPPath[i].m_pathEntryName.ascii().data());
                         MemoryValue(callFrame, baseObject);
-                    } else
+                    } else {
                         // SRL log a field access
                         FieldAccess(ActionLog::READ_MEMORY, baseObject, JSONPPath[i].m_pathEntryName.ascii().data());
                         baseObject = baseObject.get(callFrame, JSONPPath[i].m_pathEntryName);
                         MemoryValue(callFrame, baseObject);
+                    }
 
                     if (callFrame->hadException())
                         return jsUndefined();
