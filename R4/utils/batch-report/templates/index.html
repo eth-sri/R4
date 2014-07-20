@@ -20,17 +20,17 @@
             {{ loop.index }}
         </td>
         <td>
-            <a href="{{ item.handle }}/index.html">{{ item.handle }}</a>
+            <a href="{{ item.website }}/index.html">{{ item.website }}</a>
         </td>
         <td class="{% if item.er_log.races_total == item.er_log.races_success %}success{% else %}danger{% endif %}">
             {{ item.er_log.races_total }}/<b>{{ item.er_log.races_success }}</b>/{{ item.er_log.races_failure }}
         </td>
-        <td class="{% if item.result.error == 0 and item.result.timeout == 0 %}success{% elif item.result.timeout > 0 %}warning{% else %}danger{% endif %}">
-            {{ item.result.equal }}/{{ item.result.diff }}/{{ item.result.timeout }}/{{ item.result.error }}
+        <td class="{% if item.summary.error == 0 and item.summary.timeout == 0 %}success{% elif item.summary.timeout > 0 %}warning{% else %}danger{% endif %}">
+            {{ item.summary.equal }}/{{ item.summary.diff }}/{{ item.summary.timeout }}/{{ item.summary.error }}
         </td>
         <td>
-            ER: H-{{ item.result.er_high }} /  N-{{ item.result.er_normal }} / L-{{ item.result.er_low }} / <b>{{ item.result.er_unknown }}</b> <br/>
-            R4: H-{{ item.result.r4_high }} /  N-{{ item.result.r4_normal }} / L-{{ item.result.r4_low }} 
+            ER: H-{{ item.summary.er_high }} /  N-{{ item.summary.er_normal }} / L-{{ item.summary.er_low }} / <b>{{ item.summary.er_unknown }}</b> <br/>
+            R4: H-{{ item.summary.r4_high }} /  N-{{ item.summary.r4_normal }} / L-{{ item.summary.r4_low }} 
         </td>
         <td>
             {{ item.er_log.execution_time // 60 }}m {{ item.er_log.execution_time % 60 }}s

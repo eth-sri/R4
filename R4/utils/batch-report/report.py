@@ -123,6 +123,7 @@ def parse_race(base_dir, handle):
             errors_file = os.path.join(handle_dir, 'errors.log')
 
     errors = []
+    exceptions = []
 
     try:
         fp = open(errors_file, 'rb')
@@ -144,14 +145,28 @@ def parse_race(base_dir, handle):
             else:
                 details = fp.read(length).decode('utf8', 'ignore')
 
-            errors.append(HashableDict(
+            container = errors
+            t = 'error'
+
+            if 'JavaScript_Interpreter' in module:
+                continue
+
+            if 'console.log' in module:
+                if 'ERROR' in description:
+                    container = exceptions
+                    t = 'exception'
+                else:
+                    continue
+
+            container.append(HashableDict(
                 event_action_id=event_action_id,
-                type='error',
+                type=t,
                 module=module,
                 description=description,
                 details=details,
                 _ignore_properties=['event_action_id', 'type']
             ))
+
 
     # STDOUT
 
@@ -210,6 +225,7 @@ def parse_race(base_dir, handle):
 
     zip_errors_schedule = []
     errors_index = 0
+    exceptions_index = 0
     schedule_index = 0
     current_event_action_id = None
 
@@ -228,6 +244,13 @@ def parse_race(base_dir, handle):
 
             errors_index += 1
 
+        elif exceptions_index < len(exceptions) and \
+                exceptions[exceptions_index]['event_action_id'] == current_event_action_id:
+
+            zip_errors_schedule.append(exceptions[exceptions_index])
+
+            exceptions_index += 1
+
         elif schedule_index < len(schedule):
             zip_errors_schedule.append(schedule[schedule_index])
 
@@ -240,6 +263,7 @@ def parse_race(base_dir, handle):
     return {
         'handle': handle,
         'errors': errors,
+        'exceptions': exceptions,
         'schedule': schedule,
         'zip_errors_schedule': zip_errors_schedule,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
@@ -291,8 +315,9 @@ def parse_er_log(base_dir):
 
 def generate_comparison_file(record_file, replay_file, comparison_file):
     try:
-        print('compare -metric RMSE %s %s %s' % (record_file, replay_file, comparison_file))
-        stdout = subprocess.check_output('compare -metric RMSE %s %s %s' % (record_file, replay_file, comparison_file), stderr=subprocess.STDOUT, shell=True)
+        cmd = 'compare -metric RMSE %s %s %s' % (record_file, replay_file, comparison_file)
+        print(cmd)
+        stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         type = 'normal'
     except subprocess.CalledProcessError as e:
         if e.returncode == 2:
@@ -305,7 +330,9 @@ def generate_comparison_file(record_file, replay_file, comparison_file):
         # do a subimage search
 
         try:
-            stdout = subprocess.check_output('compare -metric RMSE -subimage-search %s %s %s' % (record_file, replay_file, comparison_file), stderr=subprocess.STDOUT, shell=True)
+            cmd = 'compare -metric RMSE -subimage-search %s %s %s' % (record_file, replay_file, comparison_file)
+            print(cmd)
+            stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
             type = 'subimage'
         except subprocess.CalledProcessError as e:
             if e.returncode == 2:
@@ -333,7 +360,7 @@ def cimage_human(type, distance):
         return 'ERROR'
 
 
-def compare_race(base_data, race_data, executor):
+def compare_race(base_data, race_data):
     """
     Outputs comparison
     """
@@ -344,22 +371,23 @@ def compare_race(base_data, race_data, executor):
 
     if not os.path.isfile(cimage_meta):
 
-        cimage = {
+        match_type, distance = generate_comparison_file(
+            file1,
+            file2,
+            os.path.join(race_data['race_dir'], 'comparison.png'))
 
+
+        cimage = {
+            'distance': float(distance),
+            'match_type': match_type,
+            'human': cimage_human(match_type, distance)
         }
 
-        def finished_callback(future):
-
-            match_type, distance = future.result()
-            cimage['distance'] = distance
-            cimage['match_type'] = match_type
-            cimage['human'] = cimage_human(match_type, distance)
-
-            with open(cimage_meta, 'w') as fp:
-                fp.writelines([
-                    str(cimage['distance']),
-                    cimage['match_type']
-                ])
+        with open(cimage_meta, 'w') as fp:
+            fp.writelines([
+                str(cimage['distance']),
+                cimage['match_type']
+            ])
 
         file1 = os.path.join(base_data['race_dir'], 'out.screenshot.png')
         if not os.path.exists(file1):
@@ -369,12 +397,6 @@ def compare_race(base_data, race_data, executor):
         if not os.path.exists(file2):
             file2 = os.path.join(race_data['race_dir'], 'screenshot.png')
 
-        visual_state_match = executor.submit(generate_comparison_file,
-                                             file1,
-                                             file2,
-                                             os.path.join(race_data['race_dir'], 'comparison.png'))
-
-        visual_state_match.add_done_callback(finished_callback)
 
     else:
 
@@ -421,7 +443,27 @@ def compare_race(base_data, race_data, executor):
             'race': race_errors[j1:j2]
         })
 
-    distance = sum(1 for opcode in opcodes if opcode[0] != 'equal')
+    errors_distance = sum(1 for opcode in opcodes if opcode[0] != 'equal')
+
+    # Exceptions diff
+
+    base_exceptions = base_data['exceptions']
+    race_exceptions = race_data['exceptions']
+
+    exceptions_diff = difflib.SequenceMatcher(None, base_exceptions, race_exceptions)
+    exceptions_opcodes = exceptions_diff.get_opcodes()
+    exceptions_opcodes_human = []
+
+    for opcode in exceptions_opcodes:
+        tag, i1, i2, j1, j2 = opcode
+
+        exceptions_opcodes_human.append({
+            'base': base_exceptions[i1:i2],
+            'tag': tag,
+            'race': race_exceptions[j1:j2]
+        })
+
+    exceptions_distance = sum(1 for opcode in exceptions_opcodes if opcode[0] != 'equal')
 
     # Race and Errors Diff
 
@@ -456,24 +498,38 @@ def compare_race(base_data, race_data, executor):
 
     html_state_match = base_data['html_state'] == race_data['html_state']
     visual_state_match = cimage.get('human', 'FAIL') == 'EXACT'
-    errors_diff_count = abs(len(base_data['errors']) - len(race_data['errors']))
+
+    # Low triggers
 
     classification = 'LOW'
     classification_details = None
 
-    if errors_diff_count > 0:
+    if not visual_state_match:
+        classification = 'LOW'
+        classification_details = 'Visual state mismatch'
+
+    # Medium triggers
+
+    # TODO this trigger should strong update some high triggers, e.g. if pending DOM timers exist
+    if errors_distance > 0:
         classification = 'NORMAL'
-        classification_details = 'Error count diff'
+        classification_details = 'Errors count diff'
+
+    if not html_state_match:
+        classification = 'NORMAL'
+        classification_details = 'HTML state mismatch'
+
+    # High triggers
+
+    if exceptions_distance > 0:
+        classification = 'HIGH'
+        classification_details = 'Exception count diff'
 
     if not visual_state_match and not html_state_match:
         classification = 'HIGH'
         classification_details = 'Visual and DOM state mismatch'
-    elif not html_state_match:
-        classification = 'NORMAL'
-        classification_details = 'HTML state mismatch'
-    elif not visual_state_match:
-        classification = 'LOW'
-        classification_details = 'Visual state mismatch'
+
+    # Low Triggers (strong update)
 
     if 'LATE_EVENT_ATTACH ' in race_data['er_classification_details']:
         classification = 'LOW'
@@ -485,16 +541,18 @@ def compare_race(base_data, race_data, executor):
 
 
     return {
-        'errors_diff_count': errors_diff_count,
+        'exceptions_diff': exceptions_opcodes,
+        'exceptions_diff_human': exceptions_opcodes_human,
+        'exceptions_diff_distance': exceptions_distance,
         'errors_diff': opcodes,
         'errors_diff_human': opcodes_human,
-        'errors_diff_distance': distance,
+        'errors_diff_distance': errors_distance,
         'zip_diff': zip_opcodes,
         'zip_diff_human': zip_opcodes_human,
         'zip_diff_has_unequal': unequal_seen,
         'html_state_match': html_state_match,
         'visual_state_match': cimage,
-        'is_equal': base_data['html_state'] == race_data['html_state'] and 'human' in cimage and cimage['human'] == 'EXACT' and distance == 0,
+        'is_equal': base_data['html_state'] == race_data['html_state'] and 'human' in cimage and cimage['human'] == 'EXACT' and errors_distance == 0 and exceptions_distance == 0,
         'r4_classification': classification,
         'r4_classification_details': classification_details
     }
@@ -544,20 +602,25 @@ def output_race_report(website, race, jinja, output_dir, input_dir):
         ))
 
 
-def init_race_index():
-    return []
+def output_race_index(website, parsed_races, er_log, jinja, output_dir, input_dir):
 
+    try:
+        os.mkdir(output_dir)
+    except OSError:
+        pass  # folder exists
 
-def append_race_index(race_index, race, base_data, race_data, comparison):
-    race_index.append({
-        'handle': race,
-        'base_data': base_data,
-        'race_data': race_data,
-        'comparison': comparison
-    })
+    for race in parsed_races:
+        output_race_report(website, race, jinja, output_dir, input_dir)
 
+    with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
-def output_race_index(website, output_dir, input_dir):
+        fp.write(jinja.get_template('race_index.html').render(
+            website=website,
+            parsed_races=parsed_races,
+            er_log=er_log
+        ))
+
+def output_website_index(website_index, output_dir, input_dir):
 
     jinja = Environment(loader=PackageLoader('templates', ''))
 
@@ -566,36 +629,6 @@ def output_race_index(website, output_dir, input_dir):
     except OSError:
         pass  # folder exists
 
-    for race in website['race_index']:
-        output_race_report(website['handle'], race, jinja, output_dir, input_dir)
-
-    with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
-
-        fp.write(jinja.get_template('race_index.html').render(
-            website=website
-        ))
-
-
-def init_website_index():
-    return []
-
-
-def append_website_index(website_index, website, er_log, race_index):
-    website_index.append({
-        'handle': website,
-        'race_index': race_index,
-        'er_log': er_log
-    })
-
-
-def output_website_index(website_index, jinja, output_dir, input_dir):
-
-    try:
-        os.mkdir(output_dir)
-    except OSError:
-        pass  # folder exists
-
-    website_statistics = []
     summary = {
         'race_result': {
             'equal': 0,
@@ -622,62 +655,126 @@ def output_website_index(website_index, jinja, output_dir, input_dir):
         'execution_time': 0,
     }
 
-    with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
-        for website in website_index:
-            website_dir = os.path.join(output_dir, website['handle'])
-            executor.submit(output_race_index, website, website_dir, input_dir)
+    items = []
 
-        executor.shutdown()
+    for item in website_index:
 
-    for website in website_index:
+        if item is None:
+            continue
 
-        result = {
-            'equal': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and race['comparison']['is_equal']]),
-            'diff': len([race for race in website['race_index'] if race['race_data']['result'] == 'FINISHED' and not race['comparison']['is_equal']]),
-            'timeout': len([race for race in website['race_index'] if race['race_data']['result'] == 'TIMEOUT']),
-            'error': len([race for race in website['race_index'] if race['race_data']['result'] == 'ERROR']),
-            'er_high': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'HIGH']),
-            'er_normal': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'NORMAL']),
-            'er_low': len([race for race in website['race_index'] if race['race_data']['er_classification'] == 'LOW']),
-            'er_unknown': len([race for race in website['race_index'] if race['race_data']['er_classification'] in ['UNKNOWN', 'PARSE_ERROR']]),
-            'r4_high': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'HIGH']),
-            'r4_normal': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'NORMAL']),
-            'r4_low': len([race for race in website['race_index'] if race['comparison']['r4_classification'] == 'LOW'])
-        }
+        summary['race_result']['equal'] += item['summary']['equal']
+        summary['race_result']['diff'] += item['summary']['diff']
+        summary['race_result']['timeout'] += item['summary']['timeout']
+        summary['race_result']['error'] += item['summary']['error']
 
-        website_statistics.append({
-            'handle': website['handle'],
-            'race_index': website['race_index'],
-            'er_log': website['er_log'],
-            'result': result
-        })
+        summary['execution_result']['total'] += item['er_log']['races_total']
+        summary['execution_result']['success'] += item['er_log']['races_success']
+        summary['execution_result']['failure'] += item['er_log']['races_failure']
 
-        summary['race_result']['equal'] += result['equal']
-        summary['race_result']['diff'] += result['diff']
-        summary['race_result']['timeout'] += result['timeout']
-        summary['race_result']['error'] += result['error']
+        summary['execution_time'] += item['er_log']['execution_time']
 
-        summary['execution_result']['total'] += website['er_log']['races_total']
-        summary['execution_result']['success'] += website['er_log']['races_success']
-        summary['execution_result']['failure'] += website['er_log']['races_failure']
+        summary['er_classification_result']['high'] += item['summary']['er_high']
+        summary['er_classification_result']['normal'] += item['summary']['er_normal']
+        summary['er_classification_result']['low'] += item['summary']['er_low']
+        summary['er_classification_result']['unknown'] += item['summary']['er_unknown']
+        summary['r4_classification_result']['high'] += item['summary']['r4_high']
+        summary['r4_classification_result']['normal'] += item['summary']['r4_normal']
+        summary['r4_classification_result']['low'] += item['summary']['r4_low']
 
-        summary['execution_time'] += website['er_log']['execution_time']
-
-        summary['er_classification_result']['high'] += result['er_high']
-        summary['er_classification_result']['normal'] += result['er_normal']
-        summary['er_classification_result']['low'] += result['er_low']
-        summary['er_classification_result']['unknown'] += result['er_unknown']
-        summary['r4_classification_result']['high'] += result['r4_high']
-        summary['r4_classification_result']['normal'] += result['r4_normal']
-        summary['r4_classification_result']['low'] += result['r4_low']
+        items.append(item)
 
     with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
         fp.write(jinja.get_template('index.html').render(
-            website_index=website_statistics,
+            website_index=items,
             summary=summary
         ))
 
+def process_race(website_dir, race, base_data, er_race_classifier):
+    race_data = parse_race(website_dir, race)
+    er_race_classifier.inject_classification(race_data)
+
+    comparison = compare_race(base_data, race_data)
+
+    return {
+        'handle': race,
+        'base_data': base_data,
+        'race_data': race_data,
+        'comparison': comparison
+    }
+
+
+def process(job):
+
+    website, analysis_dir, output_dir = job
+
+    print ("PROCESSING", website)
+
+    website_dir = os.path.join(analysis_dir, website)
+    parsed_races = []
+        
+    ## Get a list of races ##
+
+    races = os.listdir(website_dir)
+
+    try:
+        races.remove('base')
+        races.remove('record')
+    except ValueError:
+        print('Error, missing base or record directory in output dir for %s' % website)
+        return None
+            
+    ignore_files = ['runner', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
+
+    for ignore_file in ignore_files:
+        if ignore_file in races:
+            races.remove(ignore_file)
+
+    ## Parse each race ##
+
+    try:
+        base_data = parse_race(website_dir, 'base')
+    except RaceParseException:
+        print("Error parsing %s :: base" % website)
+        return None
+
+    er_race_classifier = ERRaceClassifier(website_dir)
+    er_log = parse_er_log(website_dir)                
+
+    for race in races:
+        try:
+            parsed_races.append(process_race(website_dir, race, base_data, er_race_classifier))
+        except RaceParseException:
+            print("Error parsing %s :: %s" % (website, race))
+
+    ## Generate HTML files ##
+
+    jinja = Environment(loader=PackageLoader('templates', ''))
+
+    website_output_dir = os.path.join(output_dir, website)
+    output_race_index(website, parsed_races, er_log, jinja, website_output_dir, analysis_dir)
+
+    ## End ##
+
+    summary = {
+        'equal': len([race for race in parsed_races if race['race_data']['result'] == 'FINISHED' and race['comparison']['is_equal']]),
+        'diff': len([race for race in parsed_races if race['race_data']['result'] == 'FINISHED' and not race['comparison']['is_equal']]),
+        'timeout': len([race for race in parsed_races if race['race_data']['result'] == 'TIMEOUT']),
+        'error': len([race for race in parsed_races if race['race_data']['result'] == 'ERROR']),
+        'er_high': len([race for race in parsed_races if race['race_data']['er_classification'] == 'HIGH']),
+        'er_normal': len([race for race in parsed_races if race['race_data']['er_classification'] == 'NORMAL']),
+        'er_low': len([race for race in parsed_races if race['race_data']['er_classification'] == 'LOW']),
+        'er_unknown': len([race for race in parsed_races if race['race_data']['er_classification'] in ['UNKNOWN', 'PARSE_ERROR']]),
+        'r4_high': len([race for race in parsed_races if race['comparison']['r4_classification'] == 'HIGH']),
+        'r4_normal': len([race for race in parsed_races if race['comparison']['r4_classification'] == 'NORMAL']),
+        'r4_low': len([race for race in parsed_races if race['comparison']['r4_classification'] == 'LOW'])
+    }
+
+    return {
+        'website': website,
+        'er_log': er_log,
+        'summary': summary
+    }
 
 def main():
 
@@ -689,61 +786,10 @@ def main():
         sys.exit(1)
 
     websites = os.listdir(analysis_dir)
-    website_index = init_website_index()
-
-    ignore_files = ['runner', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
-
-        for website in websites:
-
-            print ("PROCESSING", website)
-
-            website_dir = os.path.join(analysis_dir, website)
-
-            races = os.listdir(website_dir)
-            race_index = init_race_index()
-
-            try:
-                races.remove('base')
-                races.remove('record')
-            except ValueError:
-                print('Error, missing base or record directory in output dir for %s' % website)
-                continue
-
-            for ignore_file in ignore_files:
-                if ignore_file in races:
-                    races.remove(ignore_file)
-
-            try:
-                base_data = parse_race(website_dir, 'base')
-
-                er_race_classifier = ERRaceClassifier(website_dir)
-
-                for race in races:
-
-                    try:
-                        race_data = parse_race(website_dir, race)
-                        er_race_classifier.inject_classification(race_data)
-
-                        comparison = compare_race(base_data, race_data, executor)
-
-                        append_race_index(race_index, race, base_data, race_data, comparison)
-
-                    except RaceParseException:
-                        print("Error parsing %s :: %s" % (website, race))
-
-                er_log = parse_er_log(website_dir)
-                
-                append_website_index(website_index, website, er_log, race_index)
-
-            except RaceParseException:
-                print("Error parsing %s :: base" % website)
-
-        executor.shutdown()
-
-    jinja = Environment(loader=PackageLoader('templates', ''))
-    output_website_index(website_index, jinja, output_dir, analysis_dir)
+        website_index = executor.map(process, [(website, analysis_dir, output_dir) for website in websites])
+        output_website_index(website_index, output_dir, analysis_dir)
 
 if __name__ == '__main__':
     main()

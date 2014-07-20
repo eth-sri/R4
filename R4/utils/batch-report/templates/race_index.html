@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h2><a href="../index.html">R4</a>: {{ website.handle }}</h2>
+<h2><a href="../index.html">R4</a>: {{ website }}</h2>
 
  <!-- Nav tabs -->
 <ul class="nav nav-tabs">
@@ -17,7 +17,8 @@
     <table class="table">
         <tr>
             <th>Race</th>
-            <th>Distance</th>
+            <th>Errors</th>
+            <th>JS Exceptions</th>
             <th>HTML State Match</th>
             <th>Visual State Match</th>
             <th>Replay</th>
@@ -25,13 +26,16 @@
             <th>R4C</th>
         </tr>
 
-        {% for race in website.race_index %}
+        {% for race in parsed_races %}
         <tr>
             <td>
                 <a href="{{ race.handle }}.html">{{ race.handle }}</a>
             </td>
             <td class="{% if race.comparison.errors_diff_distance == 0 %}success{% else %}danger{% endif %}">
                 {{ race.comparison.errors_diff_distance }}
+            </td>
+            <td class="{% if race.comparison.exceptions_diff_distance == 0 %}success{% else %}danger{% endif %}">
+                {{ race.comparison.exceptions_diff_distance }}
             </td>
             <td class="{% if race.comparison.html_state_match %}success{% else %}danger{% endif %}">
                 {{ race.comparison.html_state_match }}
@@ -60,7 +64,7 @@
 
       <h3>Event Racer stdout</h3>
 
-      <pre>{{ website.er_log.stdout }}</pre>
+      <pre>{{ er_log.stdout }}</pre>
 
   </div>
 

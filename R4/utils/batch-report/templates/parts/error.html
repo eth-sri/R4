@@ -1,4 +1,4 @@
-{% if error.type == 'error' %}
+{% if error.type == 'error' or error.type == 'exception' %}
 <div class="well well-sm">
     <p>{{ error.module }}<br/><b>{{ error.description }}</b></p>
     <p><i>{{ error.details|replace("\n", "<br/>") }}</i></p>
