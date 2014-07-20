@@ -396,11 +396,18 @@ def compare_race(base_data, race_data):
 
     if not os.path.isfile(cimage_meta):
 
+        file1 = os.path.join(base_data['race_dir'], 'out.screenshot.png')
+        if not os.path.exists(file1):
+            file1 = os.path.join(base_data['race_dir'], 'screenshot.png')
+
+        file2 = os.path.join(race_data['race_dir'], 'out.screenshot.png')
+        if not os.path.exists(file2):
+            file2 = os.path.join(race_data['race_dir'], 'screenshot.png')
+
         match_type, distance = generate_comparison_file(
             file1,
             file2,
             os.path.join(race_data['race_dir'], 'comparison.png'))
-
 
         cimage = {
             'distance': float(distance),
@@ -413,15 +420,6 @@ def compare_race(base_data, race_data):
                 str(cimage['distance']),
                 cimage['match_type']
             ])
-
-        file1 = os.path.join(base_data['race_dir'], 'out.screenshot.png')
-        if not os.path.exists(file1):
-            file1 = os.path.join(base_data['race_dir'], 'screenshot.png')
-
-        file2 = os.path.join(race_data['race_dir'], 'out.screenshot.png')
-        if not os.path.exists(file2):
-            file2 = os.path.join(race_data['race_dir'], 'screenshot.png')
-
 
     else:
 
