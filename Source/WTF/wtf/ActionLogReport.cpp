@@ -73,9 +73,11 @@ void ActionLogFormatV(ActionLog::CommandType cmd, const char* format, va_list ap
     } else {
         stringId = wtfThreadData().variableSet()->addString(strspace);
     }
-    if (!wtfThreadData().actionLog()->logCommand(cmd, stringId) && strict_mode) {
+    if (!wtfThreadData().actionLog()->logCommand(cmd, stringId)) {
         fprintf(stderr, "Can't log command %s %s\n", ActionLog::CommandType_AsString(cmd), strspace);
-        CRASH();
+        if (strict_mode) {
+            CRASH();
+        }
     }
 
 //	printf("%s %s\n", ActionLog::CommandType_AsString(cmd), strspace);

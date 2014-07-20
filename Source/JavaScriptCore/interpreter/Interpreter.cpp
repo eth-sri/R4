@@ -1230,6 +1230,11 @@ JSValue Interpreter::execute(ProgramExecutable* program, CallFrame* callFrame, S
                     globalObject->methodTable()->put(globalObject, callFrame, JSONPPath[0].m_pathEntryName, JSONPValue, slot);
                 } else
                     globalObject->methodTable()->putDirectVirtual(globalObject, callFrame, JSONPPath[0].m_pathEntryName, JSONPValue, DontEnum | DontDelete);
+
+                // SRL log a field access to the global object
+                JSCellFieldAccess(ActionLog::READ_MEMORY, globalObject, JSONPPath[0].m_pathEntryName.ascii().data());
+                MemoryValue(callFrame, JSONPValue);
+
                 // var declarations return undefined
                 result = jsUndefined();
                 continue;
@@ -1247,14 +1252,30 @@ JSValue Interpreter::execute(ProgramExecutable* program, CallFrame* callFrame, S
                             goto failedJSONP;
                         }
                         baseObject = slot.getValue(callFrame, JSONPPath[i].m_pathEntryName);
+
+                        // SRL log a field access to the global object
+                        JSCellFieldAccess(ActionLog::READ_MEMORY, globalObject, JSONPPath[i].m_pathEntryName.ascii().data());
+                        MemoryValue(callFrame, baseObject);
                     } else
+                        // SRL log a field access
+                        FieldAccess(ActionLog::READ_MEMORY, baseObject, JSONPPath[i].m_pathEntryName.ascii().data());
                         baseObject = baseObject.get(callFrame, JSONPPath[i].m_pathEntryName);
+                        MemoryValue(callFrame, baseObject);
+
                     if (callFrame->hadException())
                         return jsUndefined();
                     continue;
                 }
                 case JSONPPathEntryTypeLookup: {
-                    baseObject = baseObject.get(callFrame, JSONPPath[i].m_pathIndex);
+                    // SRL: Log a JS array write.
+                    if (baseObject.isCell()) {
+                        ActionLogReportArrayRead(baseObject.asCell()->getCellIndex(), JSONPPath[i].m_pathIndex);
+                        baseObject = baseObject.get(callFrame, JSONPPath[i].m_pathIndex);
+                        MemoryValue(callFrame, baseObject);
+                    } else {
+                        baseObject = baseObject.get(callFrame, JSONPPath[i].m_pathIndex);
+                    }
+
                     if (callFrame->hadException())
                         return jsUndefined();
                     continue;
@@ -1267,7 +1288,11 @@ JSValue Interpreter::execute(ProgramExecutable* program, CallFrame* callFrame, S
             PutPropertySlot slot;
             switch (JSONPPath.last().m_type) {
             case JSONPPathEntryTypeCall: {
+                // SRL log a field access
+                FieldAccess(ActionLog::READ_MEMORY, baseObject, JSONPPath.last().m_pathEntryName.ascii().data());
                 JSValue function = baseObject.get(callFrame, JSONPPath.last().m_pathEntryName);
+                MemoryValue(callFrame, function);
+
                 if (callFrame->hadException())
                     return jsUndefined();
                 CallData callData;
@@ -1283,13 +1308,24 @@ JSValue Interpreter::execute(ProgramExecutable* program, CallFrame* callFrame, S
                 break;
             }
             case JSONPPathEntryTypeDot: {
+                // SRL log a field write
+                FieldAccess(ActionLog::WRITE_MEMORY, baseObject, JSONPPath.last().m_pathEntryName.ascii().data());
                 baseObject.put(callFrame, JSONPPath.last().m_pathEntryName, JSONPValue, slot);
+                MemoryValue(callFrame, JSONPValue);
+
                 if (callFrame->hadException())
                     return jsUndefined();
                 break;
             }
             case JSONPPathEntryTypeLookup: {
-                baseObject.putByIndex(callFrame, JSONPPath.last().m_pathIndex, JSONPValue, slot.isStrictMode());
+                // SRL log an array write
+                if (baseObject.isCell()) {
+                    ActionLogReportArrayWrite(baseObject.asCell()->getCellIndex(), JSONPPath.last().m_pathIndex);
+                    baseObject.putByIndex(callFrame, JSONPPath.last().m_pathIndex, JSONPValue, slot.isStrictMode());
+                    MemoryValue(callFrame, JSONPValue);
+                } else {
+                    baseObject.putByIndex(callFrame, JSONPPath.last().m_pathIndex, JSONPValue, slot.isStrictMode());
+                }
                 if (callFrame->hadException())
                     return jsUndefined();
                 break;
