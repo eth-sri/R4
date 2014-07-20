@@ -281,13 +281,12 @@ protected:
     typedef QPair<QNetworkReplyInitialSnapshot::NetworkSignal, QNetworkReplySnapshot*> QueuedSnapshot;
     QList<QueuedSnapshot> m_snapshotQueue;
 
-    QNetworkReplyInitialSnapshot* m_initialSnapshot;
-    QNetworkReplySnapshot* m_currentSnapshot;
-
-
     unsigned long m_sequenceNumber;
     bool m_nextSnapshotUpdateTimerRunning;
     Timer<QNetworkReplyControllable> m_nextSnapshotUpdateTimer;
+
+    QNetworkReplyInitialSnapshot* m_initialSnapshot;
+    QNetworkReplySnapshot* m_currentSnapshot;
 
     QNetworkReply* m_reply;
 

@@ -57,10 +57,14 @@ bool EventActionDescriptor::operator!=(const EventActionDescriptor& other) const
 
 std::string EventActionDescriptor::toString() const
 {
-    std::stringstream result;
-    result << m_category << "-" << m_type << "(" << m_params << ")";
+    if (m_full_cache.empty()) {
+        std::stringstream result;
+        result << m_category << "-" << m_type << "(" << m_params << ")";
 
-    return result.str();
+        m_full_cache = result.str();
+    }
+
+    return m_full_cache;
 }
 
 std::string EventActionDescriptor::serialize() const

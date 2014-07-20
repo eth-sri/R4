@@ -88,6 +88,8 @@ namespace WTF {
         std::string m_params;
 
         bool m_isNull;
+
+        mutable std::string m_full_cache;
     };
 
 }

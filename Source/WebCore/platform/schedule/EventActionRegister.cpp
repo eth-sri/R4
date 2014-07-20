@@ -52,6 +52,7 @@ EventActionRegister::EventActionRegister()
     : m_maps(new EventActionRegisterMaps)
     , m_isDispatching(false)
     , m_dispatchHistory(new EventActionSchedule())
+    , m_verbose(false)
 {
 }
 
@@ -117,7 +118,9 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
             HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
             ActionLogEventTriggered(l[0].object);
 
-            std::cout << "Running " << descriptor.toString() << std::endl; // DEBUG(WebERA)
+            if (m_verbose) {
+                std::cout << "Running " << descriptor.toString() << std::endl; // DEBUG(WebERA)
+            }
             bool found = (it2->function)(it2->object, descriptor);
 
             HBExitEventAction(found);
@@ -154,8 +157,9 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
         std::cerr << "Warning: multiple targets may fire with signature " << descriptorString << std::endl;
     }
 
-    std::cout << "Running " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
-
+    if (m_verbose) {
+        std::cout << "Running " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
+    }
     bool done = (l.front().function)(l.front().object, descriptor); // don't use the descriptor from this point on, it could be deleted
     ASSERT(done);
 
@@ -191,7 +195,9 @@ void EventActionRegister::enterImmediateEventAction(ActionLog::EventActionType t
 {
     WTF::EventActionId id = HBAllocateEventActionId();
 
-    std::cout << "Running[NOW] " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
+    if (m_verbose) {
+        std::cout << "Running[NOW] " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
+    }
 
     eventActionDispatchStart(id, descriptor);
     HBEnterEventAction(id, type);

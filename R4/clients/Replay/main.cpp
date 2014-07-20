@@ -147,6 +147,7 @@ void ReplayClientApplication::handleUserOptions()
                  << "[-timeout]"
                  << "[-out_dir]"
                  << "[-in_dir]"
+                 << "[-verbose]"
                  << "[-proxy URL:PORT]"
                  << "<URL> [<schedule>|<schedule> <log.network.data> <log.random.data> <log.time.data>]";
         std::exit(0);
@@ -174,6 +175,12 @@ void ReplayClientApplication::handleUserOptions()
     m_logNetworkPath = indir + "/log.network.data";
     m_logTimePath = indir + "/log.time.data";
     m_logRandomPath = indir + "/log.random.data";
+
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->setVerbose(false);
+    int verboseIndex = args.indexOf("-verbose");
+    if (verboseIndex != -1) {
+        WebCore::threadGlobalData().threadTimers().eventActionRegister()->setVerbose(true);
+    }
 
     int proxyUrlIndex = args.indexOf("-proxy");
     if (proxyUrlIndex != -1) {

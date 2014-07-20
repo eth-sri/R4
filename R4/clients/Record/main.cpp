@@ -168,12 +168,19 @@ void RecordClientApplication::handleUserOptions()
                  << "[-autoexplore-timeout]"
                  << "[-pre-autoexplore-timeout]"
                  << "[-hidewindow]"
+                 << "[-verbose]"
                  << "[-proxy URL:PORT]"
                  << "[-cookie KEY=VALUE]"
                  << "[-ignore-mouse-move]"
                  << "[-out_dir]"
                  << "URL";
         std::exit(0);
+    }
+
+    WebCore::threadGlobalData().threadTimers().eventActionRegister()->setVerbose(false);
+    int verboseIndex = args.indexOf("-verbose");
+    if (verboseIndex != -1) {
+        WebCore::threadGlobalData().threadTimers().eventActionRegister()->setVerbose(true);
     }
 
     int proxyUrlIndex = args.indexOf("-proxy");

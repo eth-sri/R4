@@ -106,6 +106,10 @@ public:
         }
     }
 
+    void setVerbose(bool v) {
+        m_verbose = v;
+    }
+
 private:
 
     void eventActionDispatchStart(WTF::EventActionId id, const WTF::EventActionDescriptor& descriptor)
@@ -131,6 +135,8 @@ private:
     bool m_isDispatching;
 
     EventActionSchedule* m_dispatchHistory;
+
+    bool m_verbose;
 };
 
 }  // namespace WebCore

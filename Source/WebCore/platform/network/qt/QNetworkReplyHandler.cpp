@@ -252,15 +252,9 @@ QByteArray QNetworkReplyInitialSnapshot::read(qint64 maxlen)
 QByteArray QNetworkReplyInitialSnapshot::peek(qint64 maxlen)
 {
     qint64 chunkSize = std::min(maxlen, m_stream.size() - m_streamPosition);
+    QByteArray result(m_stream.data()+m_streamPosition, chunkSize);
 
-    QByteArray chunk;
-    QByteArray::const_iterator it = m_stream.begin() + m_streamPosition;
-    for (int i = 0; i < chunkSize; i++) {
-        chunk.append((*it));
-        ++it;
-    }
-
-    return chunk;
+    return result;
 }
 
 void QNetworkReplyInitialSnapshot::serialize(QIODevice* stream) const

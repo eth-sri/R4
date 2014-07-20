@@ -54,6 +54,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     std::ifstream fp;
     fp.open(schedulePath.c_str());
     m_schedule = WebCore::EventActionSchedule::deserialize(fp);
+    m_schedule->reverse();
     fp.close();
 
     m_eventActionTimeoutTimer.setInterval(m_timeout_miliseconds); // an event action must be executed within x miliseconds
@@ -99,11 +100,11 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
         }
     }
 
-    bool success = tryExecuteEventActionDescriptor(eventActionRegister, m_schedule->first());
+    bool success = tryExecuteEventActionDescriptor(eventActionRegister, m_schedule->last());
 
     if (success) {
 
-        m_schedule->remove(0);
+        m_schedule->removeLast();
 
         m_skipAfterNextTry = false;
         m_eventActionTimeoutTimer.stop();
@@ -138,8 +139,8 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
         WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action skipped after timeout.", detail.str());
 
-        m_schedule_backlog.append(m_schedule->first());
-        m_schedule->remove(0);
+        m_schedule_backlog.append(m_schedule->last());
+        m_schedule->removeLast();
 
         return true; // Go to the next event action now
 
@@ -147,8 +148,9 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
 
     if (!m_eventActionTimeoutTimer.isActive()) {
 
-        WTF::EventActionDescriptor nextToSchedule = m_schedule->first().second;
-        std::string eventActionType = nextToSchedule.getType();
+        const WebCore::EventActionScheduleItem& item = m_schedule->last();
+        const WTF::EventActionDescriptor& nextToSchedule = item.second;
+        const std::string& eventActionType = nextToSchedule.getType();
 
         if (eventActionType == "DOMTimer") {
             // set timeout to match expected time to trigger the next DOMTimer
@@ -170,7 +172,7 @@ bool ReplayScheduler::tryExecuteEventActionDescriptor(
         const WebCore::EventActionScheduleItem& next)
 {
 
-    WTF::EventActionDescriptor nextToSchedule = next.second;
+    const WTF::EventActionDescriptor& nextToSchedule = next.second;
     WTF::EventActionId nextToScheduleId = next.first;
 
     // Detect relax non-determinism token and relax token. We assume that the first occurrence of a token
@@ -393,7 +395,7 @@ void ReplayScheduler::debugPrintTimers(std::ostream& out, WebCore::EventActionRe
 {
     out << "=========== TIMERS ===========" << std::endl;
     out << "RELAXED MODE: " << (m_mode == BEST_EFFORT ? "Yes" : "No") << std::endl;
-    out << "NEXT -> " << m_schedule->first().second.toString() << std::endl;
+    out << "NEXT -> " << m_schedule->last().second.toString() << std::endl;
     out << "QUEUE -> " << std::endl;
 
     eventActionRegister->debugPrintNames(out);
