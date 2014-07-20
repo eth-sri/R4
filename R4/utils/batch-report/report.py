@@ -124,6 +124,7 @@ def parse_race(base_dir, handle):
 
     errors = []
     exceptions = []
+    new_events = []
 
     try:
         fp = open(errors_file, 'rb')
@@ -157,6 +158,9 @@ def parse_race(base_dir, handle):
                     t = 'exception'
                 else:
                     continue
+
+            if 'Non-executed event action' in description:
+                new_events.append(details)
 
             container.append(HashableDict(
                 event_action_id=event_action_id,
@@ -198,6 +202,8 @@ def parse_race(base_dir, handle):
         schedule_file = os.path.join(handle_dir, 'schedule.data')        
 
     schedule = []
+    raceFirst = ""
+    raceSecond = ""
     
     with open(schedule_file, 'rb') as fp:
 
@@ -211,8 +217,27 @@ def parse_race(base_dir, handle):
             if '<relax>' in line or '<change>' in line:
                 event_action_id = -1
                 event_action_descriptor = line
+
+                # This is a hack,
+                # If se see <change>, then the next line should be saved as the first racing event
+                # and if we see  <relax>, then the next line should be saved as the second racing event.
+
+                if '<change>' in line:
+                    raceFirst = None
+                
+                if '<relax>' in line:
+                    raceSecond = None
+
             else:
                 event_action_id, event_action_descriptor = line.split(';', 1)
+
+                # If any race is marked as None, then we should update it now
+
+                if raceFirst is None:
+                    raceFirst = (event_action_id, event_action_descriptor)
+
+                if raceSecond is None:
+                    raceSecond = (event_action_id, event_action_descriptor)
 
             schedule.append(HashableDict(
                 event_action_id=event_action_id,
@@ -224,41 +249,38 @@ def parse_race(base_dir, handle):
     # ZIP ERRORS AND SCHEDULE
 
     zip_errors_schedule = []
-    errors_index = 0
-    exceptions_index = 0
-    schedule_index = 0
     current_event_action_id = None
 
-    while True:
+    buckets = {}
 
-        if current_event_action_id is None:
-            zip_errors_schedule.append(schedule[schedule_index])
+    for s in schedule:
+        if s['event_action_id'] == -1:
+            continue
 
-            current_event_action_id = zip_errors_schedule[-1]['event_action_id']
-            schedule_index += 1
+        bucket = buckets.get(s['event_action_id'], [])
+        bucket.append(s)
+        buckets[s['event_action_id']] = bucket
+        
+    for s in errors:
+        bucket = buckets.get(s['event_action_id'], [])
+        bucket.append(s)
+        buckets[s['event_action_id']] = bucket
 
-        elif errors_index < len(errors) and \
-                errors[errors_index]['event_action_id'] == current_event_action_id:
+    for s in exceptions:
+        bucket = buckets.get(s['event_action_id'], [])
+        bucket.append(s)
+        buckets[s['event_action_id']] = bucket
 
-            zip_errors_schedule.append(errors[errors_index])
+    for s in schedule:
+        if s['event_action_id'] == -1:
+            zip_errors_schedule.append(s)
+            continue
 
-            errors_index += 1
+        zip_errors_schedule.extend(buckets[s['event_action_id']])
+        del buckets[s['event_action_id']]
 
-        elif exceptions_index < len(exceptions) and \
-                exceptions[exceptions_index]['event_action_id'] == current_event_action_id:
-
-            zip_errors_schedule.append(exceptions[exceptions_index])
-
-            exceptions_index += 1
-
-        elif schedule_index < len(schedule):
-            zip_errors_schedule.append(schedule[schedule_index])
-
-            current_event_action_id = zip_errors_schedule[-1]['event_action_id']
-            schedule_index += 1
-
-        else:
-            break
+    for bucket in buckets:
+        zip_errors_schedule.extend(bucket)
 
     return {
         'handle': handle,
@@ -269,7 +291,10 @@ def parse_race(base_dir, handle):
         'result': result_match.group(1) if result_match is not None else 'ERROR',
         'html_state': state_match.group(1),
         'race_dir': handle_dir,
-        'origin': origin
+        'origin': origin,
+        'raceFirst': raceFirst,
+        'raceSecond': raceSecond,
+        'new_events': new_events
     }
 
 
@@ -510,7 +535,6 @@ def compare_race(base_data, race_data):
 
     # Medium triggers
 
-    # TODO this trigger should strong update some high triggers, e.g. if pending DOM timers exist
     if errors_distance > 0:
         classification = 'NORMAL'
         classification_details = 'Errors count diff'
@@ -529,6 +553,19 @@ def compare_race(base_data, race_data):
         classification = 'HIGH'
         classification_details = 'Visual and DOM state mismatch'
 
+    # Medium Triggers (strong update)
+
+    if not visual_state_match and not html_state_match:
+
+        # Unfinished business heuristic
+        # If we have pending events we have a strong indication that the race only delayed some behaviour
+        race_first_id, race_first_descriptor = race_data['raceFirst']
+        race_first_parts = race_first_descriptor.split(',')
+
+        if len(race_data['new_events']) > 0:
+            classification = 'NORMAL'
+            classification_details = 'PENDING_EVENTS' 
+
     # Low Triggers (strong update)
 
     if 'LATE_EVENT_ATTACH ' in race_data['er_classification_details']:
@@ -539,6 +576,37 @@ def compare_race(base_data, race_data):
         classification = 'LOW'
         classification_details = 'COOKIE_OR_CLASSNAME'
 
+    # Ad-hoc sync heuristic
+    # If a DOM timer is swapped in the conflict, and a continuation of that DOM timer appears as a new event,
+    # then we have an indication of a ad-hoc synchronisation (DOM timer reading a memory location, until 
+    # the memory location changes and the DOM timer reacts.
+
+    race_first_id, race_first_descriptor = race_data['raceFirst']
+    race_first_parts = race_first_descriptor.split(',')
+
+    for new_event in race_data['new_events']:
+
+        # race_first_descriptor would be 
+        # 1-DOMTimer(<some url>,x,y,z,w,q)
+
+        # A new DOM timer (which is a continuation of race_first) would be
+        # 1-DOMTimer(<some url>,x,y,z,<race_first_id>,q) or
+        # 1-DOMTimer(<some url>,x,y,z,w,q+1)
+
+        new_parts = new_event.replace(')', ',').split(',')
+
+        if len(new_parts) < 4 or len(race_first_parts) < 4:
+            continue
+
+        #print(race_first_id, race_first_descriptor, new_event, "\nPART1",  ','.join(race_first_parts[:-3]), "\nPART2", ','.join(new_parts[:-3]), "\nCOMPARE",  ','.join(race_first_parts[:-3]) == ','.join(new_parts[:-3]), "\nHEU1", new_parts[-3] == race_first_id and new_parts[-2] == race_first_parts[-2], "\nHEU2",                     (new_parts[-3] == race_first_parts[-3] and int(new_parts[-2]) == int(race_first_parts[-2]+1)))
+
+        if ','.join(race_first_parts[:-3]) == ','.join(new_parts[:-3]): 
+
+            if (new_parts[-3] == race_first_id and new_parts[-2] == race_first_parts[-2]) or \
+                    (new_parts[-3] == race_first_parts[-3] and int(new_parts[-2]) == int(race_first_parts[-2]+1)):
+
+                classification = 'LOW'
+                classification_details = 'DOM_TIMER_AD_HOC_SYNC'
 
     return {
         'exceptions_diff': exceptions_opcodes,
