@@ -44,18 +44,18 @@ do
     mkdir -p $OUTRUNNER
 
     if [[ $VERBOSE -eq 1 ]]; then
-        echo "> $RECORD_BIN -out_dir $OUTRECORD -autoexplore -autoexplore-timeout 10 $PROTOCOL://$site > $OUTRECORD/out.log 2> $OUTRECORD/out.log"
+        echo "> $RECORD_BIN -out_dir $OUTRECORD -hidewindow -autoexplore -autoexplore-timeout 10 $PROTOCOL://$site > $OUTRECORD/out.log 2> $OUTRECORD/out.log"
     fi
 
-    $RECORD_BIN -out_dir $OUTRECORD -autoexplore -autoexplore-timeout 10 $PROTOCOL://$site > $OUTRECORD/out.log 2> $OUTRECORD/out.log
+    $RECORD_BIN -out_dir $OUTRECORD -hidewindow -autoexplore -autoexplore-timeout 10 $PROTOCOL://$site > $OUTRECORD/out.log 2> $OUTRECORD/out.log
 
     if [[ $? == 0 ]] ; then
 
         if [[ $VERBOSE -eq 1 ]]; then
-            echo "> /usr/bin/time -p $ER_BIN -in_dir=$OUTRECORD/ -in_schedule_file=$OUTRECORD/schedule.data -tmp_new_schedule_file=$OUTDIR/new_schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_network_log=$OUTDIR/out.log.network.data  -tmp_time_log=$OUTDIR/out.log.time.data  -tmp_random_log=$OUTDIR/out.log.random.data  -tmp_status_log=$OUTDIR/out.status.data -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/out.schedule.data -tmp_stdout=$OUTDIR/stdout.txt -tmp_er_log_file=$OUTDIR/out.ER_actionlog --site=$PROTOCOL://$site --replay_command=\"$REPLAY_BIN -out_dir $OUTDIR -timeout 60 -in_dir %s/ \"%s\" %s\" &> $OUTRUNNER/stdout.txt"
+            echo "> /usr/bin/time -p $ER_BIN -in_dir=$OUTRECORD/ -in_schedule_file=$OUTRECORD/schedule.data -tmp_new_schedule_file=$OUTDIR/new_schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_network_log=$OUTDIR/out.log.network.data  -tmp_time_log=$OUTDIR/out.log.time.data  -tmp_random_log=$OUTDIR/out.log.random.data  -tmp_status_log=$OUTDIR/out.status.data -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/out.schedule.data -tmp_stdout=$OUTDIR/stdout.txt -tmp_er_log_file=$OUTDIR/out.ER_actionlog --site=$PROTOCOL://$site --replay_command=\"$REPLAY_BIN -hidewindow -out_dir $OUTDIR -timeout 60 -in_dir %s/ \"%s\" %s\" &> $OUTRUNNER/stdout.txt"
         fi
 
-        /usr/bin/time -p $ER_BIN -in_dir=$OUTRECORD/ -in_schedule_file=$OUTRECORD/schedule.data -tmp_new_schedule_file=$OUTDIR/new_schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_network_log=$OUTDIR/out.log.network.data -tmp_time_log=$OUTDIR/out.log.time.data -tmp_random_log=$OUTDIR/out.log.random.data -tmp_status_log=$OUTDIR/out.status.data -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/out.schedule.data -tmp_stdout=$OUTDIR/stdout.txt -tmp_er_log_file=$OUTDIR/out.ER_actionlog --site=$PROTOCOL://$site --replay_command="$REPLAY_BIN -out_dir $OUTDIR -timeout 60 -in_dir %s/ \"%s\" %s" &> $OUTRUNNER/stdout.txt
+        /usr/bin/time -p $ER_BIN -in_dir=$OUTRECORD/ -in_schedule_file=$OUTRECORD/schedule.data -tmp_new_schedule_file=$OUTDIR/new_schedule.data -out_dir=$OUTDIR -tmp_error_log=$OUTDIR/out.errors.log -tmp_network_log=$OUTDIR/out.log.network.data -tmp_time_log=$OUTDIR/out.log.time.data -tmp_random_log=$OUTDIR/out.log.random.data -tmp_status_log=$OUTDIR/out.status.data -tmp_png_file=$OUTDIR/out.screenshot.png -tmp_schedule_file=$OUTDIR/out.schedule.data -tmp_stdout=$OUTDIR/stdout.txt -tmp_er_log_file=$OUTDIR/out.ER_actionlog --site=$PROTOCOL://$site --replay_command="$REPLAY_BIN -hidewindow -out_dir $OUTDIR -timeout 60 -in_dir %s/ \"%s\" %s" &> $OUTRUNNER/stdout.txt
 
         if [[ ! $? == 0 ]] ; then
             echo "Search errored out, see $OUTRUNNER/stdout.txt"
