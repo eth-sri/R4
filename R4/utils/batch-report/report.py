@@ -324,8 +324,8 @@ def parse_er_log(base_dir):
 
         if result_match is not None:
             result['races_total'] = int(result_match.group(1))
-            result['races_success'] = int(result_match.group(3))
-            result['races_failure'] = int(result_match.group(2)) - result['races_success']
+            result['races_success'] = int(result_match.group(3))-1
+            result['races_failure'] = int(result_match.group(2)) - int(result_match.group(3))
         else:
             print('FAIL')
             print(stdout)
@@ -792,9 +792,7 @@ def process(job):
             
     ignore_files = ['runner', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
-    for ignore_file in ignore_files:
-        if ignore_file in races:
-            races.remove(ignore_file)
+    races = [race for race in races if not race.startswith('_') and not race in ignore_files]
 
     ## Parse each race ##
 
