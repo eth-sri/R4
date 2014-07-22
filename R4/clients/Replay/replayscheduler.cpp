@@ -216,7 +216,10 @@ bool ReplayScheduler::tryExecuteEventActionDescriptor(
 
     // Relaxed non-deterministic execution
 
-    if (!found && (m_skipAfterNextTry || m_mode == BEST_EFFORT_NOND)) {
+    if (!found && (m_skipAfterNextTry && m_mode == BEST_EFFORT_NOND)) {
+        // Important that we only do fuzzy matching just before giving up...
+        // If we always fuzzy match, then we could decide to fuzzy match with a bad candidate, while a better candidate would
+        // appear if we waited for skipAfterNextTry
 
         // Try to do a fuzzy match
 
