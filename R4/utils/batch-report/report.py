@@ -323,8 +323,8 @@ def parse_er_log(base_dir):
         result_match = re.compile('Tried ([0-9]+) schedules. ([0-9]+) generated, ([0-9]+)').search(stdout)
 
         if result_match is not None:
-            result['races_total'] = int(result_match.group(1))
-            result['races_success'] = int(result_match.group(3))-1
+            result['races_total'] = int(result_match.group(2))
+            result['races_success'] = int(result_match.group(3))
             result['races_failure'] = int(result_match.group(2)) - int(result_match.group(3))
         else:
             print('FAIL')
