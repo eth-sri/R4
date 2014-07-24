@@ -171,7 +171,6 @@ def parse_race(base_dir, handle):
                 _ignore_properties=['event_action_id', 'type']
             ))
 
-
     # STDOUT
 
     stdout_file = os.path.join(handle_dir, 'stdout.txt')
@@ -276,11 +275,14 @@ def parse_race(base_dir, handle):
             zip_errors_schedule.append(s)
             continue
 
-        zip_errors_schedule.extend(buckets[s['event_action_id']])
-        del buckets[s['event_action_id']]
+        try:
+            zip_errors_schedule.extend(buckets[s['event_action_id']])
+            del buckets[s['event_action_id']]
+        except:
+            print("Error applying event action", s['event_action_id'], "to zipped schedule")
 
     for bucket in buckets:
-        zip_errors_schedule.extend(bucket)
+        zip_errors_schedule.extend(buckets[bucket])
 
     return {
         'handle': handle,
@@ -437,12 +439,13 @@ def compare_race(base_data, race_data):
         # Remove "new event action" error at the end of error reports if they both have it
         # Often, this is not an error, just a side effect of the system, and this side effect
         # is different from execution to execution. Filter it away
-        if len(base_list) > 0 and len(race_list) > 0 and \
-            base_list[-1]['type'] == 'error' and race_list[-1]['type'] == 'error' and \
-            'event action observed' in base_list[-1]['description'] and \
-            'event action observed' in race_list[-1]['description']:
+        if len(base_list) > 0 and len(race_list) > 0:
 
-            return base_list[:-1], race_list[:-1]
+            if base_list[-1]['type'] == 'error' and race_list[-1]['type'] == 'error' and \
+               'event action observed' in base_list[-1]['description'] and \
+               'event action observed' in race_list[-1]['description']:
+
+                return base_list[:-1], race_list[:-1]
 
         return base_list, race_list
 
@@ -757,6 +760,7 @@ def output_website_index(website_index, output_dir, input_dir):
         ))
 
 def process_race(website_dir, race, base_data, er_race_classifier):
+
     race_data = parse_race(website_dir, race)
     er_race_classifier.inject_classification(race_data)
 
@@ -853,6 +857,7 @@ def main():
 
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
         website_index = executor.map(process, [(website, analysis_dir, output_dir) for website in websites])
+        #website_index = [process([website, analysis_dir, output_dir]) for website in websites]
         output_website_index(website_index, output_dir, analysis_dir)
 
 if __name__ == '__main__':

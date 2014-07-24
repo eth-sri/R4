@@ -37,11 +37,13 @@ EventActionDescriptor::EventActionDescriptor(EventActionCategory category, const
     , m_type(type)
     , m_params(params)
     , m_isNull(false)
+    , m_patched(false)
 {
 }
 
 EventActionDescriptor::EventActionDescriptor()
     : m_isNull(true)
+    , m_patched(false)
 {
 }
 
@@ -65,6 +67,10 @@ std::string EventActionDescriptor::toString() const
     }
 
     return m_full_cache;
+}
+
+std::string EventActionDescriptor::toUnpatchedString() const {
+    return isPatched() ? m_unpatchedString : toString();
 }
 
 std::string EventActionDescriptor::serialize() const
@@ -108,6 +114,33 @@ std::string EventActionDescriptor::getParameter(unsigned int number) const
     }
 
     return m_params.substr(start, end-start);
+}
+
+void EventActionDescriptor::patchParameter(unsigned int number, const std::string& value) const
+{
+    m_unpatchedString = toString();
+
+    size_t start = 0; // start index of param
+    size_t end = m_params.find(','); // index just after the param
+
+    if (end == std::string::npos) {
+       end = m_params.size(); // special case if there is only one argument
+    }
+
+    for (int i = 0; i < number; i++) {
+        assert(end != m_params.size()); // indexing into non-existing param
+
+        start = end + 1; // end points at the "," just before the start position
+        end = m_params.find(',', start);
+
+        if (end == std::string::npos) {
+           end = m_params.size();
+        }
+    }
+
+    m_params = m_params.substr(0, start) + value + m_params.substr(end);
+    m_patched = true;
+    m_full_cache = std::string();
 }
 
 std::string EventActionDescriptor::escapeParam(const std::string& param)

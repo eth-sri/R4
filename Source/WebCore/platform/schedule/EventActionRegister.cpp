@@ -89,10 +89,10 @@ void EventActionRegister::deregisterEventActionHandler(const WTF::EventActionDes
 }
 
 bool EventActionRegister::runEventAction(const WTF::EventActionDescriptor& descriptor) {
-        runEventAction(-1, descriptor);
+        runEventAction(-1, -1, descriptor);
 }
 
-bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const WTF::EventActionDescriptor& descriptor) {
+bool EventActionRegister::runEventAction(WTF::EventActionId newEventActionId, WTF::EventActionId originalEventActionId, const WTF::EventActionDescriptor& descriptor) {
 
     std::string descriptorString = descriptor.toString();
 
@@ -112,10 +112,10 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
             // Note, it is a bit undefined how well the happens before relations are applied if we
             // abort an event action. Thus, HB relations should not be used if event action providers are used.
 
-            WTF::EventActionId id = eventActionId == -1 ? HBAllocateEventActionId() : eventActionId;
+            WTF::EventActionId eventActionId = newEventActionId == -1 ? HBAllocateEventActionId() : newEventActionId;
 
-            eventActionDispatchStart(id, descriptor);
-            HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
+            eventActionDispatchStart(eventActionId, originalEventActionId, descriptor);
+            HBEnterEventAction(eventActionId, toActionLogType(descriptor.getCategory()));
             ActionLogEventTriggered(l[0].object);
 
             if (m_verbose) {
@@ -124,7 +124,7 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
             bool found = (it2->function)(it2->object, descriptor);
 
             HBExitEventAction(found);
-            eventActionDispatchEnd(found);
+            eventActionDispatchEnd(found, originalEventActionId);
 
             if (found) {
                 return true; // event handled
@@ -145,9 +145,9 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
 
     // Pre-Execution
 
-    WTF::EventActionId id = eventActionId == -1 ? HBAllocateEventActionId() : eventActionId;
+    WTF::EventActionId id = newEventActionId == -1 ? HBAllocateEventActionId() : newEventActionId;
 
-    eventActionDispatchStart(id, descriptor);
+    eventActionDispatchStart(id, originalEventActionId, descriptor);
     HBEnterEventAction(id, toActionLogType(descriptor.getCategory()));
     ActionLogEventTriggered(l.front().object);
 
@@ -174,7 +174,7 @@ bool EventActionRegister::runEventAction(WTF::EventActionId eventActionId, const
     // Post-Execution
 
     HBExitEventAction(true);
-    eventActionDispatchEnd(true);
+    eventActionDispatchEnd(true, originalEventActionId);
 
     return true;
 }
@@ -199,14 +199,14 @@ void EventActionRegister::enterImmediateEventAction(ActionLog::EventActionType t
         std::cout << "Running[NOW] " << id << " : " << descriptor.toString() << std::endl; // DEBUG(WebERA)
     }
 
-    eventActionDispatchStart(id, descriptor);
+    eventActionDispatchStart(id, -1, descriptor);
     HBEnterEventAction(id, type);
 }
 
 void EventActionRegister::exitImmediateEventAction()
 {
     HBExitEventAction(true);
-    eventActionDispatchEnd(true);
+    eventActionDispatchEnd(true, -1);
 }
 
 void EventActionRegister::debugPrintNames(std::ostream& out) const

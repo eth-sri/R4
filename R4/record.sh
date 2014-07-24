@@ -5,7 +5,7 @@ set -ue -o pipefail
 # INPUT HANDLING
 
 if (( ! $# > 0 )); then
-    echo "Usage: <website URL> <base dir> [--verbose] [--auto] [--cookie key=value]*"  
+    echo "Usage: <website URL> <base dir> [--verbose] [--auto] [--cookie key=value]* [--move-mouse]"  
     echo "Outputs result of recording to <base dir>/record"
     exit 1
 fi
@@ -20,6 +20,7 @@ PROTOCOL=http
 VERBOSE=0
 AUTO=0
 COOKIESCMD=""
+MOVEMOUSE=0
 
 while [[ $# > 0 ]]
 do
@@ -27,6 +28,10 @@ do
 case $1 in
     --auto)
         AUTO=1
+        shift
+    ;;
+    --move-mouse)
+        MOVEMOUSE=1
         shift
     ;;
     --verbose)
@@ -61,7 +66,11 @@ fi
 if [[ $AUTO -eq 1 ]]; then
     AUTOCMD="-hidewindow -autoexplore -autoexplore-timeout 10"
 else
-    AUTOCMD="-ignore-mouse-move"
+    if [[ $MOVEMOUSE -eq 1 ]]; then
+        AUTOCMD=""
+    else
+        AUTOCMD="-ignore-mouse-move"
+    fi
 fi
 
 echo "Running "  $PROTOCOL $URL " @ " $OUTDIR

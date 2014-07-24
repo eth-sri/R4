@@ -149,6 +149,8 @@ private:
     unsigned int m_timeout_miliseconds;
     unsigned int m_timeout_aggressive_miliseconds;
 
+    WTF::EventActionId m_nextEventActionId;
+
 private slots:
     void slEventActionTimeout();
 

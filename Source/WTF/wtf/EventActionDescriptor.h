@@ -69,11 +69,17 @@ namespace WTF {
 
         // Inspecting the params
         std::string getParameter(unsigned int number) const; // TODO this is a bit of a hack
+        void patchParameter(unsigned int number, const std::string& value) const;
+
+        bool isPatched() const {
+            return m_patched;
+        }
 
         bool operator==(const EventActionDescriptor& other) const;
         bool operator!=(const EventActionDescriptor& other) const;
 
         std::string toString() const;
+        std::string toUnpatchedString() const;
 
         std::string serialize() const;
         static EventActionDescriptor deserialize(const std::string&);
@@ -85,11 +91,13 @@ namespace WTF {
     private:
         EventActionCategory m_category;
         std::string m_type;
-        std::string m_params;
+        mutable std::string m_params;
 
         bool m_isNull;
+        mutable bool m_patched;
 
         mutable std::string m_full_cache;
+        mutable std::string m_unpatchedString;
     };
 
 }

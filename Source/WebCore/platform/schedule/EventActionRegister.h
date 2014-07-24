@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <ostream>
+#include <map>
 
 #include "wtf/EventActionDescriptor.h"
 #include "wtf/EventActionSchedule.h"
@@ -51,7 +52,7 @@ public:
 
     // Attempts to execute an event action. Returns true on success.
     bool runEventAction(const WTF::EventActionDescriptor& descriptor);
-    bool runEventAction(WTF::EventActionId forceEventActionId, const WTF::EventActionDescriptor& descriptor);
+    bool runEventAction(WTF::EventActionId newEventActionId, WTF::EventActionId originalEventActionId, const WTF::EventActionDescriptor& descriptor);
 
     // Ghost operations, used to simulate the execution of certain un-schedulable event actions
     // TODO(WebERA) Ghost operations are disabled, and have no effect. Thus, event actions which use this feature are not detected
@@ -110,23 +111,36 @@ public:
         m_verbose = v;
     }
 
+    WTF::EventActionId translateOldIdToNew(WTF::EventActionId oldId) {
+        std::map<int, int>::const_iterator it = m_originalToNewEventActionIdMap.find(oldId);
+
+        if (it == m_originalToNewEventActionIdMap.end()) {
+            return oldId;
+        }
+
+        return it->second;
+    }
+
 private:
 
-    void eventActionDispatchStart(WTF::EventActionId id, const WTF::EventActionDescriptor& descriptor)
+    void eventActionDispatchStart(WTF::EventActionId id, WTF::EventActionId originalId, const WTF::EventActionDescriptor& descriptor)
     {
         ASSERT(!m_isDispatching);
+
+        m_originalToNewEventActionIdMap.insert(std::pair<int, int>(originalId, id));
 
         m_dispatchHistory->append(EventActionScheduleItem(id, descriptor));
         m_isDispatching = true;
     }
 
-    void eventActionDispatchEnd(bool commit)
+    void eventActionDispatchEnd(bool commit, WTF::EventActionId originalId)
     {
         ASSERT(m_isDispatching);
 
         m_isDispatching = false;
 
         if (!commit) {
+            m_originalToNewEventActionIdMap.erase(originalId);
             m_dispatchHistory->removeLast();
         }
     }
@@ -137,6 +151,8 @@ private:
     EventActionSchedule* m_dispatchHistory;
 
     bool m_verbose;
+
+    std::map<int, int> m_originalToNewEventActionIdMap;
 };
 
 }  // namespace WebCore

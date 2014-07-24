@@ -32,6 +32,7 @@
 #include "platform/ThreadGlobalData.h"
 #include "platform/ThreadTimers.h"
 #include "wtf/ActionLogReport.h"
+#include "WebCore/platform/EventActionHappensBeforeReport.h"
 
 #include "fuzzyurl.h"
 
@@ -50,6 +51,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_timeout_use_aggressive(false)
     , m_timeout_miliseconds(20000)
     , m_timeout_aggressive_miliseconds(500)
+    , m_nextEventActionId(WebCore::HBAllocateEventActionId())
 {
     std::ifstream fp;
     fp.open(schedulePath.c_str());
@@ -103,7 +105,6 @@ bool ReplayScheduler::executeDelayedEventAction(WebCore::EventActionRegister* ev
     bool success = tryExecuteEventActionDescriptor(eventActionRegister, m_schedule->last());
 
     if (success) {
-
         m_schedule->removeLast();
 
         m_skipAfterNextTry = false;
@@ -198,18 +199,30 @@ bool ReplayScheduler::tryExecuteEventActionDescriptor(
         return true;
     }
 
-    // Update the warning collecter such that all warnings are associated with this event action
+    std::string eventActionType = nextToSchedule.getType();
 
-    WTF::WarningCollectorSetCurrentEventAction(nextToScheduleId);
+    WTF::WarningCollectorSetCurrentEventAction(m_nextEventActionId);
+
+    // Patch event action descriptor if it references old event action IDs
+    // For now, only DOM timer (index 4) use this feature
+
+    if (eventActionType == "DOMTimer" && !nextToSchedule.isPatched()) {
+        int oldId = atoi(nextToSchedule.getParameter(4).c_str());
+
+        std::stringstream param;
+        param << eventActionRegister->translateOldIdToNew(oldId);
+
+        std::cout << "Translating " << nextToSchedule.toString() << " from " << oldId << " to " << param.str() << std::endl;
+
+        nextToSchedule.patchParameter(4, param.str());
+    }
 
     // Exact execution
 
-    std::string eventActionType = nextToSchedule.getType();
+    m_timeProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toUnpatchedString()));
+    m_randomProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toUnpatchedString()));
 
-    m_timeProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
-    m_randomProvider->setCurrentDescriptorString(QString::fromStdString(nextToSchedule.toString()));
-
-    bool found = eventActionRegister->runEventAction(nextToScheduleId, nextToSchedule);
+    bool found = eventActionRegister->runEventAction(m_nextEventActionId, nextToScheduleId, nextToSchedule);
 
     m_timeProvider->unsetCurrentDescriptorString();
     m_randomProvider->unsetCurrentDescriptorString();
@@ -316,10 +329,10 @@ bool ReplayScheduler::tryExecuteEventActionDescriptor(
                 std::cout << "Fuzzy match: " << details.str() << std::endl;
                 WTF::WarningCollectorReport("WEBERA_SCHEDULER", "Event action fuzzy matched in best effort mode.", details.str());
 
-                m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
-                m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toString()));
+                m_timeProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toUnpatchedString()));
+                m_randomProvider->setCurrentDescriptorString(QString::fromStdString(bestDescriptor.toUnpatchedString()));
 
-                found = eventActionRegister->runEventAction(nextToScheduleId, bestDescriptor);
+                found = eventActionRegister->runEventAction(m_nextEventActionId, nextToScheduleId, bestDescriptor);
 
                 m_timeProvider->unsetCurrentDescriptorString();
                 m_randomProvider->unsetCurrentDescriptorString();
@@ -327,6 +340,10 @@ bool ReplayScheduler::tryExecuteEventActionDescriptor(
         }
 
     } // End fuzzy non-deterministic match
+
+    if (found) {
+        m_nextEventActionId = WebCore::HBAllocateEventActionId();
+    }
 
     return found;
 
