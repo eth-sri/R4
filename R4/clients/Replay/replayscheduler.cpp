@@ -38,7 +38,7 @@
 
 #include "replayscheduler.h"
 
-ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyControllableFactoryReplay* networkProvider, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider)
+ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyControllableFactoryReplay* networkProvider, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider, int schedulerTimeout)
     : QObject(NULL)
     , Scheduler()
     , m_networkProvider(networkProvider)
@@ -49,7 +49,7 @@ ReplayScheduler::ReplayScheduler(const std::string& schedulePath, QNetworkReplyC
     , m_doneEmitted(false)
     , m_skipAfterNextTry(false)
     , m_timeout_use_aggressive(false)
-    , m_timeout_miliseconds(20000)
+    , m_timeout_miliseconds(schedulerTimeout)
     , m_timeout_aggressive_miliseconds(500)
     , m_nextEventActionId(WebCore::HBAllocateEventActionId())
 {

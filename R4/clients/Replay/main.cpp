@@ -81,6 +81,8 @@ private:
     bool m_isStopping;
     bool m_showWindow;
 
+    int m_schedulerTimeout;
+
 public slots:
     void slSchedulerDone();
     void slTimeout();
@@ -95,6 +97,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
     , m_outdir("/tmp/")
     , m_isStopping(false)
     , m_showWindow(true)
+    , m_schedulerTimeout(20000)
 {
 
     handleUserOptions();
@@ -118,7 +121,7 @@ ReplayClientApplication::ReplayClientApplication(int& argc, char** argv)
 
     // Scheduler
 
-    m_scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_network, m_timeProvider, m_randomProvider);
+    m_scheduler = new ReplayScheduler(m_schedulePath.toStdString(), m_network, m_timeProvider, m_randomProvider, m_schedulerTimeout);
     QObject::connect(m_scheduler, SIGNAL(sigDone()), this, SLOT(slSchedulerDone()));
 
     WebCore::ThreadTimers::setScheduler(m_scheduler);
@@ -148,6 +151,7 @@ void ReplayClientApplication::handleUserOptions()
                  << "[-out_dir]"
                  << "[-in_dir]"
                  << "[-verbose]"
+                 << "[-scheduler_timeout_ms]"
                  << "[-proxy URL:PORT]"
                  << "<URL> [<schedule>|<schedule> <log.network.data> <log.random.data> <log.time.data>]";
         std::exit(0);
@@ -201,6 +205,11 @@ void ReplayClientApplication::handleUserOptions()
     int timeoutIndex = args.indexOf("-timeout");
     if (timeoutIndex != -1) {
         QTimer::singleShot(takeOptionValue(&args, timeoutIndex).toInt() * 1000, this, SLOT(slTimeout()));
+    }
+
+    int schedulerTimeoutIndex = args.indexOf("-scheduler_timeout_ms");
+    if (schedulerTimeoutIndex != -1) {
+        m_schedulerTimeout = takeOptionValue(&args, schedulerTimeoutIndex).toInt();
     }
 
     int lastArg = args.lastIndexOf(QRegExp("^-.*"));

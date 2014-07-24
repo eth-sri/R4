@@ -57,7 +57,7 @@ class ReplayScheduler : public QObject, public WebCore::Scheduler
     Q_OBJECT
 
 public:
-    ReplayScheduler(const std::string& schedulePath, QNetworkReplyControllableFactoryReplay* networkProvider, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider);
+    ReplayScheduler(const std::string& schedulePath, QNetworkReplyControllableFactoryReplay* networkProvider, TimeProviderReplay* timeProvider, RandomProviderReplay* randomProvider, int schedulerTimeout);
     ~ReplayScheduler();
 
     void eventActionScheduled(const WTF::EventActionDescriptor& descriptor, WebCore::EventActionRegister* eventActionRegister);

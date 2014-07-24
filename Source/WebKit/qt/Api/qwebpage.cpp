@@ -2552,6 +2552,8 @@ bool QWebPage::javaScriptPrompt(QWebFrame *frame, const QString& msg, const QStr
 */
 bool QWebPage::shouldInterruptJavaScript()
 {
+    return false;
+
 #ifdef QT_NO_MESSAGEBOX
     return false;
 #else
