@@ -54,14 +54,8 @@ void ActionLogScopeEnd() {
 }
 
 void ActionLogFormatV(ActionLog::CommandType cmd, const char* format, va_list ap) {
-	char strspace[512] = { 0 };
-	// It's possible for methods that use a va_list to invalidate
-	// the data in it upon use.  The fix is to make a copy
-	// of the structure before using it and use that copy instead.
-	va_list backup_ap;
-	va_copy(backup_ap, ap);
-	vsnprintf(strspace, sizeof(strspace) - 1, format, ap);
-	va_end(backup_ap);
+    char strspace[512] = { 0 };
+    vsnprintf(strspace, sizeof(strspace) - 1, format, ap);
 
 	// Use the string even if it didn't fit in the 256 chars.
 
@@ -84,10 +78,10 @@ void ActionLogFormatV(ActionLog::CommandType cmd, const char* format, va_list ap
 }
 
 void ActionLogFormat(ActionLog::CommandType cmd, const char* format, ...) {
-	va_list ap;
-	va_start(ap, format);
-	ActionLogFormatV(cmd, format, ap);
-	va_end(ap);
+    va_list ap;
+    va_start(ap, format);
+    ActionLogFormatV(cmd, format, ap);
+    va_end(ap);
 }
 
 void ActionLogReportArrayRead(size_t array, int index) {

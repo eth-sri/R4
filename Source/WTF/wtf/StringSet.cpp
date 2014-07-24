@@ -7,6 +7,8 @@
 
 #include "StringSet.h"
 #include <string.h>
+#include <string>
+#include <tr1/functional_hash.h>
 
 StringSet::StringSet() : m_hashTableLoad(0) {
 }
@@ -52,12 +54,11 @@ int StringSet::findStringL(const char* s, int slen, int hash) const {
 	return -1;
 }
 
+std::tr1::hash<std::string>hash;
+
 int StringSet::stringHash(const char* s, int slen) const {
-    unsigned long hash = 5381;
-    for (int i = 0; i < slen; ++i) {
-        hash = ((hash << 5) + hash) + static_cast<unsigned int>(s[i]);
-    }
-    return hash;
+    size_t h = hash(std::string(s));
+    return h;
 }
 
 void StringSet::addHash(int hash, int value) {

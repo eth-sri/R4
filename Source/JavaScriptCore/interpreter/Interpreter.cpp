@@ -103,12 +103,12 @@ void JSCellFieldAccess(ActionLog::CommandType command, JSCell* cell, const char*
 	if (Interpreter::m_jsDomNodeUnwrapper != NULL) {
 		void* ptr1 = Interpreter::m_jsDomNodeUnwrapper(ptr);
 		if (ptr1 != ptr) {
-			ActionLogFormat(command, "DOMNode[%p].%s", ptr, field);
+            ActionLogFormat(command, "DOMNode[%p].%s", ptr, field);
 			return;
 		}
-	}
-	ActionLogFormat(command, "%s[%d].%s",
-			cell->classInfo()->className, static_cast<int>(cell->getCellIndex()), field);
+    }
+    ActionLogFormat(command, "%s[%d].%s",
+            cell->classInfo()->className, static_cast<int>(cell->getCellIndex()), field);
 }
 
 void FieldAccess(ActionLog::CommandType command, const JSValue& val, const char* field) {
