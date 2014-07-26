@@ -1051,7 +1051,7 @@ QWebElement QWebFramePrivate::findElement(const WTF::String& nodeIdentifier)
 bool QWebFramePrivate::triggerEventOnNode(EventAttachLog::EventType type, const WTF::String& nodeIdentifier, QWebElement target)
 {
 
-    ActionLogScopeStart("auto:explore");
+    ActionLogScopeStart("auto:fixed-sequence-explore");
     ActionLogFormat(ActionLog::ENTER_SCOPE, "auto:node[%s]:%s", nodeIdentifier.ascii().data(), EventAttachLog::EventTypeStr(type));
 
     //QByteArray elURI = target.namespaceUri().toLatin1();
