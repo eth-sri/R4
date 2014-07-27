@@ -99,13 +99,3 @@ if [ ! -d $OUTDIR/base ]; then
     exit 1
 fi
 
-for D in `find $OUTDIR -type d`
-do
-    if [ -f $D/schedule.data ]; then
-        killall --quiet -w webera
-        $BER_BIN $D/ER_actionlog -in_schedule_file=$D/schedule.data > /dev/null &
-        sleep 2
-        wget --quiet -P $D/ http://localhost:8000/varlist
-        killall --quiet -w webera
-    fi
-done

@@ -34,10 +34,10 @@ if [ -f $1 ]; then
 fi
 
 VERBOSE=1
-AUTO=0
+AUTO=1
 
 if [[ $AUTO -eq 1 ]]; then
-    AUTOCMD="-hidewindow -autoexplore -autoexplore-timeout 10"
+    AUTOCMD="-hidewindow -autoexplore -autoexplore-timeout 15"
     AUTOCMD2="-hidewindow -verbose"
 else
     AUTOCMD="-ignore-mouse-move"
@@ -75,17 +75,6 @@ do
             echo "Error: Repeating the initial recording failed"
             continue
         fi
-
-        for D in `find $OUTDIR -type d`
-        do
-            if [ -f $D/schedule.data ]; then
-                killall --quiet -w webera
-                $BER_BIN $D/ER_actionlog -in_schedule_file=$D/schedule.data > /dev/null &
-                sleep 2
-                wget --quiet -P $D/ http://localhost:8000/varlist
-                killall --quiet -w webera
-            fi
-        done
 
     else
         echo "Initial recording failed, see $OUTRECORD/out.log"
