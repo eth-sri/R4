@@ -878,8 +878,9 @@ def compare_race(base_data, race_data, namespace):
             
             classification = 'LOW'
             classification_details += 'R4_EVENTS_COMMUTE '
-            #print("MARKER", race_data['race_dir'], 'EVENTS_COMMUTE[1]')
+            #print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE')
 
+        """
         elif len(reordered_diff) == 1 and 'Timer[??]=DOMTimer[??]' in reordered_diff[0]:  
             # Pattern 2-a: Do nothing but spawn a future DOM timer
             
@@ -894,6 +895,7 @@ def compare_race(base_data, race_data, namespace):
 
             classification = 'LOW'
             classification_details += 'R4_SPAWN_TIMER_AD_HOC[EARLY] '
+        """
 
         if classification == 'HIGH':
             if (len(original_diff) > 0 and len(reordered_diff) == 0) or \
@@ -917,7 +919,8 @@ def compare_race(base_data, race_data, namespace):
                     classification_details += 'R4_CONTINUATION_AD_HOC '
 
                     #print("MARKER", race_data['race_dir'], 'CONTINUATION_AD_HOC[3]')
-
+        
+        
         #if classification == 'HIGH':
         #   print(race_data['race_dir'], race_data['handle'], "is a candidate", "\n",
         #         '\n'.join([' '.join(["ORIGINAL:", item]) for item in original_diff]),
@@ -1128,6 +1131,55 @@ def process(job):
             parsed_races.append(process_race(website_dir, race, base_data, er_race_classifier, namespace))
         except RaceParseException:
             print("Error parsing %s :: %s" % (website, race))
+
+    classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
+
+    er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE', 
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE']
+
+    r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS', 
+             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE', 
+             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+
+    tags =  ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE',
+             'ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE', 
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'R4_AD_HOC_SYNC_PENDING_EVENTS', 
+             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE', 
+             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+
+    data = [website, 
+            str(len(parsed_races)),
+            str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'LOW'])),
+            str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'NORMAL'])),
+            str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'HIGH']))]
+
+    def filter_classifiers(details):
+        return [c for c in details.split(' ') if c not in classifiers]
+
+    def only_classifiers(details):
+        return [c for c in details.split(' ') if c in classifiers]
+
+
+    #for tag in tags:
+    #        if tag in classifiers:
+    #           data.append(str(len([1 for race in parsed_races if tag in only_classifiers(race['comparison']['r4_classification_details']) and len(only_classifiers(race['comparison']['r4_classification_details'])) == 1])))
+    #      else:
+    #         data.append(str(len([1 for race in parsed_races if tag in filter_classifiers(race['comparison']['r4_classification_details']) and len(filter_classifiers(race['comparison']['r4_classification_details'])) == 1])))
+
+    for tag in tags:
+        data.append(str(len([1 for race in parsed_races if tag in race['comparison']['r4_classification_details']])))
+
+    # filtered by ER
+    data.append(str(len([1 for race in parsed_races if 
+                         any([tag in er_tags for tag in race['comparison']['r4_classification_details'].split(' ')])])))
+
+    # filtered by R4
+    data.append(str(len([1 for race in parsed_races if
+                         any([tag in r4_tags for tag in race['comparison']['r4_classification_details'].split(' ')])])))
+
+
+    ## Output statistics
+    print(','.join(data))
 
     ## Generate HTML files ##
 
