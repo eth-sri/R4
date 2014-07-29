@@ -1076,15 +1076,14 @@ def output_website_index(website_index, output_dir, input_dir):
             summary=summary
         ))
 
-def process_race(website_dir, race, base_data, er_race_classifier, namespace):
+def process_race(website_dir, race_data, base_data, er_race_classifier, namespace):
 
-    race_data = parse_race(website_dir, race)
     er_race_classifier.inject_classification(race_data, namespace)
 
     comparison = compare_race(base_data, race_data, namespace)
 
     return {
-        'handle': race,
+        'handle': race_data['handle'],
         'base_data': base_data,
         'race_data': race_data,
         'comparison': comparison
@@ -1117,20 +1116,23 @@ def process(job):
 
     ## Parse each race ##
 
-    try:
-        base_data = parse_race(website_dir, 'base')
-    except RaceParseException:
-        print("Error parsing %s :: base" % website)
-        return None
-
     er_race_classifier = ERRaceClassifier(website_dir)
     er_log = parse_er_log(website_dir)                
 
     for race in races:
+
         try:
-            parsed_races.append(process_race(website_dir, race, base_data, er_race_classifier, namespace))
+            race_data = parse_race(website_dir, race)
         except RaceParseException:
             print("Error parsing %s :: %s" % (website, race))
+        
+        try:
+            base_data = parse_race(website_dir, race_data['origin'])
+        except RaceParseException:
+            print("Error parsing %s :: %s (base)" % website)
+            break
+
+        parsed_races.append(process_race(website_dir, race_data, base_data, er_race_classifier, namespace))
 
     classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
 
