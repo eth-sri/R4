@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "DebuggerCallFrame.h"
+#include <sstream>
 
 #include "JavaScriptCore/runtime/ErrorInstance.h"
 #include "JSFunction.h"
@@ -111,14 +112,27 @@ UString DebuggerCallFrame::exceptionString() const
     if (m_exception.isObject()) {
         JSObject* exception = asObject(m_exception);
 
-        if (exception->isErrorInstance() && static_cast<ErrorInstance*>(exception)->appendSourceToMessage()) {
+        if (exception->isErrorInstance()) {
+            JSValue name = exception->get(m_callFrame, m_callFrame->globalData().propertyNames->name);
             JSValue value = exception->getDirect(m_callFrame->globalData(), m_callFrame->globalData().propertyNames->message);
 
-            if (value.isString()) {
-                return value.toString(m_callFrame)->getString(m_callFrame);
+            std::stringstream str;
+
+            if (name.isString()) {
+                str << name.toString(m_callFrame)->getString(m_callFrame).ascii().data();
             } else {
-                return value.getString(m_callFrame);
+                str << name.getString(m_callFrame).ascii().data();
             }
+
+            str << ": ";
+
+            if (value.isString()) {
+                str << value.toString(m_callFrame)->getString(m_callFrame).ascii().data();
+            } else {
+                str << value.getString(m_callFrame).ascii().data();
+            }
+
+            return UString(str.str().c_str(), str.str().length());
         }
     }
 

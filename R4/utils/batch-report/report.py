@@ -236,7 +236,13 @@ def get_or_create_event_action_memory(base_dir, memory, event_action_id):
             location_or_value = match.group(2)
 
             if operation == 'write':
-                last_location = location_or_value
+            
+                if 'CachedResource' in location_or_value:
+                    # Cached resources never have a value
+                    memory[location_or_value] = "?"
+
+                else:
+                    last_location = location_or_value
 
             elif operation == 'value' and last_location is not None:
                 memory[last_location] = location_or_value
@@ -312,7 +318,7 @@ def parse_race(base_dir, handle):
 
     errors_file = os.path.join(handle_dir, 'out.errors.log')
     if not os.path.exists(errors_file):
-            errors_file = os.path.join(handle_dir, 'errors.log')
+        errors_file = os.path.join(handle_dir, 'errors.log')
 
     errors = []
     exceptions = []
@@ -342,9 +348,15 @@ def parse_race(base_dir, handle):
             t = 'error'
 
             if 'JavaScript_Interpreter' in module:
-                continue
+                if 'An exception occured' in description and \
+                   any([buildin_exception_indicator in details for buildin_exception_indicator in [
+                       'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'
+                   ]]):
 
-            if 'console.log' in module:
+                    container = exceptions
+                    t = 'exception'
+
+            elif 'console.log' in module:
                 if 'ERROR' in description and \
                    any([buildin_exception_indicator in details for buildin_exception_indicator in [
                        'EvalError', 'RangeError', 'ReferenceError', 'SyntaxError', 'TypeError', 'URIError'
@@ -369,15 +381,21 @@ def parse_race(base_dir, handle):
 
     # STDOUT
 
-    stdout_file = os.path.join(handle_dir, 'stdout.txt')
+    stdout_file = os.path.join(handle_dir, 'stdout')
     if not os.path.exists(stdout_file):
-        stdout_file = os.path.join(handle_dir, 'stdout')        
+        stdout_file = os.path.join(handle_dir, 'stdout.txt')        
 
     with open(stdout_file, 'rb') as fp:
         stdout = fp.read().decode('utf8', 'ignore')
 
     result_match = re.compile('Result: ([A-Z]+)').search(stdout)
     state_match = re.compile('HTML-hash: ([0-9]+)').search(stdout)
+
+    if result_match is None:
+        print('Warning, result not found in file:', stdout_file)
+
+    if state_match is None:
+        print('Warning, state not found in file:', stdout_file)
 
     # Origin
 
@@ -391,10 +409,10 @@ def parse_race(base_dir, handle):
     # SCHEDULE
 
     schedule_file = os.path.join(handle_dir, 'new_schedule.data')
-    if not os.path.isfile(schedule_file):
-        schedule_file = os.path.join(handle_dir, 'out.schedule.data')        
 
-    output_schedule_file = os.path.join(handle_dir, 'schedule.data')        
+    output_schedule_file = os.path.join(handle_dir, 'out.schedule.data')        
+    if not os.path.isfile(output_schedule_file):
+        output_schedule_file = os.path.join(handle_dir, 'schedule.data')        
 
     schedule = []
     raceFirst = ""
@@ -406,7 +424,6 @@ def parse_race(base_dir, handle):
 
         index = 0
         for line in fp.readlines():
-
             line = line.decode('utf8', 'ignore')
 
             if line == '':
@@ -439,6 +456,53 @@ def parse_race(base_dir, handle):
                     raceSecond = (event_action_id, event_action_descriptor)
                     raceSecondIndex = index
 
+            index += 1
+
+    output_race_first = None
+    output_race_second = None
+
+    with open(output_schedule_file, 'rb') as fp:
+
+        lines = fp.readlines()
+        
+        try:
+            # subtract 1 for the missing <change> marker
+            output_race_first = lines[raceFirstIndex-1].decode('utf8', 'ignore').split(';', 1)
+
+            # subtract 2 for <change> and <relax> markers
+            output_race_second = lines[raceSecondIndex-2].decode('utf8', 'ignore').split(';', 1)
+
+        except IndexError:
+            output_race_first = None
+            output_race_second = None
+
+        index = 0
+        for line in lines:
+            line = line.decode('utf8', 'ignore')
+
+            if line == '':
+                continue
+
+            if index == raceFirstIndex:
+
+                schedule.append(HashableDict(
+                    event_action_id=-1,
+                    type='schedule',
+                    event_action_descriptor="<change>",
+                    _ignore_properties=['event_action_id', 'type']
+                ))
+
+            if index == raceSecondIndex:
+
+                schedule.append(HashableDict(
+                    event_action_id=-1,
+                    type='schedule',
+                    event_action_descriptor="<relax>",
+                    _ignore_properties=['event_action_id', 'type']
+                ))
+
+            event_action_id, event_action_descriptor = line.split(';', 1)
+
             schedule.append(HashableDict(
                 event_action_id=event_action_id,
                 type='schedule',
@@ -447,25 +511,6 @@ def parse_race(base_dir, handle):
             ))
 
             index += 1
-
-    output_race_first = None
-    output_race_second = None
-
-    if raceFirstIndex != -1 and raceSecondIndex != -1:
-        with open(output_schedule_file, 'rb') as fp:
-
-            lines = fp.readlines()
-
-            try:
-                # subtract 1 for the missing <change> marker
-                output_race_first = lines[raceFirstIndex-1].decode('utf8', 'ignore').split(';', 1)
-
-                # subtract 2 for <change> and <relax> markers
-                output_race_second = lines[raceSecondIndex-2].decode('utf8', 'ignore').split(';', 1)
-
-            except IndexError:
-                output_race_first = None
-                output_race_second = None
 
     # ZIP ERRORS AND SCHEDULE
 
@@ -513,7 +558,7 @@ def parse_race(base_dir, handle):
         'schedule': schedule,
         'zip_errors_schedule': zip_errors_schedule,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
-        'html_state': state_match.group(1),
+        'html_state': state_match.group(1) if state_match is not None else 'ERROR',
         'race_dir': handle_dir,
         'origin': origin,
         'raceFirst': raceFirst,
@@ -715,6 +760,10 @@ def compare_race(base_data, race_data, namespace):
 
     exceptions_distance = sum(1 for opcode in exceptions_opcodes if opcode[0] != 'equal')
 
+    exceptions_set_comparison = \
+        set(['%s%s' % (base_exception['description'], base_exception['details']) for base_exception in base_exceptions]) == \
+        set(['%s%s' % (base_exception['description'], base_exception['details']) for base_exception in race_exceptions])
+
     # Race and Errors Diff
 
     base_zip = base_data['zip_errors_schedule']
@@ -756,7 +805,7 @@ def compare_race(base_data, race_data, namespace):
 
     # High triggers (classifiers)
 
-    if exceptions_distance > 0:
+    if not exceptions_set_comparison:
         classification = 'HIGH'
         classification_details += 'R4_EXCEPTIONS '
 
@@ -811,14 +860,14 @@ def compare_race(base_data, race_data, namespace):
     #   this DOM timer and a new (similar) DOM timer is posted (EARLY).
     #
 
-    if not visual_state_match and not html_state_match:
+    #    if not visual_state_match and not html_state_match:
 
         # Unfinished business heuristic
         # If we have pending events we have a strong indication that the race only delayed some behaviour
 
-        if len(race_data['new_events']) > 0:
-            classification = 'LOW'
-            classification_details += 'R4_AD_HOC_SYNC_PENDING_EVENTS '
+        #   if len(race_data['new_events']) > 0:
+        #   classification = 'LOW'
+        #  classification_details += 'R4_AD_HOC_SYNC_PENDING_EVENTS '
 
     # Detect the (EARLY) pattern.
 
@@ -843,6 +892,7 @@ def compare_race(base_data, race_data, namespace):
             if len(new_parts) > 4 and ''.join(race_first_parts[:4]) == ''.join(new_parts[:4]):
                 classification = 'LOW'
                 classification_details += 'R4_DOM_TIMER_AD_HOC_SYNC[EARLY] '
+                break
 
     # Detect the (DELAY) pattern
 
@@ -897,30 +947,30 @@ def compare_race(base_data, race_data, namespace):
             classification_details += 'R4_SPAWN_TIMER_AD_HOC[EARLY] '
         """
 
+        """
         if classification == 'HIGH':
-            if (len(original_diff) > 0 and len(reordered_diff) == 0) or \
-               (len(reordered_diff) > 0 and len(original_diff) == 0):
-
-                hit = True
-                for key in original_diff_keys:
-                    v = get_memory_stats(base_data['race_dir'], key)
-                    if v is not None and (v['num_uncovered'] > 0 or v['num_covered'] > 1):
-                        hit = False
-                        break
-
+            
+            hit = True
+            for key in original_diff_keys:
+                v = get_memory_stats(base_data['race_dir'], key)
+                if v is not None and 'ONLY_LOCAL_WRITE' not in v['classes']:
+                    hit = False
+                    break
+                    
+            if hit == True:
                 for key in reordered_diff_keys:
                     v = get_memory_stats(race_data['race_dir'], key)
-                    if v is not None and (v['num_uncovered'] > 0 or v['num_covered'] > 1):
+                    if v is not None and 'ONLY_LOCAL_WRITE' not in v['classes']:
                         hit = False
                         break
 
-                if hit:
-                    classification = 'LOW'
-                    classification_details += 'R4_CONTINUATION_AD_HOC '
+            if hit:
+                classification = 'LOW'
+                classification_details += 'R4_EVENTS_COMMUTE[EXTENDED] '
 
-                    #print("MARKER", race_data['race_dir'], 'CONTINUATION_AD_HOC[3]')
-        
-        
+                print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE[EXTENDED]')
+        """
+
         #if classification == 'HIGH':
         #   print(race_data['race_dir'], race_data['handle'], "is a candidate", "\n",
         #         '\n'.join([' '.join(["ORIGINAL:", item]) for item in original_diff]),
@@ -1110,7 +1160,7 @@ def process(job):
         print('Error, missing base or record directory in output dir for %s' % website)
         return None
             
-    ignore_files = ['runner', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
+    ignore_files = ['runner', 'record.png', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
     races = [race for race in races if not race.startswith('_') and not race in ignore_files]
 
