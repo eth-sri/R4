@@ -210,9 +210,6 @@ TimerBase::TimerBase()
 TimerBase::~TimerBase()
 {
     stop();
-    if (HBIsCurrentEventActionValid()) {
-        ActionLogFormat(ActionLog::WRITE_MEMORY, "TIMER[%p]", this);
-    }
     ASSERT(!inHeap());
 }
 
@@ -222,10 +219,6 @@ void TimerBase::start(double nextFireInterval, double repeatInterval)
 
     m_repeatInterval = repeatInterval;
     setNextFireTime(monotonicallyIncreasingTime() + nextFireInterval, nextFireInterval);
-
-    if (HBIsCurrentEventActionValid()) {
-        ActionLogFormat(ActionLog::READ_MEMORY, "TIMER[%p]", this);
-    }
 }
 
 void TimerBase::stop()
