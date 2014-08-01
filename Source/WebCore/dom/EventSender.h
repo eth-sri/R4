@@ -157,7 +157,7 @@ template<typename T> void EventSender<T>::cancelEvent(T* sender)
 template<typename T> void EventSender<T>::dispatchPendingEvents()
 {
     for (typename std::multimap<T*, EventSenderEvent<T>*>::iterator it = m_dispatchMap.begin(); it != m_dispatchMap.end(); it++) {
-        (*it).second->dispatchEvent();
+        (*it).second->dispatchEvent(); // WebERA: TODO, decide if this should be allowed. In some cases this results in some very restrictive HB relations
     }
 }
 
