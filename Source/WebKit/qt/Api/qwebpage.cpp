@@ -3966,7 +3966,7 @@ void QWebPage::updatePositionDependentActions(const QPoint &pos)
 */
 
 /*!
-    \class QWebPage::ChooseMultipleFilesExtensionOption
+    \class QWebPage::ChooseMultipleFilesExtQWebPageensionOption
     \since 4.5
     \brief The ChooseMultipleFilesExtensionOption class describes the option
     for the multiple files selection extension.
@@ -4025,6 +4025,7 @@ void QWebPage::updatePositionDependentActions(const QPoint &pos)
 */
 bool QWebPage::extension(Extension extension, const ExtensionOption *option, ExtensionReturn *output)
 {
+    /**
 #ifndef QT_NO_FILEDIALOG
     if (extension == ChooseMultipleFilesExtension) {
         // FIXME: do not ignore suggestedFiles
@@ -4037,6 +4038,13 @@ bool QWebPage::extension(Extension extension, const ExtensionOption *option, Ext
 #endif
 
     return false;
+    **/
+
+    QStringList names;
+    names.append("/tmp/dummyfile");
+
+    static_cast<ChooseMultipleFilesExtensionReturn*>(output)->fileNames = names;
+    return true;
 }
 
 /*!
@@ -4120,6 +4128,7 @@ QWebSettings *QWebPage::settings() const
 */
 QString QWebPage::chooseFile(QWebFrame *parentFrame, const QString& suggestedFile)
 {
+    /**
     Q_UNUSED(parentFrame)
 #ifndef QT_NO_FILEDIALOG
     QWidget* parent = (d->client) ? d->client->ownerWidget() : 0;
@@ -4127,6 +4136,8 @@ QString QWebPage::chooseFile(QWebFrame *parentFrame, const QString& suggestedFil
 #else
     return QString::null;
 #endif
+    **/
+    return QString::fromStdString("/tmp/dummyfile");
 }
 
 /*!
