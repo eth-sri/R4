@@ -210,13 +210,8 @@ TimerBase::TimerBase()
 TimerBase::~TimerBase()
 {
     stop();
-
-    // TODO(WebERA-HB-REVIEW): Why should this not also be the case for event actions calling stop?
-    if (m_lastFireEventAction != 0 &&
-            HBIsCurrentEventActionValid() &&
-            m_lastFireEventAction != HBCurrentEventAction()) {
-
-            HBAddExplicitArc(m_lastFireEventAction, HBCurrentEventAction());
+    if (HBIsCurrentEventActionValid()) {
+        ActionLogFormat(ActionLog::WRITE_MEMORY, "TIMER[%p]", this);
     }
     ASSERT(!inHeap());
 }
@@ -227,6 +222,10 @@ void TimerBase::start(double nextFireInterval, double repeatInterval)
 
     m_repeatInterval = repeatInterval;
     setNextFireTime(monotonicallyIncreasingTime() + nextFireInterval, nextFireInterval);
+
+    if (HBIsCurrentEventActionValid()) {
+        ActionLogFormat(ActionLog::READ_MEMORY, "TIMER[%p]", this);
+    }
 }
 
 void TimerBase::stop()
