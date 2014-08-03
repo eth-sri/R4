@@ -25,12 +25,12 @@ class ERRaceClassifier(object):
     RACE_PARENT_RE = re.compile('(.*race[0-9]+)_race[0-9]+')
 
     def __init__(self, website_dir):
-        
+
         self.website_dir = website_dir
         self._cache = {}
 
     def inject_classification(self, race_data, namespace):
-        
+
         handle = race_data['handle']
         id = handle[handle.rindex('race')+4:]
 
@@ -49,7 +49,7 @@ class ERRaceClassifier(object):
             varlist_path = os.path.join(self.website_dir, parent, 'varlist')
 
             if not os.path.exists(varlist_path):
-                
+
                 try:
                     cmd = '$WEBERA_DIR/R4/er-classify.sh %s %s' % \
                           (os.path.join(self.website_dir, parent), namespace)
@@ -101,7 +101,7 @@ def get_memory_stats(race_dir, key):
             memlist_cache[race_dir] = {}
 
         else:
-            
+
             RE_memory_location = re.compile('(Variable|Attribute)</td><td>([a-zA-Z\.0-9\[\]\(\)\-_:/\$]*)</td>')
             RE_value = re.compile('Uncovered races:</b> \([a-z ]+\) ([0-9]+)(.*?)<br><b>Covered races:</b> ([0-9]+)(.*?)<br>')
 
@@ -118,7 +118,7 @@ def get_memory_stats(race_dir, key):
                         match = RE_memory_location.search(line)
                         if match is not None:
                             last_location = match.group(2)
-                    
+
                     else:
                         match = RE_value.search(line)
                         if match is not None:
@@ -134,7 +134,7 @@ def get_memory_stats(race_dir, key):
                         last_location = None
 
             memlist_cache[race_dir] = result
-            
+
     return memlist_cache[race_dir].get(key, None)
 
 RE_value_with_memory = re.compile('\[.*\]|event action [0-9]+|IO_[0-9]+|:0x[abcdef\-0-9]+|:[0-9]+|0x[abcdef0-9]+|x_x[0-9]+')
@@ -153,19 +153,19 @@ def abstract_memory_equal(handle, m1, m2):
         for k,v in mem.items():
             if 'Timer:' in k:
                 ids.append(k.split(':')[1])
-        
+
         return ids
 
     known_ids = get_known_ids(m1)
     known_ids.extend(get_known_ids(m2))
-    
+
     # Memory adresses are not equal in the two memory "diffs". We approximate their equality  by stripping out
-    # memory locations, and converting them into anon_memory_location=value strings. 
+    # memory locations, and converting them into anon_memory_location=value strings.
     # We then check set equality
 
     memory1 = ['%s=%s' % (anon(location), anon(value, known_ids)) for location, value in m1.items()]
 
-    # start: Some fixes to the approximation 
+    # start: Some fixes to the approximation
 
     # (a) in some cases we observe registered event actions (which we execute) in the reordered sequence
     # but not in the original sequence. This is purely an anomaly in our instrumentation.
@@ -180,17 +180,17 @@ def abstract_memory_equal(handle, m1, m2):
     memory2 = ['%s=%s' % (anon(location), anon(value, known_ids)) for location, value in m2.items() if k not in ignore_memory2_keys]
 
     #if not set(memory1) == set(memory2):
-        #print('\n\nMISS', "\n", handle, "\n", memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n", 
-        #     [v for v in memory1 if v not in memory2], "\n\n", 
+        #print('\n\nMISS', "\n", handle, "\n", memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n",
+        #     [v for v in memory1 if v not in memory2], "\n\n",
         #    [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n",
         #   [v for v in memory2 if v not in memory1], "\n\n",
         #[k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1], "\n\n")
 
 
     #print(memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n", [v for v in memory1 if v not in memory2], "\n\n", [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n", [v for v in memory2 if v not in memory1], "\n\n", [k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1])
-    
-    return (set(memory1) == set(memory2), 
-            [v for v in memory1 if v not in memory2], 
+
+    return (set(memory1) == set(memory2),
+            [v for v in memory1 if v not in memory2],
             [v for v in memory2 if v not in memory1],
             [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2],
             [k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1])
@@ -226,7 +226,7 @@ def get_or_create_event_action_memory(base_dir, memory, event_action_id):
         for line in fp:
             line_num += 1
             line = line.decode('utf8', 'ignore')
-            
+
             match = RE_operation.search(line)
 
             if match is None:
@@ -236,7 +236,7 @@ def get_or_create_event_action_memory(base_dir, memory, event_action_id):
             location_or_value = match.group(2)
 
             if operation == 'write':
-            
+
                 if 'CachedResource' in location_or_value:
                     # Cached resources never have a value
                     memory[location_or_value] = "?"
@@ -259,7 +259,7 @@ def get_or_create_event_action_memory(base_dir, memory, event_action_id):
 
     if line_num == 0:
         print('Warning,', code_file, 'is empty!')
-        
+
     return memory
 
 def get_abstract_memory(base_dir, namespace, event_handler1, event_handler2):
@@ -383,7 +383,7 @@ def parse_race(base_dir, handle):
 
     stdout_file = os.path.join(handle_dir, 'stdout')
     if not os.path.exists(stdout_file):
-        stdout_file = os.path.join(handle_dir, 'stdout.txt')        
+        stdout_file = os.path.join(handle_dir, 'stdout.txt')
 
     with open(stdout_file, 'rb') as fp:
         stdout = fp.read().decode('utf8', 'ignore')
@@ -410,16 +410,16 @@ def parse_race(base_dir, handle):
 
     schedule_file = os.path.join(handle_dir, 'new_schedule.data')
 
-    output_schedule_file = os.path.join(handle_dir, 'out.schedule.data')        
+    output_schedule_file = os.path.join(handle_dir, 'out.schedule.data')
     if not os.path.isfile(output_schedule_file):
-        output_schedule_file = os.path.join(handle_dir, 'schedule.data')        
+        output_schedule_file = os.path.join(handle_dir, 'schedule.data')
 
     schedule = []
     raceFirst = ""
     raceFirstIndex = -1
     raceSecond = ""
     raceSecondIndex = -1
-    
+
     with open(schedule_file, 'rb') as fp:
 
         index = 0
@@ -439,7 +439,7 @@ def parse_race(base_dir, handle):
 
                 if '<change>' in line:
                     raceFirst = None
-                
+
                 if '<relax>' in line:
                     raceSecond = None
 
@@ -464,7 +464,7 @@ def parse_race(base_dir, handle):
     with open(output_schedule_file, 'rb') as fp:
 
         lines = fp.readlines()
-        
+
         try:
             # subtract 1 for the missing <change> marker
             output_race_first = lines[raceFirstIndex-1].decode('utf8', 'ignore').split(';', 1)
@@ -526,7 +526,7 @@ def parse_race(base_dir, handle):
         bucket = buckets.get(s['event_action_id'], [])
         bucket.append(s)
         buckets[s['event_action_id']] = bucket
-        
+
     for s in errors:
         bucket = buckets.get(s['event_action_id'], [])
         bucket.append(s)
@@ -815,17 +815,17 @@ def compare_race(base_data, race_data, namespace):
 
     if 'initialization race' in race_data['er_classification_details']:
         classification = 'HIGH'
-        classification_details += 'ER_INITIALIZATION_RACE ' 
+        classification_details += 'ER_INITIALIZATION_RACE '
 
     if 'readyStateChange race' in race_data['er_classification_details']:
         classification = 'HIGH'
-        classification_details += 'ER_READYSTATECHANGE_RACE ' 
+        classification_details += 'ER_READYSTATECHANGE_RACE '
 
     # Low Triggers (strong update)
 
     if 'LATE_EVENT_ATTACH' in race_data['er_classification_details']:
         classification = 'LOW'
-        classification_details += 'ER_LATE_EVENT_ATTACH ' 
+        classification_details += 'ER_LATE_EVENT_ATTACH '
 
     if 'COOKIE_OR_CLASSNAME' in race_data['er_classification_details']:
         classification = 'LOW'
@@ -875,8 +875,8 @@ def compare_race(base_data, race_data, namespace):
     race_first_parts = race_first_descriptor.split(',')
 
     if '1-DOMTimer' in race_first_descriptor:
-        
-        # race_first_descriptor would be 
+
+        # race_first_descriptor would be
         # 1-DOMTimer(<some url>,x,y,z,w,q)
 
         # A new DOM timer (which is a continuation of race_first) would be
@@ -907,7 +907,7 @@ def compare_race(base_data, race_data, namespace):
                 classification = 'LOW'
                 classification_details += 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY] '
                 break
-                
+
     if race_data['output_race_first'] is not None and \
        race_data['output_race_second'] is not None:
 
@@ -916,60 +916,60 @@ def compare_race(base_data, race_data, namespace):
         equal, original_diff, reordered_diff, original_diff_keys, reordered_diff_keys = \
             abstract_memory_equal(
                 race_data['race_dir'],
-                get_abstract_memory(base_data['race_dir'], namespace, 
-                                    race_data['raceSecond'], 
-                                    race_data['raceFirst']),  # Find the original memory output 
+                get_abstract_memory(base_data['race_dir'], namespace,
+                                    race_data['raceSecond'],
+                                    race_data['raceFirst']),  # Find the original memory output
                 get_abstract_memory(race_data['race_dir'], namespace,
-                                    race_data['output_race_first'], 
-                                    race_data['output_race_second']))  # Find the new memory output        
+                                    race_data['output_race_first'],
+                                    race_data['output_race_second']))  # Find the new memory output
 
-        if equal: 
+        if equal:
             # Pattern 1: Commute
-            
+
             classification = 'LOW'
             classification_details += 'R4_EVENTS_COMMUTE '
             #print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE')
 
-        """
-        elif len(reordered_diff) == 1 and 'Timer[??]=DOMTimer[??]' in reordered_diff[0]:  
+        
+        elif len(reordered_diff) <= 2 and 'Timer[??]=DOMTimer[??]' in reordered_diff and len(original_diff) > 0:
             # Pattern 2-a: Do nothing but spawn a future DOM timer
-            
+
             classification = 'LOW'
             classification_details += 'R4_SPAWN_TIMER_AD_HOC[DELAY] '
             #print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2A]')
 
-        elif len(reordered_diff) == 0 and len(original_diff) == 2 and \
-             'Timer[??]=DOMTimer[??]' in original_diff and \
-             ('[??]' in original_diff[0] or '[??]' in original_diff[1]): 
-            # Pattern 2-b: Spawn a timer, which is handled later
+
+        elif len(reordered_diff) > 0 and len(original_diff) <= 2 and \
+             'Timer[??]=DOMTimer[??]' in original_diff:
+            # Pattern 2-b: Originally, spawns a timer, which is handled later, but when it is reordered the timer goes away 
+            # and everything is handled now
 
             classification = 'LOW'
             classification_details += 'R4_SPAWN_TIMER_AD_HOC[EARLY] '
-        """
+            #print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2B]')
 
-        """
+
         if classification == 'HIGH':
-            
+
             hit = True
             for key in original_diff_keys:
                 v = get_memory_stats(base_data['race_dir'], key)
-                if v is not None and 'ONLY_LOCAL_WRITE' not in v['classes']:
+                if v is not None:
                     hit = False
                     break
-                    
+
             if hit == True:
                 for key in reordered_diff_keys:
                     v = get_memory_stats(race_data['race_dir'], key)
-                    if v is not None and 'ONLY_LOCAL_WRITE' not in v['classes']:
+                    if v is not None:
                         hit = False
                         break
 
             if hit:
                 classification = 'LOW'
-                classification_details += 'R4_EVENTS_COMMUTE[EXTENDED] '
+                classification_details += 'R4_EVENTS_COMMUTE '
 
                 print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE[EXTENDED]')
-        """
 
         #if classification == 'HIGH':
         #   print(race_data['race_dir'], race_data['handle'], "is a candidate", "\n",
@@ -1148,7 +1148,7 @@ def process(job):
 
     website_dir = os.path.join(analysis_dir, website)
     parsed_races = []
-        
+
     ## Get a list of races ##
 
     races = os.listdir(website_dir)
@@ -1159,7 +1159,7 @@ def process(job):
     except ValueError:
         print('Error, missing base or record directory in output dir for %s' % website)
         return None
-            
+
     ignore_files = ['runner', 'record.png', 'arcs.log', 'out.schedule.data', 'new_schedule.data', 'stdout.txt', 'out.ER_actionlog', 'out.log.network.data', 'out.log.time.data', 'out.log.random.data', 'out.status.data']
 
     races = [race for race in races if not race.startswith('_') and not race in ignore_files]
@@ -1167,7 +1167,7 @@ def process(job):
     ## Parse each race ##
 
     er_race_classifier = ERRaceClassifier(website_dir)
-    er_log = parse_er_log(website_dir)                
+    er_log = parse_er_log(website_dir)
 
     for race in races:
 
@@ -1175,7 +1175,7 @@ def process(job):
             race_data = parse_race(website_dir, race)
         except RaceParseException:
             print("Error parsing %s :: %s" % (website, race))
-        
+
         try:
             base_data = parse_race(website_dir, race_data['origin'])
         except RaceParseException:
@@ -1186,20 +1186,24 @@ def process(job):
 
     classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
 
-    er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE', 
+    er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
              'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE']
 
-    r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS', 
-             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE', 
+
+
+    r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS',
+             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
              'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
 
-    tags =  ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE',
-             'ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE', 
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'R4_AD_HOC_SYNC_PENDING_EVENTS', 
-             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE', 
+    r4_classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH']
+    er_classifiers = ['ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
+
+    tags =  ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'R4_AD_HOC_SYNC_PENDING_EVENTS',
+             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
              'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
 
-    data = [website, 
+    data = [website,
             str(len(parsed_races)),
             str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'LOW'])),
             str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'NORMAL'])),
@@ -1218,17 +1222,48 @@ def process(job):
     #      else:
     #         data.append(str(len([1 for race in parsed_races if tag in filter_classifiers(race['comparison']['r4_classification_details']) and len(filter_classifiers(race['comparison']['r4_classification_details'])) == 1])))
 
+    # classified by R4
+    for tag in r4_classifiers:
+        data.append(str(len([1 for race in parsed_races if \
+                             tag in race['comparison']['r4_classification_details'] and not \
+                             any(t in race['comparison']['r4_classification_details'] for t in tags)])))
+
+    # classified by ER
+    for tag in er_classifiers:
+        data.append(str(len([1 for race in parsed_races if \
+                             tag in race['comparison']['r4_classification_details'] and not \
+                             any(t in race['comparison']['r4_classification_details'] for t in tags)])))
+
     for tag in tags:
         data.append(str(len([1 for race in parsed_races if tag in race['comparison']['r4_classification_details']])))
 
     # filtered by ER
-    data.append(str(len([1 for race in parsed_races if 
+    data.append(str(len([1 for race in parsed_races if
                          any([tag in er_tags for tag in race['comparison']['r4_classification_details'].split(' ')])])))
 
     # filtered by R4
     data.append(str(len([1 for race in parsed_races if
                          any([tag in r4_tags for tag in race['comparison']['r4_classification_details'].split(' ')])])))
 
+    # classified by R4 only
+    for tag in r4_classifiers:
+        data.append(str(len([1 for race in parsed_races if \
+                                 tag in race['comparison']['r4_classification_details'] and not \
+                                 any(t in race['comparison']['r4_classification_details'] for t in tags) and not \
+                                 any(t in race['comparison']['r4_classification_details'] for t in er_classifiers)])\
+))
+
+    # classified by ER only
+    for tag in er_classifiers:
+        data.append(str(len([1 for race in parsed_races if \
+                                 tag in race['comparison']['r4_classification_details'] and not \
+                                 any(t in race['comparison']['r4_classification_details'] for t in tags) and not \
+                                 any(t in race['comparison']['r4_classification_details'] for t in r4_classifiers)])\
+))
+
+
+    # ER classifies as high
+    data.append(str(len([race for race in parsed_races if race['race_data']['er_classification'] == 'HIGH'])))
 
     ## Output statistics
     print(','.join(data))
