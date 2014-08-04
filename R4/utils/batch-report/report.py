@@ -187,7 +187,7 @@ def abstract_memory_equal(handle, m1, m2):
         #[k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1], "\n\n")
 
 
-    #print(memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n", [v for v in memory1 if v not in memory2], "\n\n", [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n", [v for v in memory2 if v not in memory1], "\n\n", [k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1])
+    print(memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n", [v for v in memory1 if v not in memory2], "\n\n", [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n", [v for v in memory2 if v not in memory1], "\n\n", [k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1])
 
     return (set(memory1) == set(memory2),
             [v for v in memory1 if v not in memory2],
@@ -222,6 +222,7 @@ def get_or_create_event_action_memory(base_dir, memory, event_action_id):
     with open(code_file, 'rb') as fp:
 
         last_location = None
+        known_ids = []
 
         for line in fp:
             line_num += 1
@@ -241,10 +242,17 @@ def get_or_create_event_action_memory(base_dir, memory, event_action_id):
                     # Cached resources never have a value
                     memory[location_or_value] = "?"
 
+                elif 'Timer:' in location_or_value:
+                    known_ids.append(location_or_value.split(':')[1])
+                    memory['TIMER'] = memory.get('TIMER', 0) + 1
+
                 else:
                     last_location = location_or_value
 
             elif operation == 'value' and last_location is not None:
+                if location_or_value in known_ids:
+                    location_or_value = '??'
+
                 memory[last_location] = location_or_value
                 last_location = None
 
@@ -930,23 +938,29 @@ def compare_race(base_data, race_data, namespace):
             classification_details += 'R4_EVENTS_COMMUTE '
             #print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE')
 
-        
-        elif len(reordered_diff) <= 2 and 'Timer[??]=DOMTimer[??]' in reordered_diff and len(original_diff) > 0:
+        elif not '1-DOMTimer' in race_second_parts[0] and \
+             not '1-DOMTimer' in race_first_parts[0] and \
+             len(reordered_diff) <= 2 and \
+             any(['TIMER=' in i for i in reordered_diff]) and \
+             len(original_diff) > 0:
             # Pattern 2-a: Do nothing but spawn a future DOM timer
 
             classification = 'LOW'
             classification_details += 'R4_SPAWN_TIMER_AD_HOC[DELAY] '
-            #print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2A]')
+            print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2A]')
 
-
-        elif len(reordered_diff) > 0 and len(original_diff) <= 2 and \
-             'Timer[??]=DOMTimer[??]' in original_diff:
-            # Pattern 2-b: Originally, spawns a timer, which is handled later, but when it is reordered the timer goes away 
+        elif not '1-DOMTimer' in race_second_parts[0] and \
+             not '1-DOMTimer' in race_first_parts[0] and \
+             len(reordered_diff) > 0 and \
+             len(original_diff) <= 2 and \
+             any(['TIMER' in i for i in original_diff]):
+            # Pattern 2-b: Originally, spawns a timer, which is handled later, 
+            # but when it is reordered the timer goes away 
             # and everything is handled now
 
             classification = 'LOW'
             classification_details += 'R4_SPAWN_TIMER_AD_HOC[EARLY] '
-            #print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2B]')
+            print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2B]')
 
 
         if classification == 'HIGH':
