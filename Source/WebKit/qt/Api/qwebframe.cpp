@@ -969,10 +969,10 @@ bool QWebFramePrivate::autoEventProvider(void* object, const WTF::EventActionDes
 
     if (target.isNull()) {
         std::cerr << "Error: Node (" << nodeIdentifier.ascii().data() << ") not found..." << std::endl;
-        CRASH();
+        //CRASH(); // Do not crash, in some cases this is expected.
+    } else {
+        ths->triggerEventOnNode(type, nodeIdentifier, target);
     }
-
-    ths->triggerEventOnNode(type, nodeIdentifier, target);
 
     return true;
 }

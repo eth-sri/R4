@@ -175,7 +175,7 @@ void ReplayClientApplication::handleUserOptions()
          indir = takeOptionValue(&args, indirIndex);
     }
 
-    m_schedulePath = indir + "s/chedule.data";
+    m_schedulePath = indir + "schedule.data";
     m_logNetworkPath = indir + "/log.network.data";
     m_logTimePath = indir + "/log.time.data";
     m_logRandomPath = indir + "/log.random.data";
