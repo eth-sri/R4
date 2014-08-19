@@ -170,6 +170,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuffer.h>
 #include <wtf/EventActionDescriptor.h>
+#include <WebCore/platform/EventActionHappensBeforeReport.h>
 #include <JavaScriptCore/runtime/timeprovider.h>
 
 #if ENABLE(SHARED_WORKERS)
@@ -491,6 +492,7 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     , m_didDispatchViewportPropertiesChanged(false)
 #endif
     , m_lastPendingTasksEventAction(0)
+    , m_lastPendingStylesheetEventAction(0)
 {
     m_document = this;
 
@@ -3222,6 +3224,14 @@ void Document::removePendingSheet()
     if (!ownerElement())
         printf("Stylesheet loaded at time %d. %d stylesheets still remain.\n", elapsedTime(), m_pendingStylesheets);
 #endif
+
+    if (m_lastPendingStylesheetEventAction != 0 && WebCore::HBIsCurrentEventActionValid) {
+        HBAddExplicitArc(m_lastPendingStylesheetEventAction, WebCore::HBCurrentEventAction());
+    }
+
+    if (WebCore::HBIsCurrentEventActionValid()) {
+        m_lastPendingStylesheetEventAction = WebCore::HBCurrentEventAction();
+    }
 
     if (m_pendingStylesheets)
         return;

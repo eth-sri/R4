@@ -641,6 +641,8 @@ void HTMLDocumentParser::executeScriptsWaitingForStylesheets()
     // but we need to ensure it isn't deleted yet.
     RefPtr<HTMLDocumentParser> protect(this);
 
+    m_modifiedInputJoin.threadEndAction(); // WebERA: Add HB relation between loaded stylesheets and next parse event
+
     ASSERT(!m_scriptRunner->isExecutingScript());
     ASSERT(m_treeBuilder->isPaused());
     // Note: We only ever wait on one script at a time, so we always know this

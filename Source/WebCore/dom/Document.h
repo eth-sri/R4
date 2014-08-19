@@ -1519,6 +1519,7 @@ private:
 
     MultiJoinHappensBefore m_addedPendingTaskJoin;
     WTF::EventActionId m_lastPendingTasksEventAction;
+    WTF::EventActionId m_lastPendingStylesheetEventAction;
 };
 
 // Put these methods here, because they require the Document definition, but we really want to inline them.
