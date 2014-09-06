@@ -18,6 +18,7 @@
         <tr>
             <th>Race</th>
             <th>Errors</th>
+            <th>Schedule Diff.</th>
             <th>JS Exceptions</th>
             <th>HTML State Match</th>
             <th>Visual State Match</th>
@@ -33,6 +34,9 @@
             </td>
             <td class="{% if race.comparison.errors_diff_distance == 0 %}success{% else %}danger{% endif %}">
                 {{ race.comparison.errors_diff_distance }}
+            </td>
+            <td class="{% if race.comparison.schedule_distance == 0 %}success{% else %}danger{% endif %}">
+                {{ race.comparison.schedule_distance }}
             </td>
             <td class="{% if race.comparison.exceptions_diff_distance == 0 %}success{% else %}danger{% endif %}">
                 {{ race.comparison.exceptions_diff_distance }}

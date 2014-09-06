@@ -187,7 +187,7 @@ def abstract_memory_equal(handle, m1, m2):
         #[k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1], "\n\n")
 
 
-    print(memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n", [v for v in memory1 if v not in memory2], "\n\n", [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n", [v for v in memory2 if v not in memory1], "\n\n", [k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1])
+    #print(memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n", [v for v in memory1 if v not in memory2], "\n\n", [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n", [v for v in memory2 if v not in memory1], "\n\n", [k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1])
 
     return (set(memory1) == set(memory2),
             [v for v in memory1 if v not in memory2],
@@ -332,6 +332,9 @@ def parse_race(base_dir, handle):
     exceptions = []
     new_events = []
 
+    num_new_events = 0
+    num_skipped_events = 0
+
     try:
         fp = open(errors_file, 'rb')
     except (FileNotFoundError, NotADirectoryError):
@@ -377,6 +380,13 @@ def parse_race(base_dir, handle):
 
             if 'Non-executed event action' in description:
                 new_events.append(details)
+                num_new_events += 1
+
+            if 'JavaScript_Interpreter' in module and 'Event action skipped after timeout.' in description:
+                num_skipped_events += 1
+
+            if 'JavaScript_Interpreter' in module and 'Event action executed from pending schedule.' in description:
+                num_skipped_events -= 1
 
             container.append(HashableDict(
                 event_action_id=event_action_id,
@@ -573,7 +583,9 @@ def parse_race(base_dir, handle):
         'raceSecond': raceSecond,
         'output_race_first': output_race_first,
         'output_race_second': output_race_second,
-        'new_events': new_events
+        'new_events': new_events,
+        'num_new_events': num_new_events,
+        'num_skipped_events': num_skipped_events
     }
 
 
@@ -991,6 +1003,7 @@ def compare_race(base_data, race_data, namespace):
         #        '\n'.join([' '.join(["REORDERED:", item]) for item in reordered_diff]), "\n======\n\n")
 
     return {
+        'schedule_distance': race_data['num_new_events'] + race_data['num_skipped_events'],
         'exceptions_diff': exceptions_opcodes,
         'exceptions_diff_human': exceptions_opcodes_human,
         'exceptions_diff_distance': exceptions_distance,
@@ -1311,21 +1324,62 @@ def process(job):
         'summary': summary
     }
 
+def query(website_dir, race):
+
+    er_race_classifier = ERRaceClassifier(website_dir)
+
+    try:
+        race_data = parse_race(website_dir, race)
+    except RaceParseException:
+        print("Error parsing %s" % (race))
+        return False
+
+    try:
+        base_data = parse_race(website_dir, race_data['origin'])
+    except RaceParseException:
+        print("Error parsing %s (base)" % race_data['origin'])
+        return False
+
+
+    return process_race(website_dir, race_data, base_data, er_race_classifier, 8010)['comparison']['r4_classification']
+
 def main():
 
     try:
-        analysis_dir = sys.argv[1]
-        output_dir = sys.argv[2]
+        if len(sys.argv) == 3:
+            arg1 = sys.argv[1]
+            arg2 = sys.argv[2]
+
+        else:
+            arg1 = sys.argv[2]
+            arg2 = sys.argv[3]
+
     except IndexError:
-        print('Usage: %s <analysis-dir> <report-dir>' % sys.argv[0])
+        print('Usage: %s <analysis-dir> <report-dir> | query <website-dir> <race>' % sys.argv[0])
         sys.exit(1)
 
-    websites = os.listdir(analysis_dir)
+    if len(sys.argv) == 3:
+        # Normal analysis
 
-    with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
-        website_index = executor.map(process, [(websites[index], analysis_dir, output_dir, str(8001+index)) for index in range(0, len(websites))])
-        #website_index = [process([website, analysis_dir, output_dir, "8001"]) for website in websites]
-        output_website_index(website_index, output_dir, analysis_dir)
+
+        analysis_dir = arg1
+        output_dir = arg2
+        websites = os.listdir(analysis_dir)
+
+        with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
+            data = [(websites[index], analysis_dir, output_dir, str(8001+index)) for index in range(0, len(websites))]
+            website_index = executor.map(process, data)
+            #website_index = [process([website, analysis_dir, output_dir, "8001"]) for website in websites]
+            output_website_index(website_index, output_dir, analysis_dir)
+
+    else:
+        # Query
+
+        website_dir = arg1
+        race = arg2
+
+        print(query(website_dir, race))
+        
 
 if __name__ == '__main__':
     main()

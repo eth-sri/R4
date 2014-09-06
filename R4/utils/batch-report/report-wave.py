@@ -341,6 +341,9 @@ def parse_race(base_dir, handle):
     exceptions = []
     new_events = []
 
+    num_new_events = 0
+    num_skipped_events = 0
+
     try:
         fp = open(errors_file, 'rb')
     except (FileNotFoundError, NotADirectoryError):
@@ -386,6 +389,13 @@ def parse_race(base_dir, handle):
 
             if 'Non-executed event action' in description:
                 new_events.append(details)
+                num_new_events += 1
+
+            if 'JavaScript_Interpreter' in module and 'Event action skipped after timeout.' in description:
+                num_skipped_events += 1
+
+            if 'JavaScript_Interpreter' in module and 'Event action executed from pending schedule.' in description:
+                num_skipped_events -= 1
 
             container.append(HashableDict(
                 event_action_id=event_action_id,
@@ -584,7 +594,9 @@ def parse_race(base_dir, handle):
         'raceSecond': raceSecond,
         'output_race_first': output_race_first,
         'output_race_second': output_race_second,
-        'new_events': new_events
+        'new_events': new_events,
+        'num_new_events': num_new_events,
+        'num_skipped_events': num_skipped_events
     }
 
 
@@ -869,7 +881,10 @@ def compare_race(base_data, race_data, namespace):
     if classification != 'LOW' and race_data['er_classification'] == 'LOW':
         print('Error: Unknown classification',  race_data['er_classification_details'])
 
+    schedule_distance = race_data['num_new_events'] + race_data['num_skipped_events']
+
     return {
+        'schedule_distance': schedule_distance,
         'exceptions_diff': exceptions_opcodes,
         'exceptions_diff_human': exceptions_opcodes_human,
         'exceptions_diff_distance': exceptions_distance,
@@ -881,7 +896,7 @@ def compare_race(base_data, race_data, namespace):
         'zip_diff_has_unequal': unequal_seen,
         'html_state_match': html_state_match,
         'visual_state_match': cimage,
-        'is_equal': base_data['html_state'] == race_data['html_state'] and 'human' in cimage and cimage['human'] == 'EXACT' and errors_distance == 0 and exceptions_distance == 0,
+        'is_equal': base_data['html_state'] == race_data['html_state'] and schedule_distance == 0 and exceptions_distance == 0,
         'r4_classification': classification,
         'r4_classification_details': classification_details
     }
@@ -1202,8 +1217,8 @@ def main():
     websites = os.listdir(analysis_dir)
 
     with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
-        #website_index = executor.map(process, [(websites[index], analysis_dir, output_dir, str(8001+index)) for index in range(0, len(websites))])
-        website_index = [process([website, analysis_dir, output_dir, "8001"]) for website in websites]
+        website_index = executor.map(process, [(websites[index], analysis_dir, output_dir, str(8001+index)) for index in range(0, len(websites))])
+        #website_index = [process([website, analysis_dir, output_dir, "8001"]) for website in websites]
         output_website_index(website_index, output_dir, analysis_dir)
 
 if __name__ == '__main__':
