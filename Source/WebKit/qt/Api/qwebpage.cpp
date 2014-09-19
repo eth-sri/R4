@@ -528,6 +528,11 @@ void QWebPagePrivate::deferEvent(QEvent* event)
         return;
     }
 
+    if (event->type() == QEvent::MouseButtonPress) {
+        // model button press and release as a single event
+        return;
+    }
+
     m_deferredEventQueue.append(DeferredQEvent(event));
     rescheduleDeferredEventTimerIfStopped();
 }
@@ -3556,6 +3561,7 @@ void QWebPage::eventDeferred(QEvent *ev)
         d->mouseDoubleClickEvent(static_cast<QMouseEvent*>(ev));
         break;
     case QEvent::MouseButtonRelease:
+        d->mousePressEvent(static_cast<QMouseEvent*>(ev));
         d->mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
         break;
 #ifndef QT_NO_CONTEXTMENU

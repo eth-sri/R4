@@ -30,8 +30,8 @@ do
 
 case $1 in
     --high-time-limit)
-        TIMEOUT="230000"
-        TIMEOUTCMD="-scheduler_timeout_ms 800000"
+        TIMEOUT="600"
+        TIMEOUTCMD="-scheduler_timeout_ms 150000"
         shift
     ;;
     --old-style-bound)

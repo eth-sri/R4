@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.3
 
 import sys
 import os
@@ -64,7 +64,7 @@ class ERRaceClassifier(object):
                 self._cache[parent] = None
 
         soup = self._cache.get(parent, None)
-
+        
         if soup is not None:
 
             try:
@@ -79,7 +79,7 @@ class ERRaceClassifier(object):
 
                 race_data['er_classification'] = classification
                 race_data['er_classification_details'] = details
-            except: #Exception as e:
+            except: # Exception as e:
                 #raise e
                 race_data['er_classification'] = 'PARSE_ERROR'
                 race_data['er_classification_details'] = ''
