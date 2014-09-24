@@ -2700,7 +2700,8 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
     PlatformKeyboardEvent::getCurrentModifierState(shiftKey, ctrlKey, altKey, metaKey);
     IntPoint globalPoint = view->contentsToScreen(IntRect(view->windowToContents(m_currentMousePosition), IntSize())).location();
     PlatformMouseEvent fakeMouseMoveEvent(m_currentMousePosition, globalPoint, NoButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey, metaKey, currentTime());
-    mouseMoved(fakeMouseMoveEvent);
+    // WebERA: Consistently disable mouse move events. In certain cases we are spammed by them a bit too much
+    //mouseMoved(fakeMouseMoveEvent);
 
     m_fakeUserEventJoin.joinAction();
     m_fakeUserEventJoin.clear();
