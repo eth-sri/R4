@@ -13,6 +13,13 @@ from bs4 import BeautifulSoup
 
 NUM_PROC = 7
 
+def gen_varlist_memlist(base, port):
+    try:
+        cmd = '$WEBERA_DIR/R4/er-classify.sh %s %s' % (base, port)
+        return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+    except subprocess.CalledProcessError as e:
+        print('Failed running %s' % cmd)
+        return None
 
 class ERRaceClassifier(object):
 
@@ -49,13 +56,7 @@ class ERRaceClassifier(object):
             varlist_path = os.path.join(self.website_dir, parent, 'varlist')
 
             if not os.path.exists(varlist_path):
-
-                try:
-                    cmd = '$WEBERA_DIR/R4/er-classify.sh %s %s' % \
-                          (os.path.join(self.website_dir, parent), namespace)
-                    stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-                except subprocess.CalledProcessError as e:
-                    print('Failed running %s' % cmd)
+                gen_varlist_memlist(os.path.join(self.website_dir, parent), namespace)
 
             try:
                 with open(varlist_path, 'r') as fp:
@@ -91,11 +92,15 @@ class ERRaceClassifier(object):
 
 memlist_cache = {}
 
-def get_memory_stats(race_dir, key):
+def get_memory_stats(race_dir, key, namespace):
 
     if race_dir not in memlist_cache:
 
         memlist_file = os.path.join(race_dir, 'memlist')
+
+        if not os.path.exists(memlist_file) or os.stat(memlist_file).st_size == 0:
+            gen_varlist_memlist(race_dir, namespace)
+
         if not os.path.exists(memlist_file) or os.stat(memlist_file).st_size == 0:
             print('Warning,', memlist_file, 'is missing')
             memlist_cache[race_dir] = {}
@@ -867,6 +872,10 @@ def compare_race(base_data, race_data, namespace):
         classification = 'LOW'
         classification_details += 'ER_WRITE_SAME_VALUE '
 
+    if 'RACE_WITH_UNLOAD' in race_data['er_classification_details']:
+        classification = 'LOW'
+        classification_details += 'ER_RACE_WITH_UNLOAD '
+
     if classification != 'LOW' and race_data['er_classification'] == 'LOW':
         print('Error: Unknown classification',  race_data['er_classification_details'])
 
@@ -979,14 +988,14 @@ def compare_race(base_data, race_data, namespace):
 
             hit = True
             for key in original_diff_keys:
-                v = get_memory_stats(base_data['race_dir'], key)
+                v = get_memory_stats(base_data['race_dir'], key, namespace)
                 if v is not None:
                     hit = False
                     break
 
             if hit == True:
                 for key in reordered_diff_keys:
-                    v = get_memory_stats(race_data['race_dir'], key)
+                    v = get_memory_stats(race_data['race_dir'], key, namespace)
                     if v is not None:
                         hit = False
                         break
@@ -1214,9 +1223,7 @@ def process(job):
     classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
 
     er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE']
-
-
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WITH_UNLOAD']
 
     r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS',
              'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
@@ -1226,7 +1233,7 @@ def process(job):
     er_classifiers = ['ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
 
     tags =  ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'R4_AD_HOC_SYNC_PENDING_EVENTS',
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WTIH_UNLOAD', 'R4_AD_HOC_SYNC_PENDING_EVENTS',
              'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
              'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
 

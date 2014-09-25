@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -ue -o pipefail
-
 BER_BIN=$EVENTRACER_DIR/bin/eventracer/webapp/raceanalyzer
 
 # INPUT HANDLING
@@ -12,11 +10,15 @@ if (( ! $# > 0 )); then
     exit 1
 fi
 
+if [ -z "$ER_CLASSIFY_EXTRA" ]; then
+    ER_CLASSIFY_EXTRA=""
+fi
+
 OUTDIR=$1
 PORT=$2
 
 if [ -f $OUTDIR/schedule.data ]; then
-    $BER_BIN $OUTDIR/ER_actionlog -port $PORT &
+    $BER_BIN $OUTDIR/ER_actionlog $ER_CLASSIFY_EXTRA  -port $PORT &
     sleep 5
     wget --quiet --output-document $OUTDIR/varlist http://localhost:$PORT/varlist
     wget --quiet --output-document $OUTDIR/memlist http://localhost:$PORT/varlist?filter_level=1
