@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.3
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -8,10 +8,8 @@ import shutil
 from jinja2 import Environment, PackageLoader
 import subprocess
 from builtins import FileNotFoundError, NotADirectoryError
-import concurrent.futures
 from bs4 import BeautifulSoup
-
-NUM_PROC = 7
+import simplejson
 
 def gen_varlist_memlist(base, port):
     try:
@@ -65,7 +63,7 @@ class ERRaceClassifier(object):
                 self._cache[parent] = None
 
         soup = self._cache.get(parent, None)
-        
+
         if soup is not None:
 
             try:
@@ -89,10 +87,10 @@ class ERRaceClassifier(object):
             race_data['er_classification_details'] = ''
 
 # Please look away, and allow me to be a bit quick-and-dirty for a moment
-
 memlist_cache = {}
 
 def get_memory_stats(race_dir, key, namespace):
+    global memlist_cache
 
     if race_dir not in memlist_cache:
 
@@ -140,7 +138,9 @@ def get_memory_stats(race_dir, key, namespace):
 
             memlist_cache[race_dir] = result
 
-    return memlist_cache[race_dir].get(key, None)
+    result =  memlist_cache[race_dir].get(key, None)
+
+    return result
 
 RE_value_with_memory = re.compile('\[.*\]|event action [0-9]+|IO_[0-9]+|:0x[abcdef\-0-9]+|:[0-9]+|0x[abcdef0-9]+|x_x[0-9]+')
 
@@ -578,7 +578,7 @@ def parse_race(base_dir, handle):
         'handle': handle,
         'errors': errors,
         'exceptions': exceptions,
-        'schedule': schedule,
+#        'schedule': schedule,
         'zip_errors_schedule': zip_errors_schedule,
         'result': result_match.group(1) if result_match is not None else 'ERROR',
         'html_state': state_match.group(1) if state_match is not None else 'ERROR',
@@ -1019,7 +1019,7 @@ def compare_race(base_data, race_data, namespace):
         'errors_diff': opcodes,
         'errors_diff_human': opcodes_human,
         'errors_diff_distance': errors_distance,
-        'zip_diff': zip_opcodes,
+#        'zip_diff': zip_opcodes,
         'zip_diff_human': zip_opcodes_human,
         'zip_diff_has_unequal': unequal_seen,
         'html_state_match': html_state_match,
@@ -1038,6 +1038,11 @@ def output_race_report(website, race, jinja, output_dir, input_dir):
     record_file = os.path.join(output_dir, 'record.png')
     replay_file = os.path.join(output_dir, '%s-replay.png' % race['handle'])
     comparison_file = os.path.join(output_dir, '%s-comparison.png' % race['handle'])
+
+    try:
+        os.mkdir(output_dir)
+    except OSError:
+        pass  # folder exists
 
     try:
         if not os.path.isfile(record_file):
@@ -1081,9 +1086,6 @@ def output_race_index(website, parsed_races, er_log, jinja, output_dir, input_di
     except OSError:
         pass  # folder exists
 
-    for race in parsed_races:
-        output_race_report(website, race, jinja, output_dir, input_dir)
-
     with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
         fp.write(jinja.get_template('race_index.html').render(
@@ -1092,7 +1094,7 @@ def output_race_index(website, parsed_races, er_log, jinja, output_dir, input_di
             er_log=er_log
         ))
 
-def output_website_index(website_index, output_dir, input_dir):
+def output_website_index(websites, output_dir, input_dir):
 
     jinja = Environment(loader=PackageLoader('templates', ''))
 
@@ -1128,32 +1130,37 @@ def output_website_index(website_index, output_dir, input_dir):
     }
 
     items = []
+    for website in websites:
 
-    for item in website_index:
+        try:
+            print(os.path.join(output_dir, website, 'payload.json'))
+            with open(os.path.join(output_dir, website, 'payload.json'), 'r') as fp:
+                item = simplejson.loads(fp.read())
+                item['website'] = website
+                
+            summary['race_result']['equal'] += item['summary']['equal']
+            summary['race_result']['diff'] += item['summary']['diff']
+            summary['race_result']['timeout'] += item['summary']['timeout']
+            summary['race_result']['error'] += item['summary']['error']
 
-        if item is None:
-            continue
+            summary['execution_result']['total'] += item['er_log']['races_total']
+            summary['execution_result']['success'] += item['er_log']['races_success']
+            summary['execution_result']['failure'] += item['er_log']['races_failure']
 
-        summary['race_result']['equal'] += item['summary']['equal']
-        summary['race_result']['diff'] += item['summary']['diff']
-        summary['race_result']['timeout'] += item['summary']['timeout']
-        summary['race_result']['error'] += item['summary']['error']
+            summary['execution_time'] += item['er_log']['execution_time']
 
-        summary['execution_result']['total'] += item['er_log']['races_total']
-        summary['execution_result']['success'] += item['er_log']['races_success']
-        summary['execution_result']['failure'] += item['er_log']['races_failure']
+            summary['er_classification_result']['high'] += item['summary']['er_high']
+            summary['er_classification_result']['normal'] += item['summary']['er_normal']
+            summary['er_classification_result']['low'] += item['summary']['er_low']
+            summary['er_classification_result']['unknown'] += item['summary']['er_unknown']
+            summary['r4_classification_result']['high'] += item['summary']['r4_high']
+            summary['r4_classification_result']['normal'] += item['summary']['r4_normal']
+            summary['r4_classification_result']['low'] += item['summary']['r4_low']
 
-        summary['execution_time'] += item['er_log']['execution_time']
+            items.append(item)
 
-        summary['er_classification_result']['high'] += item['summary']['er_high']
-        summary['er_classification_result']['normal'] += item['summary']['er_normal']
-        summary['er_classification_result']['low'] += item['summary']['er_low']
-        summary['er_classification_result']['unknown'] += item['summary']['er_unknown']
-        summary['r4_classification_result']['high'] += item['summary']['r4_high']
-        summary['r4_classification_result']['normal'] += item['summary']['r4_normal']
-        summary['r4_classification_result']['low'] += item['summary']['r4_low']
-
-        items.append(item)
+        except FileNotFoundError:
+            pass
 
     with open(os.path.join(output_dir, 'index.html'), 'w') as fp:
 
@@ -1175,7 +1182,6 @@ def process_race(website_dir, race_data, base_data, er_race_classifier, namespac
         'comparison': comparison
     }
 
-
 def process(job):
 
     website, analysis_dir, output_dir, namespace = job
@@ -1183,7 +1189,32 @@ def process(job):
     print ("PROCESSING", website)
 
     website_dir = os.path.join(analysis_dir, website)
-    parsed_races = []
+
+    jinja = Environment(loader=PackageLoader('templates', ''))
+    website_output_dir = os.path.join(output_dir, website)
+
+    classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
+
+    er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WITH_UNLOAD']
+
+    r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS',
+             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
+             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+
+    r4_classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH']
+    er_classifiers = ['ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
+
+    tags =  ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
+             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WTIH_UNLOAD', 'R4_AD_HOC_SYNC_PENDING_EVENTS',
+             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
+             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+
+    def filter_classifiers(details):
+        return [c for c in details.split(' ') if c not in classifiers]
+
+    def only_classifiers(details):
+        return [c for c in details.split(' ') if c in classifiers]
 
     ## Get a list of races ##
 
@@ -1205,6 +1236,38 @@ def process(job):
     er_race_classifier = ERRaceClassifier(website_dir)
     er_log = parse_er_log(website_dir)
 
+    summary = {
+        'website': website,
+        'count': 0,
+        'equal': 0,
+        'diff': 0,
+        'timeout': 0,
+        'error': 0,
+        'er_high': 0,
+        'er_normal': 0,
+        'er_low': 0,
+        'er_unknown': 0,
+        'r4_high': 0,
+        'r4_normal': 0,
+        'r4_low': 0,
+        'classified_by_er': 0,
+        'filtered_by_r4': 0,
+        'classified_high_er': 0
+    }
+
+    for tag in r4_classifiers:
+        summary['r4_classifier_%s' % tag] = 0
+    for tag in er_classifiers:
+        summary['er_classifier_%s' % tag] = 0
+    for tag in tags:
+        summary['r4_classifiers_detail_%s' % tag] = 0
+    for tag in r4_classifiers:
+        summary['r4_classifiers_only_%s' % tag] = 0
+    for tag in er_classifiers:
+        summary['er_classifiers_only_%s' % tag] = 0
+
+    race_summaries = []
+
     for race in races:
 
         try:
@@ -1218,118 +1281,114 @@ def process(job):
             print("Error parsing %s :: %s (base)" % website)
             break
 
-        parsed_races.append(process_race(website_dir, race_data, base_data, er_race_classifier, namespace))
+        prace = process_race(website_dir, race_data, base_data, er_race_classifier, namespace)
 
-    classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
+        output_race_report(website, prace, jinja, website_output_dir, analysis_dir)
 
-    er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WITH_UNLOAD']
+        summary['count'] += 1
 
-    r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS',
-             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
-             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+        summary['equal'] += 1 if prace['race_data']['result'] == 'FINISHED' and prace['comparison']['is_equal'] else 0
+        summary['diff'] += 1 if prace['race_data']['result'] == 'FINISHED' and not prace['comparison']['is_equal'] else 0
+        summary['timeout'] += 1 if prace['race_data']['result'] == 'TIMEOUT' else 0
+        summary['error'] += 1 if prace['race_data']['result'] == 'ERROR' else 0
+        summary['er_high'] += 1 if prace['race_data']['er_classification'] == 'HIGH' else 0
+        summary['er_normal'] += 1 if prace['race_data']['er_classification'] == 'NORMAL' else 0
+        summary['er_low'] += 1 if prace['race_data']['er_classification'] == 'LOW' else 0
+        summary['er_unknown'] += 1 if prace['race_data']['er_classification'] in ['UNKNOWN', 'PARSE_ERROR'] else 0
+        summary['r4_high'] += 1 if prace['comparison']['r4_classification'] == 'HIGH' else 0
+        summary['r4_normal'] += 1 if prace['comparison']['r4_classification'] == 'NORMAL' else 0
+        summary['r4_low'] += 1 if prace['comparison']['r4_classification'] == 'LOW' else 0
 
-    r4_classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH']
-    er_classifiers = ['ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
+        # classified by R4
+        for tag in r4_classifiers:
+            key = 'r4_classifier_%s' % tag
+            summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] and not \
+                            any(t in prace['comparison']['r4_classification_details'] for t in tags) else 0
 
-    tags =  ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WTIH_UNLOAD', 'R4_AD_HOC_SYNC_PENDING_EVENTS',
-             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
-             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+        # classified by ER
+        for tag in er_classifiers:
+            key = 'er_classifier_%s' % tag
+            summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] and not \
+                            any(t in prace['comparison']['r4_classification_details'] for t in tags) else 0
 
-    data = [website,
-            str(len(parsed_races)),
-            str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'LOW'])),
-            str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'NORMAL'])),
-            str(len([1 for race in parsed_races if race['comparison']['r4_classification'] == 'HIGH']))]
+        for tag in tags:
+            key = 'r4_classifiers_detail_%s' % tag
+            summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] else 0
 
-    def filter_classifiers(details):
-        return [c for c in details.split(' ') if c not in classifiers]
+        # filtered by ER
+        summary['classified_by_er'] += 1 if any([tag in er_tags for tag in prace['comparison']['r4_classification_details'].split(' ')]) else 0
 
-    def only_classifiers(details):
-        return [c for c in details.split(' ') if c in classifiers]
+        # filtered by R4
+        summary['filtered_by_r4'] += 1 if any([tag in r4_tags for tag in prace['comparison']['r4_classification_details'].split(' ')]) else 0
 
+        # classified by R4 only
+        for tag in r4_classifiers:
+            key = 'r4_classifiers_only_%s' % tag
+            summary[key] += 1 if \
+                            tag in prace['comparison']['r4_classification_details'] and not \
+                            any(t in prace['comparison']['r4_classification_details'] for t in tags) and not \
+                            any(t in prace['comparison']['r4_classification_details'] for t in er_classifiers) else 0
 
-    #for tag in tags:
-    #        if tag in classifiers:
-    #           data.append(str(len([1 for race in parsed_races if tag in only_classifiers(race['comparison']['r4_classification_details']) and len(only_classifiers(race['comparison']['r4_classification_details'])) == 1])))
-    #      else:
-    #         data.append(str(len([1 for race in parsed_races if tag in filter_classifiers(race['comparison']['r4_classification_details']) and len(filter_classifiers(race['comparison']['r4_classification_details'])) == 1])))
+        # classified by ER only
+        for tag in er_classifiers:
+            key = 'er_classifiers_only_%s' % tag
+            summary[key] += 1 if \
+                            tag in prace['comparison']['r4_classification_details'] and not \
+                            any(t in prace['comparison']['r4_classification_details'] for t in tags) and not \
+                            any(t in prace['comparison']['r4_classification_details'] for t in r4_classifiers) else 0
 
-    # classified by R4
-    for tag in r4_classifiers:
-        data.append(str(len([1 for race in parsed_races if \
-                             tag in race['comparison']['r4_classification_details'] and not \
-                             any(t in race['comparison']['r4_classification_details'] for t in tags)])))
+        # ER classifies as high
+        summary['classified_high_er'] += 1 if prace['race_data']['er_classification'] == 'HIGH' else 0
 
-    # classified by ER
-    for tag in er_classifiers:
-        data.append(str(len([1 for race in parsed_races if \
-                             tag in race['comparison']['r4_classification_details'] and not \
-                             any(t in race['comparison']['r4_classification_details'] for t in tags)])))
-
-    for tag in tags:
-        data.append(str(len([1 for race in parsed_races if tag in race['comparison']['r4_classification_details']])))
-
-    # filtered by ER
-    data.append(str(len([1 for race in parsed_races if
-                         any([tag in er_tags for tag in race['comparison']['r4_classification_details'].split(' ')])])))
-
-    # filtered by R4
-    data.append(str(len([1 for race in parsed_races if
-                         any([tag in r4_tags for tag in race['comparison']['r4_classification_details'].split(' ')])])))
-
-    # classified by R4 only
-    for tag in r4_classifiers:
-        data.append(str(len([1 for race in parsed_races if \
-                                 tag in race['comparison']['r4_classification_details'] and not \
-                                 any(t in race['comparison']['r4_classification_details'] for t in tags) and not \
-                                 any(t in race['comparison']['r4_classification_details'] for t in er_classifiers)])\
-))
-
-    # classified by ER only
-    for tag in er_classifiers:
-        data.append(str(len([1 for race in parsed_races if \
-                                 tag in race['comparison']['r4_classification_details'] and not \
-                                 any(t in race['comparison']['r4_classification_details'] for t in tags) and not \
-                                 any(t in race['comparison']['r4_classification_details'] for t in r4_classifiers)])\
-))
-
-
-    # ER classifies as high
-    data.append(str(len([race for race in parsed_races if race['race_data']['er_classification'] == 'HIGH'])))
+        race_summaries.append({
+            'handle': prace['handle'],
+            'errors_diff_distance': prace['comparison']['errors_diff_distance'],
+            'schedule_distance': prace['comparison']['schedule_distance'],
+            'exceptions_diff_distance': prace['comparison']['exceptions_diff_distance'],
+            'html_state_match': prace['comparison']['html_state_match'],
+            'visual_state_match_human': prace['comparison']['visual_state_match']['human'],
+            'visual_state_match_distance': prace['comparison']['visual_state_match']['distance'],
+            'result': prace['race_data']['result'],
+            'er_classification': prace['race_data']['er_classification'],
+            'er_classification_details': prace['race_data']['er_classification_details'],
+            'r4_classification': prace['comparison']['r4_classification'],
+            'r4_classification_details': prace['comparison']['r4_classification_details'],
+        })
 
     ## Output statistics
-    print(','.join(data))
+
+    data = ['website', 'count', 'r4_low', 'r4_normal', 'r4_high']
+    for tag in r4_classifiers:
+        data.append('r4_classifier_%s' % tag)
+    for tag in er_classifiers:
+        data.append('er_classifier_%s' % tag)
+    for tag in tags:
+        data.append('r4_classifiers_detail_%s' % tag)
+    data.append('classified_by_er')
+    data.append('filtered_by_r4')
+    for tag in r4_classifiers:
+        data.append('r4_classifiers_only_%s' % tag)
+    for tag in er_classifiers:
+        data.append('er_classifiers_only_%s' % tag)
+    data.append('classified_high_er')
+
+    print(','.join([str(summary[key]) for key in data]))
 
     ## Generate HTML files ##
 
-    jinja = Environment(loader=PackageLoader('templates', ''))
-
-    website_output_dir = os.path.join(output_dir, website)
-    output_race_index(website, parsed_races, er_log, jinja, website_output_dir, analysis_dir)
+    output_race_index(website, race_summaries, er_log, jinja, website_output_dir, analysis_dir)
 
     ## End ##
 
-    summary = {
-        'equal': len([race for race in parsed_races if race['race_data']['result'] == 'FINISHED' and race['comparison']['is_equal']]),
-        'diff': len([race for race in parsed_races if race['race_data']['result'] == 'FINISHED' and not race['comparison']['is_equal']]),
-        'timeout': len([race for race in parsed_races if race['race_data']['result'] == 'TIMEOUT']),
-        'error': len([race for race in parsed_races if race['race_data']['result'] == 'ERROR']),
-        'er_high': len([race for race in parsed_races if race['race_data']['er_classification'] == 'HIGH']),
-        'er_normal': len([race for race in parsed_races if race['race_data']['er_classification'] == 'NORMAL']),
-        'er_low': len([race for race in parsed_races if race['race_data']['er_classification'] == 'LOW']),
-        'er_unknown': len([race for race in parsed_races if race['race_data']['er_classification'] in ['UNKNOWN', 'PARSE_ERROR']]),
-        'r4_high': len([race for race in parsed_races if race['comparison']['r4_classification'] == 'HIGH']),
-        'r4_normal': len([race for race in parsed_races if race['comparison']['r4_classification'] == 'NORMAL']),
-        'r4_low': len([race for race in parsed_races if race['comparison']['r4_classification'] == 'LOW'])
-    }
 
-    return {
-        'website': website,
+    # save status file for indexer
+    payload = simplejson.dumps({
         'er_log': er_log,
         'summary': summary
-    }
+    })
+
+    with open(os.path.join(website_output_dir, 'payload.json'), 'w') as fp:
+        fp.write(payload)
 
 def query(website_dir, race):
 
@@ -1353,40 +1412,38 @@ def query(website_dir, race):
 def main():
 
     try:
-        if len(sys.argv) == 3:
-            arg1 = sys.argv[1]
-            arg2 = sys.argv[2]
-
+        command = sys.argv[1]
+        
+        if command == 'website':
+            arg1 = sys.argv[2]
+            arg2 = sys.argv[3]
+            arg3 = sys.argv[4]
+        elif command == 'index':
+            arg1 = sys.argv[2]
+            arg2 = sys.argv[3]
+            arg3 = None
         else:
             arg1 = sys.argv[2]
             arg2 = sys.argv[3]
+            arg3 = None
 
     except IndexError:
-        print('Usage: %s <analysis-dir> <report-dir> | query <website-dir> <race>' % sys.argv[0])
+        print("""Usage: %s command
+website <analysis-dir> <report-dir> <website>
+index <analysis-dir> <report-dir>
+query <website-dir> <race>""" % sys.argv[0])
         sys.exit(1)
 
-    if len(sys.argv) == 3:
-        # Normal analysis
+    if command == 'website':
+        process([arg3, arg1, arg2, "8001"])
 
+    elif command == 'index':
+        websites = [w for w in os.listdir(arg1) if w != '.' and w != '..']
+        output_website_index(websites, arg2, arg1)
 
-        analysis_dir = arg1
-        output_dir = arg2
-        websites = os.listdir(analysis_dir)
+    elif command == 'query':
+        print(query(arg1, arg2))
 
-        with concurrent.futures.ProcessPoolExecutor(NUM_PROC) as executor:
-            data = [(websites[index], analysis_dir, output_dir, str(8001+index)) for index in range(0, len(websites))]
-            website_index = executor.map(process, data)
-            #website_index = [process([website, analysis_dir, output_dir, "8001"]) for website in websites]
-            output_website_index(website_index, output_dir, analysis_dir)
-
-    else:
-        # Query
-
-        website_dir = arg1
-        race = arg2
-
-        print(query(website_dir, race))
-        
 
 if __name__ == '__main__':
     main()

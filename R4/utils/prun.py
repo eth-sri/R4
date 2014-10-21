@@ -12,20 +12,15 @@ def run(script, site):
 if __name__ == '__main__':
 
     if len(sys.argv) < 3:
-        print('Usage: %s proc_max site_list.txt' % sys.argv[0])
+        print('Usage: %s <script> <proc_max> site_list.txt' % sys.argv[0])
         sys.exit(1)
 
-    with open(sys.argv[2], 'r') as fp:
+    with open(sys.argv[3], 'r') as fp:
         sites = fp.readlines()
 
-    run_script = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'run.sh')
-
-    with concurrent.futures.ProcessPoolExecutor(int(sys.argv[1])) as executor:
-
+    with concurrent.futures.ProcessPoolExecutor(int(sys.argv[2])) as executor:
         for site in sites:
-
-            executor.submit(run, run_script, site)
-
+            executor.submit(run, sys.argv[1], site)
         executor.shutdown()
 
     print('Executed %s sites' % len(sites))

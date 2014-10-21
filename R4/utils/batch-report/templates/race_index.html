@@ -32,29 +32,29 @@
             <td>
                 <a href="{{ race.handle }}.html">{{ race.handle }}</a>
             </td>
-            <td class="{% if race.comparison.errors_diff_distance == 0 %}success{% else %}danger{% endif %}">
-                {{ race.comparison.errors_diff_distance }}
+            <td class="{% if race.errors_diff_distance == 0 %}success{% else %}danger{% endif %}">
+                {{ race.errors_diff_distance }}
             </td>
-            <td class="{% if race.comparison.schedule_distance == 0 %}success{% else %}danger{% endif %}">
-                {{ race.comparison.schedule_distance }}
+            <td class="{% if race.schedule_distance == 0 %}success{% else %}danger{% endif %}">
+                {{ race.schedule_distance }}
             </td>
-            <td class="{% if race.comparison.exceptions_diff_distance == 0 %}success{% else %}danger{% endif %}">
-                {{ race.comparison.exceptions_diff_distance }}
+            <td class="{% if race.exceptions_diff_distance == 0 %}success{% else %}danger{% endif %}">
+                {{ race.exceptions_diff_distance }}
             </td>
-            <td class="{% if race.comparison.html_state_match %}success{% else %}danger{% endif %}">
-                {{ race.comparison.html_state_match }}
+            <td class="{% if race.html_state_match %}success{% else %}danger{% endif %}">
+                {{ race.html_state_match }}
             </td>
-            <td class="{% if race.comparison.visual_state_match.human == 'EXACT' %}success{% else %}danger{% endif %}">
-                {{ race.comparison.visual_state_match.human }} ({{ race.comparison.visual_state_match.distance }})
+            <td class="{% if race.visual_state_match_human == 'EXACT' %}success{% else %}danger{% endif %}">
+                {{ race.visual_state_match_human }} ({{ race.visual_state_match_distance }})
             </td>
-            <td class="{% if race.race_data.result == 'FINISHED' %}success{% elif race.race_data.result == 'TIMEOUT' %}warning{% else %}danger{% endif %}">
-                {{ race.race_data.result }}
-            </td>
-            <td>
-              {{ race.race_data.er_classification }}{% if race.race_data.er_classification_details %}: <small><i>{{ race.race_data.er_classification_details }}</i></small>{% endif %}
+            <td class="{% if race.result == 'FINISHED' %}success{% elif race.result == 'TIMEOUT' %}warning{% else %}danger{% endif %}">
+                {{ race.result }}
             </td>
             <td>
-              {{ race.comparison.r4_classification }}{% if race.comparison.r4_classification_details %}: <small><i>{{ race.comparison.r4_classification_details }}</i></small>{% endif %}
+              {{ race.er_classification }}{% if race.er_classification_details %}: <small><i>{{ race.er_classification_details }}</i></small>{% endif %}
+            </td>
+            <td>
+              {{ race.r4_classification }}{% if race.r4_classification_details %}: <small><i>{{ race.r4_classification_details }}</i></small>{% endif %}
             </td>
 
         </tr>
