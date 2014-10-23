@@ -18,7 +18,7 @@ OUTDIR=$1
 PORT=$2
 
 if [ -f $OUTDIR/schedule.data ]; then
-    $BER_BIN $OUTDIR/ER_actionlog $ER_CLASSIFY_EXTRA  -port $PORT &
+    $BER_BIN $ER_CLASSIFY_EXTRA -drop_node_analysis=false -port=$PORT $OUTDIR/ER_actionlog &
     sleep 5
     wget --quiet --output-document $OUTDIR/varlist http://localhost:$PORT/varlist
     wget --quiet --output-document $OUTDIR/memlist http://localhost:$PORT/varlist?filter_level=1

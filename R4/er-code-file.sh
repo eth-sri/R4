@@ -15,7 +15,7 @@ PORT=$2
 shift
 shift
 
-$BER_BIN $OUTDIR/ER_actionlog -port $PORT &
+$BER_BIN -drop_node_analysis=false -port=$PORT $OUTDIR/ER_actionlog &
 sleep 2
 
 while [[ $# > 0 ]]

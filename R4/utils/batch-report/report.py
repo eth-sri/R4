@@ -186,9 +186,9 @@ def abstract_memory_equal(handle, m1, m2):
 
     #if not set(memory1) == set(memory2):
         #print('\n\nMISS', "\n", handle, "\n", memory1, "\n\n", memory2, "\n\n", set(memory1) == set(memory2), "\n\n",
-        #     [v for v in memory1 if v not in memory2], "\n\n",
-        #    [k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n",
-        #   [v for v in memory2 if v not in memory1], "\n\n",
+        #[v for v in memory1 if v not in memory2], "\n\n",
+        #[k for k,v in m1.items() if '%s=%s' % (anon(k), anon(v, known_ids)) not in memory2], "\n\n",
+        #[v for v in memory2 if v not in memory1], "\n\n",
         #[k for k,v in m2.items() if k not in ignore_memory2_keys and '%s=%s' % (anon(k), anon(v, known_ids)) not in memory1], "\n\n")
 
 
@@ -218,9 +218,11 @@ def create_if_missing_event_action_code(base_dir, namespace, *args):
             print('Failed running %s' % cmd)
 
 
-def get_or_create_event_action_memory(base_dir, memory, event_action_id):
+def get_or_create_event_action_memory(base_dir, memory, namespace, event_action_id):
 
     RE_operation = re.compile('(read|write|value|start) <.*>(.*)</.*>')
+
+    create_if_missing_event_action_code(base_dir, namespace, event_action_id)
 
     code_file = os.path.join(base_dir, 'varlist-%s.code' % event_action_id)
     line_num = 0
@@ -282,8 +284,8 @@ def get_abstract_memory(base_dir, namespace, event_handler1, event_handler2):
 
     create_if_missing_event_action_code(base_dir, namespace, race_first_id, race_second_id)
 
-    memory = get_or_create_event_action_memory(base_dir, {}, race_first_id)
-    memory = get_or_create_event_action_memory(base_dir, memory, race_second_id)
+    memory = get_or_create_event_action_memory(base_dir, {}, namespace, race_first_id)
+    memory = get_or_create_event_action_memory(base_dir, memory, namespace, race_second_id)
 
     return memory
 
@@ -854,94 +856,19 @@ def compare_race(base_data, race_data, namespace):
 
     if 'COOKIE_OR_CLASSNAME' in race_data['er_classification_details']:
         classification = 'LOW'
-        classification_details += 'ER_COOKIE_OR_CLASSNAME '
-
-    if 'MAYBE_LAZY_INIT' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'ER_MAYBE_LAZY_INIT '
-
-    if 'ONLY_LOCAL_WRITE' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'ER_ONLY_LOCAL_WRITE '
-
-    if 'NO_EVENT_ATTACHED' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'ER_NO_EVENT_ATTACHED '
-
-    if 'WRITE_SAME_VALUE' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'ER_WRITE_SAME_VALUE '
+        classification_details += 'R4_EVENTS_COMMUTE '
 
     if 'RACE_WITH_UNLOAD' in race_data['er_classification_details']:
         classification = 'LOW'
         classification_details += 'ER_RACE_WITH_UNLOAD '
 
-    if classification != 'LOW' and race_data['er_classification'] == 'LOW':
-        print('Error: Unknown classification',  race_data['er_classification_details'])
+    # Abstract memory operation patterns
 
-    # Ad-hoc sync heuristic
-    #
-    # If a DOM timer is part of a conflict, and the DOM timer implements the many-reads-ad-hoc-sync pattern,
-    # then we should observe that if:
-    # - The DOM timer is delayed and moved after another event, then the sync. can happen for that timer and
-    #   not the next timer (DELAY).
-    # - The DOM timer is executed early and moved before another event, then the sync. will not happen for
-    #   this DOM timer and a new (similar) DOM timer is posted (EARLY).
-    #
-
-    #    if not visual_state_match and not html_state_match:
-
-        # Unfinished business heuristic
-        # If we have pending events we have a strong indication that the race only delayed some behaviour
-
-        #   if len(race_data['new_events']) > 0:
-        #   classification = 'LOW'
-        #  classification_details += 'R4_AD_HOC_SYNC_PENDING_EVENTS '
-
-    # Detect the (EARLY) pattern.
-
-    race_first_id, race_first_descriptor = race_data['raceFirst']
-    race_first_parts = race_first_descriptor.split(',')
-
-    if '1-DOMTimer' in race_first_descriptor:
-
-        # race_first_descriptor would be
-        # 1-DOMTimer(<some url>,x,y,z,w,q)
-
-        # A new DOM timer (which is a continuation of race_first) would be
-        # 1-DOMTimer(<some url>,x,y,z,<race_first_id>,q) or
-        # 1-DOMTimer(<some url>,x,y,z,w,q+1)
-
-        # We simplify this such that they only need to share a common prefix.
-
-        for new_event in race_data['new_events']:
-
-            new_parts = new_event.split(',')
-
-            if len(new_parts) > 4 and ''.join(race_first_parts[:4]) == ''.join(new_parts[:4]):
-                classification = 'LOW'
-                classification_details += 'R4_DOM_TIMER_AD_HOC_SYNC[EARLY] '
-                break
-
-    # Detect the (DELAY) pattern
-
-    race_second_id, race_second_descriptor = race_data['raceSecond']
-    race_second_parts = race_second_descriptor.split(',')
-
-    if len(race_second_parts) > 4 and '1-DOMTimer' in race_second_parts[0]:
-        indicator = 'NEXT -> ' + ','.join(race_second_parts[:4])
-
-        for error in race_data['errors']:
-            if 'skipped' in error['description'] and indicator in error['details']:
-                classification = 'LOW'
-                classification_details += 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY] '
-                break
-
-    if race_data['output_race_first'] is not None and \
-       race_data['output_race_second'] is not None:
-
-        # Abstract memory operation patterns
-
+    if race_data['output_race_first'] is None or \
+       race_data['output_race_second'] is None:
+        print('Warning, %s/%s has no race output' % (base_data['race_dir'], base_data['handle']))
+    
+    else:
         equal, original_diff, reordered_diff, original_diff_keys, reordered_diff_keys = \
             abstract_memory_equal(
                 race_data['race_dir'],
@@ -952,40 +879,52 @@ def compare_race(base_data, race_data, namespace):
                                     race_data['output_race_first'],
                                     race_data['output_race_second']))  # Find the new memory output
 
-        if equal:
-            # Pattern 1: Commute
+        race_first_id, race_first_descriptor = race_data['raceFirst']
+        race_first_parts = race_first_descriptor.split(',')
+        race_second_id, race_second_descriptor = race_data['raceSecond']
+        race_second_parts = race_second_descriptor.split(',')
 
+        # Ad-hoc sync heuristic
+        #
+        # A combination of two specialised patterns: ad-hoc sync using a recurring timer and
+        # events using timer continuations.
+        # 
+        # We pattern match with the following two cases:
+        # 1. e1 (if x) e2 (set x) -> e2 e1: 
+        #     e1 now executes code where we would previously use a timer.
+        #     (a) a timer event is skipped, (b) the state does not change
+        #     Note, we could also check if e1 now executes more code than before. However, in some cases
+        #     e1 simply disables a countdown or timeout, thus not additional code is executed.
+        # 2. e1 (set x) e2 (if x) -> e2 e1:
+        #     (a) e2 now executes less, (b) a new timer is registered
+        # 
+
+        # Case 1
+
+        #len(reordered_diff) > 0 and \
+        if len([1 for error in race_data['errors'] \
+                if 'skipped' in error['description'] and 'NEXT -> 1-DOMTimer' in error['details']]) > 0 and \
+                   visual_state_match and exceptions_set_comparison:
+
+            classification = 'LOW'
+            classification_details += 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY] '
+            
+        # Case 2
+
+        #len(original_diff) > 0 and \
+        elif any([('1-DOMTimer' in e and '1-DOMTimer(-' not in e) for e in race_data['new_events']]):
+            # The 1-DOMTimer(- check is to filter out any spurious "internal" timers we see from time to time
+            classification = 'LOW'
+            classification_details += 'R4_DOM_TIMER_AD_HOC_SYNC[EARLY] '
+
+        # Pattern 2: Commute
+
+        if equal:
             classification = 'LOW'
             classification_details += 'R4_EVENTS_COMMUTE '
-            #print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE')
 
-        elif not '1-DOMTimer' in race_second_parts[0] and \
-             not '1-DOMTimer' in race_first_parts[0] and \
-             len(reordered_diff) <= 2 and \
-             any(['TIMER=' in i for i in reordered_diff]) and \
-             len(original_diff) > 0:
-            # Pattern 2-a: Do nothing but spawn a future DOM timer
-
-            classification = 'LOW'
-            classification_details += 'R4_SPAWN_TIMER_AD_HOC[DELAY] '
-            print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2A]')
-
-        elif not '1-DOMTimer' in race_second_parts[0] and \
-             not '1-DOMTimer' in race_first_parts[0] and \
-             len(reordered_diff) > 0 and \
-             len(original_diff) <= 2 and \
-             any(['TIMER' in i for i in original_diff]):
-            # Pattern 2-b: Originally, spawns a timer, which is handled later, 
-            # but when it is reordered the timer goes away 
-            # and everything is handled now
-
-            classification = 'LOW'
-            classification_details += 'R4_SPAWN_TIMER_AD_HOC[EARLY] '
-            print("MARKER", race_data['race_dir'], 'SPAWN_TIMER_AD_HOC[2B]')
-
-
-        if classification == 'HIGH':
-
+        elif classification == 'HIGH':
+        
             hit = True
             for key in original_diff_keys:
                 v = get_memory_stats(base_data['race_dir'], key, namespace)
@@ -1003,13 +942,7 @@ def compare_race(base_data, race_data, namespace):
             if hit:
                 classification = 'LOW'
                 classification_details += 'R4_EVENTS_COMMUTE '
-
                 print("MARKER", race_data['race_dir'], 'R4_EVENTS_COMMUTE[EXTENDED]')
-
-        #if classification == 'HIGH':
-        #   print(race_data['race_dir'], race_data['handle'], "is a candidate", "\n",
-        #         '\n'.join([' '.join(["ORIGINAL:", item]) for item in original_diff]),
-        #        '\n'.join([' '.join(["REORDERED:", item]) for item in reordered_diff]), "\n======\n\n")
 
     return {
         'schedule_distance': race_data['num_new_events'] + race_data['num_skipped_events'],
@@ -1193,22 +1126,23 @@ def process(job):
     jinja = Environment(loader=PackageLoader('templates', ''))
     website_output_dir = os.path.join(output_dir, website)
 
-    classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
-
-    er_tags = ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WITH_UNLOAD']
-
-    r4_tags = ['R4_AD_HOC_SYNC_PENDING_EVENTS',
-             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
-             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+    classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 
+                   'ER_READYSTATECHANGE_RACE']
 
     r4_classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH']
     er_classifiers = ['ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
 
-    tags =  ['ER_LATE_EVENT_ATTACH', 'ER_COOKIE_OR_CLASSNAME', 'ER_MAYBE_LAZY_INIT', 'ER_ONLY_LOCAL_WRITE',
-             'ER_NO_EVENT_ATTACHED', 'ER_WRITE_SAME_VALUE', 'ER_RACE_WTIH_UNLOAD', 'R4_AD_HOC_SYNC_PENDING_EVENTS',
-             'R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
-             'R4_SPAWN_TIMER_AD_HOC[DELAY]', 'R4_SPAWN_TIMER_AD_HOC[EARLY]', 'R4_CONTINUATION_AD_HOC']
+    # Used to calculate the set of sequences filtered by ER
+
+    er_tags = ['LATE_EVENT_ATTACH', 'COOKIE_OR_CLASSNAME', 'MAYBE_LAZY_INIT', 'ONLY_LOCAL_WRITE',
+             'NO_EVENT_ATTACHED', 'WRITE_SAME_VALUE', 'RACE_WITH_UNLOAD']
+
+    er_subsumed_commute_tags = ['COOKIE_OR_CLASSNAME', 'MAYBE_LAZY_INIT', 'ONLY_LOCAL_WRITE',
+                                'NO_EVENT_ATTACHED', 'WRITE_SAME_VALUE']
+
+    # Used to calculate the set of sequences filtered by r4
+    r4_tags = ['R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
+               'ER_RACE_WTIH_UNLOAD', 'ER_LATE_EVENT_ATTACH']
 
     def filter_classifiers(details):
         return [c for c in details.split(' ') if c not in classifiers]
@@ -1250,21 +1184,21 @@ def process(job):
         'r4_high': 0,
         'r4_normal': 0,
         'r4_low': 0,
-        'classified_by_er': 0,
-        'filtered_by_r4': 0,
-        'classified_high_er': 0
+        'classified_low_er': 0,
+        'classified_high_er': 0,
+        'er_subsumed_commute_tags': 0
     }
 
     for tag in r4_classifiers:
         summary['r4_classifier_%s' % tag] = 0
     for tag in er_classifiers:
         summary['er_classifier_%s' % tag] = 0
-    for tag in tags:
-        summary['r4_classifiers_detail_%s' % tag] = 0
     for tag in r4_classifiers:
         summary['r4_classifiers_only_%s' % tag] = 0
-    for tag in er_classifiers:
-        summary['er_classifiers_only_%s' % tag] = 0
+    for tag in er_tags:
+        summary['er_tag_%s' % tag] = 0
+    for tag in r4_tags:
+        summary['r4_tag_%s' % tag] = 0
 
     race_summaries = []
 
@@ -1299,46 +1233,38 @@ def process(job):
         summary['r4_normal'] += 1 if prace['comparison']['r4_classification'] == 'NORMAL' else 0
         summary['r4_low'] += 1 if prace['comparison']['r4_classification'] == 'LOW' else 0
 
+        summary['classified_low_er'] += 1 if prace['race_data']['er_classification'] == 'LOW' else 0
+        summary['classified_high_er'] += 1 if prace['race_data']['er_classification'] == 'HIGH' else 0
+
+        summary['er_subsumed_commute_tags'] += 1 if any([tag in prace['race_data']['er_classification_details'] for tag in er_subsumed_commute_tags]) else 0
+
         # classified by R4
         for tag in r4_classifiers:
             key = 'r4_classifier_%s' % tag
             summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] and not \
-                            any(t in prace['comparison']['r4_classification_details'] for t in tags) else 0
+                            prace['comparison']['r4_classification'] == 'LOW' else 0
 
         # classified by ER
         for tag in er_classifiers:
             key = 'er_classifier_%s' % tag
             summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] and not \
-                            any(t in prace['comparison']['r4_classification_details'] for t in tags) else 0
-
-        for tag in tags:
-            key = 'r4_classifiers_detail_%s' % tag
-            summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] else 0
-
-        # filtered by ER
-        summary['classified_by_er'] += 1 if any([tag in er_tags for tag in prace['comparison']['r4_classification_details'].split(' ')]) else 0
-
-        # filtered by R4
-        summary['filtered_by_r4'] += 1 if any([tag in r4_tags for tag in prace['comparison']['r4_classification_details'].split(' ')]) else 0
+                            prace['comparison']['r4_classification'] == 'LOW' else 0
 
         # classified by R4 only
         for tag in r4_classifiers:
             key = 'r4_classifiers_only_%s' % tag
             summary[key] += 1 if \
                             tag in prace['comparison']['r4_classification_details'] and not \
-                            any(t in prace['comparison']['r4_classification_details'] for t in tags) and not \
-                            any(t in prace['comparison']['r4_classification_details'] for t in er_classifiers) else 0
+                            prace['comparison']['r4_classification'] == 'LOW' and \
+                            prace['race_data']['er_classification'] == 'LOW' else 0
 
-        # classified by ER only
-        for tag in er_classifiers:
-            key = 'er_classifiers_only_%s' % tag
-            summary[key] += 1 if \
-                            tag in prace['comparison']['r4_classification_details'] and not \
-                            any(t in prace['comparison']['r4_classification_details'] for t in tags) and not \
-                            any(t in prace['comparison']['r4_classification_details'] for t in r4_classifiers) else 0
+        for tag in er_tags:
+            key = 'er_tag_%s' % tag
+            summary[key] += 1 if tag in prace['race_data']['er_classification_details'] else 0
 
-        # ER classifies as high
-        summary['classified_high_er'] += 1 if prace['race_data']['er_classification'] == 'HIGH' else 0
+        for tag in r4_tags:
+            key = 'r4_tag_%s' % tag
+            summary[key] += 1 if tag in prace['comparison']['r4_classification_details'] else 0
 
         race_summaries.append({
             'handle': prace['handle'],
@@ -1357,20 +1283,18 @@ def process(job):
 
     ## Output statistics
 
-    data = ['website', 'count', 'r4_low', 'r4_normal', 'r4_high']
+    data = ['website', 'count', 'r4_low', 'r4_normal', 'r4_high', 'classified_low_er', 'classified_high_er']
     for tag in r4_classifiers:
         data.append('r4_classifier_%s' % tag)
     for tag in er_classifiers:
         data.append('er_classifier_%s' % tag)
-    for tag in tags:
-        data.append('r4_classifiers_detail_%s' % tag)
-    data.append('classified_by_er')
-    data.append('filtered_by_r4')
     for tag in r4_classifiers:
         data.append('r4_classifiers_only_%s' % tag)
-    for tag in er_classifiers:
-        data.append('er_classifiers_only_%s' % tag)
-    data.append('classified_high_er')
+    for tag in er_tags:
+        data.append('er_tag_%s' % tag)
+    for tag in r4_tags:
+        data.append('r4_tag_%s' % tag)
+    data.append('er_subsumed_commute_tags')
 
     print(','.join([str(summary[key]) for key in data]))
 

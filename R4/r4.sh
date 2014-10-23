@@ -5,9 +5,9 @@ MC=$WEBERA_DIR/R4/model-check.sh
 
 mkdir -p output
 
-OUTDIR=/home/tmp/$RANDOM
+OUTDIR=~/r4tmp/$RANDOM
 while [ -f $OUTDIR ]; do
-    OUTDIR=/home/tmp/$RANDOM
+    OUTDIR=~/r4tmp/$RANDOM
 done
 
 OUTRUNNER=$OUTDIR/runner
