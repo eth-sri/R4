@@ -828,46 +828,10 @@ def compare_race(base_data, race_data, namespace):
     classification = 'NORMAL'
     classification_details = ""
 
-    # Low triggers
-
-    # High triggers (classifiers)
-
-    if not exceptions_set_comparison:
-        classification = 'HIGH'
-        classification_details += 'R4_EXCEPTIONS '
-
-    if not visual_state_match and not html_state_match:
-        classification = 'HIGH'
-        classification_details += 'R4_DOM_AND_RENDER_MISMATCH '
-
-    if 'initialization race' in race_data['er_classification_details']:
-        classification = 'HIGH'
-        classification_details += 'ER_INITIALIZATION_RACE '
-
-    if 'readyStateChange race' in race_data['er_classification_details']:
-        classification = 'HIGH'
-        classification_details += 'ER_READYSTATECHANGE_RACE '
-
-    # Low Triggers (strong update)
-
-    if 'LATE_EVENT_ATTACH' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'ER_LATE_EVENT_ATTACH '
-
-    if 'COOKIE_OR_CLASSNAME' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'R4_EVENTS_COMMUTE '
-
-    if 'RACE_WITH_UNLOAD' in race_data['er_classification_details']:
-        classification = 'LOW'
-        classification_details += 'ER_RACE_WITH_UNLOAD '
-
-    # Abstract memory operation patterns
-
     if race_data['output_race_first'] is None or \
        race_data['output_race_second'] is None:
         print('Warning, %s/%s has no race output' % (base_data['race_dir'], base_data['handle']))
-    
+
     else:
         equal, original_diff, reordered_diff, original_diff_keys, reordered_diff_keys = \
             abstract_memory_equal(
@@ -883,6 +847,53 @@ def compare_race(base_data, race_data, namespace):
         race_first_parts = race_first_descriptor.split(',')
         race_second_id, race_second_descriptor = race_data['raceSecond']
         race_second_parts = race_second_descriptor.split(',')
+
+        # Flags
+
+        if visual_state_match and html_state_match and not equal:
+            classification_details += 'R4_HEAP_MISMATCH '
+
+        # Low triggers
+
+        # High triggers (classifiers)
+
+        if not exceptions_set_comparison:
+            classification = 'HIGH'
+            classification_details += 'R4_EXCEPTIONS '
+
+        if not visual_state_match and not html_state_match:
+            classification = 'HIGH'
+            classification_details += 'R4_DOM_AND_RENDER_MISMATCH '
+
+        if 'initialization race' in race_data['er_classification_details']:
+            classification = 'HIGH'
+            classification_details += 'ER_INITIALIZATION_RACE '
+
+        if 'readyStateChange race' in race_data['er_classification_details']:
+            classification = 'HIGH'
+            classification_details += 'ER_READYSTATECHANGE_RACE '
+
+        if len([1 for error in race_data['errors'] \
+                if 'skipped' in error['description'] and 'NEXT -> 3-Network' in error['details']]) > 0 or \
+                   any(['3-Network' in e for e in race_data['new_events']]):
+            classification = 'HIGH'
+            classification_details += 'R4_NETWORK_MISMATCH '
+
+        # Low Triggers (strong update)
+
+        if 'LATE_EVENT_ATTACH' in race_data['er_classification_details']:
+            classification = 'LOW'
+            classification_details += 'ER_LATE_EVENT_ATTACH '
+
+        if 'COOKIE_OR_CLASSNAME' in race_data['er_classification_details']:
+            classification = 'LOW'
+            classification_details += 'R4_EVENTS_COMMUTE '
+
+        if 'RACE_WITH_UNLOAD' in race_data['er_classification_details']:
+            classification = 'LOW'
+            classification_details += 'ER_RACE_WITH_UNLOAD '
+
+        # Abstract memory operation patterns
 
         # Ad-hoc sync heuristic
         #
@@ -1127,9 +1138,9 @@ def process(job):
     website_output_dir = os.path.join(output_dir, website)
 
     classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'ER_INITIALIZATION_RACE', 
-                   'ER_READYSTATECHANGE_RACE']
+                   'ER_READYSTATECHANGE_RACE', 'R4_NETWORK_MISMATCH']
 
-    r4_classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH']
+    r4_classifiers = ['R4_EXCEPTIONS', 'R4_DOM_AND_RENDER_MISMATCH', 'R4_NETWORK_MISMATCH']
     er_classifiers = ['ER_INITIALIZATION_RACE', 'ER_READYSTATECHANGE_RACE']
 
     # Used to calculate the set of sequences filtered by ER
@@ -1142,7 +1153,7 @@ def process(job):
 
     # Used to calculate the set of sequences filtered by r4
     r4_tags = ['R4_DOM_TIMER_AD_HOC_SYNC[EARLY]', 'R4_DOM_TIMER_AD_HOC_SYNC[DELAY]', 'R4_EVENTS_COMMUTE',
-               'ER_RACE_WTIH_UNLOAD', 'ER_LATE_EVENT_ATTACH']
+               'ER_RACE_WTIH_UNLOAD', 'ER_LATE_EVENT_ATTACH', 'R4_HEAP_MISMATCH']
 
     def filter_classifiers(details):
         return [c for c in details.split(' ') if c not in classifiers]
@@ -1296,6 +1307,7 @@ def process(job):
         data.append('r4_tag_%s' % tag)
     data.append('er_subsumed_commute_tags')
 
+    print(data)
     print(','.join([str(summary[key]) for key in data]))
 
     ## Generate HTML files ##
